@@ -63,12 +63,11 @@
     }
 
     async function patch(table, id, data) {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?id=eq.' + id, {
+      await fetch(SUPABASE_URL + '/rest/v1/' + table + '?id=eq.' + id, {
         method: 'PATCH',
         headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify(data)
       })
-      return res.ok
     }
 
     async function load() {
@@ -120,30 +119,27 @@
         btn.textContent = 'Submitting...'
         btn.disabled = true
         const formData = new FormData(e.target)
-        let success = true
-        for (const room of rooms) {
-          const roomNotes = formData.get('room_notes_' + room.id)
-          await patch('inventory_rooms', room.id, { tenant_condition: roomNotes })
-          for (const item of (allItems[room.id] || [])) {
-            const ok = await patch('inventory_items', item.id, {
-              tenant_condition: formData.get('item_condition_' + item.id) || null,
-              tenant_notes: formData.get('item_notes_' + item.id) || null
-            })
-            if (!ok) success = false
+        try {
+          for (const room of rooms) {
+            await patch('inventory_rooms', room.id, { tenant_condition: formData.get('room_notes_' + room.id) })
+            for (const item of (allItems[room.id] || [])) {
+              await patch('inventory_items', item.id, {
+                tenant_condition: formData.get('item_condition_' + item.id) || null,
+                tenant_notes: formData.get('item_notes_' + item.id) || null
+              })
+            }
           }
-        }
-        await patch('inventory_reports', report.id, {
-          tenant_notes: formData.get('tenant_notes'),
-          status: 'completed',
-          completed_at: new Date().toISOString()
-        })
-        await fetch(SUPABASE_URL + '/functions/v1/inventory-workflow?action=notify_landlord&token=' + token, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY }
-        })
-        if (success) {
+          await patch('inventory_reports', report.id, {
+            tenant_notes: formData.get('tenant_notes'),
+            status: 'completed',
+            completed_at: new Date().toISOString()
+          })
+          await fetch(SUPABASE_URL + '/functions/v1/inventory-workflow?action=notify_landlord&token=' + token, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY }
+          })
           app.innerHTML = '<div class="success"><div style="font-size:48px;margin-bottom:16px">✓</div><h2>Thank you!</h2><p>Your inventory review has been submitted successfully.<br>Your landlord will be notified.</p></div>'
-        } else {
+        } catch(err) {
           btn.textContent = 'Submit My Review'
           btn.disabled = false
           alert('Something went wrong. Please try again.')
