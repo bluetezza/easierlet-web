@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>easierLet — Loading...</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #F5F7F5; }
+    .loader { text-align: center; color: #1A6B55; }
+    .logo { font-size: 28px; font-weight: 300; margin-bottom: 8px; }
+    .logo span { font-weight: 700; }
+    p { color: #6B8278; font-size: 14px; }
+  </style>
+  <script>
+    window.onload = function() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      if (token) {
+        window.location.href = 'https://ffzknvcptqjlkxmkdxuk.supabase.co/functions/v1/inventory-workflow?action=form&token=' + token;
+      } else {
+        document.getElementById('msg').textContent = 'Invalid link. Please contact your landlord.';
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="loader">
+    <div class="logo">easier<span>Let</span></div>
+    <p id="msg">Loading your inventory form...</p>
+  </div>
+</body>
+</html>
