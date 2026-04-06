@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>easierLet — Inventory Review</title>
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F5F7F5; color: #1A2E28; }
@@ -29,8 +30,16 @@
     select, textarea { width: 100%; padding: 10px 12px; border: 1px solid #E0E8E4; border-radius: 8px; font-size: 14px; font-family: inherit; background: #F5F7F5; color: #1A2E28; -webkit-appearance: none; }
     select:focus, textarea:focus { outline: none; border-color: #1A6B55; }
     textarea { min-height: 72px; resize: vertical; }
-    .overall-notes { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #E0E8E4; }
+    .overall-notes { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #E0E8E4; }
     .overall-notes h2 { font-size: 16px; margin-bottom: 12px; }
+    .signature-section { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #E0E8E4; }
+    .signature-section h2 { font-size: 16px; margin-bottom: 6px; }
+    .signature-section p { font-size: 13px; color: #6B8278; margin-bottom: 16px; }
+    .signature-pad-container { position: relative; border: 2px solid #E0E8E4; border-radius: 10px; background: #F9FBF9; overflow: hidden; }
+    .signature-pad-container canvas { display: block; width: 100%; height: 180px; touch-action: none; }
+    .sig-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
+    .clear-btn { font-size: 13px; color: #6B8278; background: none; border: 1px solid #E0E8E4; padding: 6px 14px; border-radius: 6px; cursor: pointer; }
+    .sig-error { color: #D94F4F; font-size: 12px; margin-top: 6px; display: none; }
     .submit-btn { width: 100%; padding: 16px; background: #1A6B55; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 40px; -webkit-appearance: none; }
     .submit-btn:disabled { opacity: 0.6; }
     .success { text-align: center; padding: 60px 20px; }
@@ -38,6 +47,9 @@
     .success p { color: #6B8278; font-size: 15px; }
     .loading { text-align: center; padding: 60px 20px; color: #6B8278; }
     .error-msg { text-align: center; padding: 40px 20px; color: #D94F4F; }
+    .locked-msg { text-align: center; padding: 40px 20px; }
+    .locked-msg h2 { color: #1A6B55; font-size: 20px; margin-bottom: 10px; }
+    .locked-msg p { color: #6B8278; font-size: 14px; }
   </style>
 </head>
 <body>
@@ -54,6 +66,7 @@
     const params = new URLSearchParams(window.location.search)
     const token = params.get('token')
     const app = document.getElementById('app')
+    let signaturePad = null
 
     async function query(table, filters) {
       let url = SUPABASE_URL + '/rest/v1/' + table + '?select=*'
@@ -78,6 +91,17 @@
         const reports = await query('inventory_reports', { access_token: token })
         if (!reports.length) { app.innerHTML = '<div class="error-msg"><h2>Not found</h2><p>This link may have expired.</p></div>'; return }
         const report = reports[0]
+
+        // Block access if locked or already completed
+        if (report.status === 'locked') {
+          app.innerHTML = '<div class="locked-msg"><div style="font-size:48px;margin-bottom:16px">🔒</div><h2>Inventory Locked</h2><p>This inventory has been finalised and can no longer be edited.</p></div>'
+          return
+        }
+        if (report.status === 'completed' && report.tenant_signature) {
+          app.innerHTML = '<div class="locked-msg"><div style="font-size:48px;margin-bottom:16px">✓</div><h2>Already Submitted</h2><p>You have already submitted this inventory. Please contact your landlord if you need to make changes.</p></div>'
+          return
+        }
+
         const properties = await query('properties', { id: report.property_id })
         const property = properties[0]
         const rooms = await query('inventory_rooms', { inventory_id: report.id })
@@ -95,7 +119,8 @@
     }
 
     function renderForm(report, property, rooms, allItems) {
-      let html = '<div class="intro-card"><h1>Inventory for <span class="address">' + (property ? property.address : 'Your Property') + '</span></h1><p>Hello ' + (report.tenant_name || 'there') + ', please review each room and item below and add your own observations. This helps protect both you and your landlord at the end of your tenancy.</p></div><form id="inventoryForm">'
+      let html = '<div class="intro-card"><h1>Inventory for <span class="address">' + (property ? property.address : 'Your Property') + '</span></h1><p>Hello ' + (report.tenant_name || 'there') + ', please review each room and item below and add your own observations. Once you are happy, sign at the bottom and submit.</p></div><form id="inventoryForm">'
+
       for (const room of rooms) {
         const items = allItems[room.id] || []
         html += '<div class="room"><h2 class="room-title">' + room.name + '</h2>'
@@ -111,16 +136,56 @@
         }
         html += '<div class="field-group"><label>Overall notes for this room (optional)</label><textarea name="room_notes_' + room.id + '" placeholder="Any general comments...">' + (room.tenant_condition || '') + '</textarea></div></div>'
       }
+
       html += '<div class="overall-notes"><h2>Your Overall Notes</h2><div class="field-group"><label>Any additional comments</label><textarea name="tenant_notes" placeholder="General comments...">' + (report.tenant_notes || '') + '</textarea></div></div>'
-      html += '<button type="submit" class="submit-btn" id="submitBtn">Submit My Review</button></form>'
+
+      html += `
+        <div class="signature-section">
+          <h2>Your Signature</h2>
+          <p>By signing below, you confirm that the information you have provided is accurate to the best of your knowledge.</p>
+          <div class="signature-pad-container">
+            <canvas id="signatureCanvas"></canvas>
+          </div>
+          <div class="sig-actions">
+            <button type="button" class="clear-btn" id="clearSig">Clear</button>
+          </div>
+          <div class="sig-error" id="sigError">Please provide your signature before submitting.</div>
+        </div>
+        <button type="submit" class="submit-btn" id="submitBtn">Submit & Sign Inventory</button>
+      </form>`
+
       app.innerHTML = html
+
+      // Initialise signature pad
+      const canvas = document.getElementById('signatureCanvas')
+      const ratio = Math.max(window.devicePixelRatio || 1, 1)
+      canvas.width = canvas.offsetWidth * ratio
+      canvas.height = canvas.offsetHeight * ratio
+      canvas.getContext('2d').scale(ratio, ratio)
+      signaturePad = new SignaturePad(canvas, {
+        backgroundColor: 'rgb(249, 251, 249)',
+        penColor: '#1A2E28'
+      })
+
+      document.getElementById('clearSig').addEventListener('click', function() {
+        signaturePad.clear()
+      })
 
       document.getElementById('inventoryForm').addEventListener('submit', async function(e) {
         e.preventDefault()
+
+        if (signaturePad.isEmpty()) {
+          document.getElementById('sigError').style.display = 'block'
+          return
+        }
+        document.getElementById('sigError').style.display = 'none'
+
         const btn = document.getElementById('submitBtn')
         btn.textContent = 'Submitting...'
         btn.disabled = true
+
         const formData = new FormData(e.target)
+        const signatureData = signaturePad.toDataURL('image/png')
 
         for (const room of rooms) {
           await patch('inventory_rooms', room.id, { tenant_condition: formData.get('room_notes_' + room.id) })
@@ -134,17 +199,18 @@
 
         await patch('inventory_reports', report.id, {
           tenant_notes: formData.get('tenant_notes'),
+          tenant_signature: signatureData,
+          tenant_signed_at: new Date().toISOString(),
           status: 'completed',
           completed_at: new Date().toISOString()
         })
 
-        // Fire and forget - don't let this block success
         fetch(SUPABASE_URL + '/functions/v1/inventory-workflow?action=notify_landlord&token=' + token, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY }
         }).catch(function() {})
 
-        app.innerHTML = '<div class="success"><div style="font-size:48px;margin-bottom:16px">✓</div><h2>Thank you!</h2><p>Your inventory review has been submitted successfully.<br>Your landlord will be notified.</p></div>'
+        app.innerHTML = '<div class="success"><div style="font-size:48px;margin-bottom:16px">✓</div><h2>Thank you!</h2><p>Your inventory has been signed and submitted successfully.<br>Your landlord will be notified.</p></div>'
       })
     }
 
