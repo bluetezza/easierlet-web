@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>easierLet — Reference Form</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F5F7F5; color: #1A2E28; }
+    .header { background: white; padding: 20px; border-bottom: 1px solid #E0E8E4; text-align: center; position: sticky; top: 0; z-index: 10; }
+    .logo { color: #1A6B55; font-size: 24px; font-weight: 300; }
+    .logo span { font-weight: 700; }
+    .subtitle { color: #6B8278; font-size: 13px; margin-top: 4px; }
+    .container { max-width: 640px; margin: 0 auto; padding: 20px; }
+    .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #E0E8E4; }
+    .card h2 { font-size: 16px; color: #1A6B55; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #E0E8E4; }
+    .field-group { margin-bottom: 14px; }
+    .field-group label { display: block; font-size: 11px; font-weight: 600; color: #6B8278; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; }
+    input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid #E0E8E4; border-radius: 8px; font-size: 14px; font-family: inherit; background: #F5F7F5; color: #1A2E28; -webkit-appearance: none; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #1A6B55; }
+    textarea { min-height: 80px; resize: vertical; }
+    .checkbox-group { display: flex; align-items: center; gap: 10px; }
+    .checkbox-group input { width: auto; }
+    .checkbox-group label { font-size: 14px; color: #1A2E28; text-transform: none; letter-spacing: 0; font-weight: normal; margin: 0; }
+    .guarantor-section { margin-top: 14px; display: none; }
+    .submit-btn { width: 100%; padding: 16px; background: #1A6B55; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 40px; -webkit-appearance: none; }
+    .submit-btn:disabled { opacity: 0.6; }
+    .privacy-note { font-size: 12px; color: #6B8278; text-align: center; margin-bottom: 20px; line-height: 1.5; }
+    .success { text-align: center; padding: 60px 20px; }
+    .success h2 { color: #1A6B55; font-size: 24px; margin-bottom: 12px; }
+    .success p { color: #6B8278; font-size: 15px; }
+    .loading { text-align: center; padding: 60px 20px; color: #6B8278; }
+    .error-msg { text-align: center; padding: 40px 20px; color: #D94F4F; }
+    .intro-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #E0E8E4; }
+    .intro-card h1 { font-size: 18px; color: #1A2E28; margin-bottom: 8px; }
+    .intro-card p { color: #6B8278; font-size: 14px; line-height: 1.5; margin-top: 8px; }
+    .address { color: #1A6B55; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">easier<span>Let</span></div>
+    <div class="subtitle">Tenant Reference Form</div>
+  </div>
+  <div class="container" id="app">
+    <div class="loading">Loading your reference form...</div>
+  </div>
+  <script>
+    const SUPABASE_URL = 'https://ffzknvcptqjlkxmkdxuk.supabase.co'
+    const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmemtudmNwdHFqbGt4bWtkeHVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNTQ0ODQsImV4cCI6MjA5MDgzMDQ4NH0.YRdkBgoVm7cpUJlsK8T4nP6iNE3vgfOmODImiAkPhr4'
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('token')
+    const app = document.getElementById('app')
+
+    async function query(table, filters) {
+      let url = SUPABASE_URL + '/rest/v1/' + table + '?select=*'
+      for (const [k, v] of Object.entries(filters)) url += '&' + k + '=eq.' + v
+      const res = await fetch(url, { headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY } })
+      return res.json()
+    }
+
+    async function load() {
+      if (!token) { app.innerHTML = '<div class="error-msg"><h2>Invalid link</h2><p>Please contact your landlord.</p></div>'; return }
+      try {
+        const refs = await query('tenant_references', { access_token: token })
+        if (!refs.length) { app.innerHTML = '<div class="error-msg"><h2>Not found</h2><p>This link may have expired.</p></div>'; return }
+        const reference = refs[0]
+
+        if (reference.status === 'submitted' || reference.status === 'approved' || reference.status === 'rejected') {
+          app.innerHTML = '<div class="success"><div style="font-size:48px;margin-bottom:16px">✓</div><h2>Already Submitted</h2><p>You have already submitted your reference form. Your landlord will be in touch shortly.</p></div>'
+          return
+        }
+
+        const tenants = await query('tenants', { id: reference.tenant_id })
+        const tenant = tenants[0]
+        const properties = await query('properties', { id: tenant?.property_id })
+        const property = properties[0]
+
+        renderForm(reference, tenant, property)
+      } catch(err) {
+        app.innerHTML = '<div class="error-msg"><h2>Error</h2><p>' + err.message + '</p></div>'
+      }
+    }
+
+    function renderForm(reference, tenant, property) {
+      app.innerHTML = `
+        <div class="intro-card">
+          <h1>Reference Form for <span class="address">${property?.address ?? 'Your Property'}</span></h1>
+          <p>Hello ${tenant?.name ?? tenant?.full_name ?? 'there'}, please complete the form below as part of your tenancy application. All information is kept strictly confidential and will only be seen by your landlord.</p>
+        </div>
+        <form id="refForm">
+          <div class="card">
+            <h2>Personal Details</h2>
+            <div class="field-group"><label>Date of Birth</label><input type="date" name="date_of_birth" /></div>
+            <div class="field-group"><label>Nationality</label><input type="text" name="nationality" placeholder="e.g. British" /></div>
+          </div>
+
+          <div class="card">
+            <h2>Employment</h2>
+            <div class="field-group">
+              <label>Employment Status</label>
+              <select name="employment_type">
+                <option value="">Select...</option>
+                <option value="employed">Employed</option>
+                <option value="self_employed">Self Employed</option>
+                <option value="retired">Retired</option>
+                <option value="student">Student</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="field-group"><label>Employer / Company Name</label><input type="text" name="employer_name" placeholder="e.g. Acme Ltd" /></div>
+            <div class="field-group"><label>Job Title</label><input type="text" name="job_title" placeholder="e.g. Software Engineer" /></div>
+            <div class="field-group"><label>Annual Income (£)</label><input type="number" name="annual_income" placeholder="e.g. 35000" /></div>
+            <div class="field-group"><label>Employment Start Date</label><input type="date" name="employment_start_date" /></div>
+            <div class="field-group"><label>Employer Phone</label><input type="tel" name="employer_phone" placeholder="+44 7700 000000" /></div>
+            <div class="field-group"><label>Employer Email</label><input type="email" name="employer_email" placeholder="hr@company.com" /></div>
+          </div>
+
+          <div class="card">
+            <h2>Current Address</h2>
+            <div class="field-group"><label>Current Address</label><textarea name="current_address" placeholder="Full address including postcode"></textarea></div>
+            <div class="field-group"><label>How Long at This Address</label><input type="text" name="time_at_address" placeholder="e.g. 2 years 3 months" /></div>
+            <div class="field-group"><label>Current Landlord Name</label><input type="text" name="current_landlord_name" placeholder="If applicable" /></div>
+            <div class="field-group"><label>Current Landlord Phone</label><input type="tel" name="current_landlord_phone" placeholder="If applicable" /></div>
+            <div class="field-group"><label>Current Landlord Email</label><input type="email" name="current_landlord_email" placeholder="If applicable" /></div>
+            <div class="field-group"><label>Reason for Leaving</label><textarea name="reason_for_leaving" placeholder="Why are you looking to move?"></textarea></div>
+          </div>
+
+          <div class="card">
+            <h2>Guarantor</h2>
+            <div class="checkbox-group">
+              <input type="checkbox" id="hasGuarantor" name="has_guarantor" onchange="toggleGuarantor(this.checked)" />
+              <label for="hasGuarantor">I have a guarantor</label>
+            </div>
+            <div class="guarantor-section" id="guarantorSection">
+              <div class="field-group" style="margin-top:14px"><label>Guarantor Full Name</label><input type="text" name="guarantor_name" /></div>
+              <div class="field-group"><label>Guarantor Email</label><input type="email" name="guarantor_email" /></div>
+              <div class="field-group"><label>Guarantor Phone</label><input type="tel" name="guarantor_phone" /></div>
+              <div class="field-group"><label>Guarantor Address</label><textarea name="guarantor_address"></textarea></div>
+              <div class="field-group"><label>Relationship to Guarantor</label><input type="text" name="guarantor_relationship" placeholder="e.g. Parent, Sibling" /></div>
+            </div>
+          </div>
+
+          <p class="privacy-note">🔒 Your information is encrypted and stored securely. It will only be seen by your landlord and will not be shared with any third parties.</p>
+          <button type="submit" class="submit-btn" id="submitBtn">Submit Reference Form</button>
+        </form>
+      `
+
+      document.getElementById('refForm').addEventListener('submit', async function(e) {
+        e.preventDefault()
+        const btn = document.getElementById('submitBtn')
+        btn.textContent = 'Submitting...'
+        btn.disabled = true
+
+        const formData = new FormData(e.target)
+        const data = {
+          date_of_birth: formData.get('date_of_birth') || null,
+          nationality: formData.get('nationality') || null,
+          employment_type: formData.get('employment_type') || null,
+          employer_name: formData.get('employer_name') || null,
+          job_title: formData.get('job_title') || null,
+          annual_income: formData.get('annual_income') ? parseFloat(formData.get('annual_income')) : null,
+          employment_start_date: formData.get('employment_start_date') || null,
+          employer_phone: formData.get('employer_phone') || null,
+          employer_email: formData.get('employer_email') || null,
+          current_address: formData.get('current_address') || null,
+          time_at_address: formData.get('time_at_address') || null,
+          current_landlord_name: formData.get('current_landlord_name') || null,
+          current_landlord_phone: formData.get('current_landlord_phone') || null,
+          current_landlord_email: formData.get('current_landlord_email') || null,
+          reason_for_leaving: formData.get('reason_for_leaving') || null,
+          has_guarantor: formData.get('has_guarantor') === 'on',
+          guarantor_name: formData.get('guarantor_name') || null,
+          guarantor_email: formData.get('guarantor_email') || null,
+          guarantor_phone: formData.get('guarantor_phone') || null,
+          guarantor_address: formData.get('guarantor_address') || null,
+          guarantor_relationship: formData.get('guarantor_relationship') || null,
+          status: 'submitted',
+          submitted_at: new Date().toISOString()
+        }
+
+        await fetch(SUPABASE_URL + '/rest/v1/tenant_references?access_token=eq.' + token, {
+          method: 'PATCH',
+          headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify(data)
+        })
+
+        fetch(SUPABASE_URL + '/functions/v1/tenant-workflow?action=notify_reference_submitted&token=' + token, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY }
+        }).catch(function() {})
+
+        app.innerHTML = '<div class="success"><div style="font-size:48px;margin-bottom:16px">✓</div><h2>Thank you!</h2><p>Your reference form has been submitted successfully.<br>Your landlord will review it and be in touch shortly.</p></div>'
+      })
+    }
+
+    function toggleGuarantor(checked) {
+      document.getElementById('guarantorSection').style.display = checked ? 'block' : 'none'
+    }
+
+    load()
+  </script>
+</body>
+</html>
