@@ -395,15 +395,7 @@
           showSuccess(); return;
         }
 
-        // Load tenant for property/rent info
-        const tenantRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/tenants?id=eq.${ref.tenant_id}&select=*,properties(address,monthly_rent)`,
-          { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
-        );
-        const tenants = await tenantRes.json();
-        tenantData = tenants[0];
-
-        // Populate property info
+        // Populate property info from get_reference data
         if (tenantData?.properties?.address) {
           document.getElementById('propertyAddress').textContent = tenantData.properties.address;
         }
