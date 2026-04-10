@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>easierLet — Property Application</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F5F7F5;
+      color: #1A2E28;
+      padding: 0 0 60px 0;
+    }
+
+    /* Header */
+    .header {
+      background: #1A6B55;
+      padding: 20px 20px 16px;
+      text-align: center;
+    }
+    .logo { font-size: 24px; color: #fff; }
+    .logo span { font-weight: 700; }
+    .header-sub { font-size: 13px; color: rgba(255,255,255,0.75); margin-top: 4px; }
+
+    .container { max-width: 600px; margin: 0 auto; padding: 20px 16px; }
+
+    /* Cards */
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    /* Section label */
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #6B8278;
+      margin-bottom: 14px;
+    }
+
+    /* Process steps */
+    .steps { display: flex; flex-direction: column; gap: 16px; }
+    .step { display: flex; gap: 14px; align-items: flex-start; }
+    .step-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; flex-shrink: 0;
+    }
+    .step-num.active { background: #1A6B55; color: #fff; }
+    .step-num.inactive { background: #E0E8E4; color: #6B8278; }
+    .step-title { font-size: 15px; font-weight: 600; color: #1A2E28; margin-bottom: 3px; }
+    .step-desc { font-size: 13px; color: #6B8278; line-height: 1.5; }
+
+    /* Warning box */
+    .warning {
+      background: #FFF8EC;
+      border: 1px solid #F0D080;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+    .warning-title { font-size: 13px; font-weight: 600; color: #8A6000; margin-bottom: 4px; }
+    .warning-text { font-size: 13px; color: #8A6000; line-height: 1.5; }
+
+    /* Form fields */
+    .field { margin-bottom: 18px; }
+    .field:last-child { margin-bottom: 0; }
+    label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: #6B8278; margin-bottom: 6px; }
+    input, select, textarea {
+      width: 100%;
+      padding: 13px 14px;
+      border: 1px solid #E0E8E4;
+      border-radius: 10px;
+      font-size: 15px;
+      color: #1A2E28;
+      background: #fff;
+      font-family: inherit;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #1A6B55;
+      box-shadow: 0 0 0 3px rgba(26,107,85,0.12);
+    }
+    textarea { resize: vertical; min-height: 80px; }
+    .field-hint { font-size: 12px; color: #6B8278; margin-top: 5px; }
+
+    /* Checkbox */
+    .checkbox-row {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px;
+      background: #F5F7F5;
+      border-radius: 10px;
+      margin-bottom: 16px;
+    }
+    .checkbox-row input[type="checkbox"] {
+      width: 20px; height: 20px; min-width: 20px;
+      border: 2px solid #E0E8E4; border-radius: 4px;
+      padding: 0; margin-top: 1px; cursor: pointer;
+      accent-color: #1A6B55;
+    }
+    .checkbox-row label {
+      text-transform: none; letter-spacing: 0; font-size: 14px;
+      font-weight: 400; color: #1A2E28; margin: 0; cursor: pointer;
+    }
+
+    /* Submit button */
+    .btn {
+      width: 100%;
+      padding: 16px;
+      background: #1A6B55;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #2A8A6E; }
+    .btn:disabled { background: #B0C8C0; cursor: not-allowed; }
+
+    /* States */
+    .loading, .success, .error-state { display: none; text-align: center; padding: 40px 20px; }
+    .loading.visible, .success.visible, .error-state.visible { display: block; }
+    .spinner {
+      width: 40px; height: 40px; border: 3px solid #E0E8E4;
+      border-top-color: #1A6B55; border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .success-icon { font-size: 48px; margin-bottom: 16px; }
+    .success h2 { font-size: 22px; color: #1A2E28; margin-bottom: 8px; }
+    .success p, .error-state p { font-size: 15px; color: #6B8278; line-height: 1.6; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">easier<span>Let</span></div>
+    <div class="header-sub">Property Application Form</div>
+  </div>
+
+  <div class="container">
+
+    <!-- Loading -->
+    <div class="loading" id="loadingState">
+      <div class="spinner"></div>
+      <p style="color:#6B8278;">Loading your application...</p>
+    </div>
+
+    <!-- Error -->
+    <div class="error-state" id="errorState">
+      <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+      <p>This link appears to be invalid or has expired. Please contact your landlord for a new link.</p>
+    </div>
+
+    <!-- Success -->
+    <div class="success" id="successState">
+      <div class="success-icon">✅</div>
+      <h2>Application Submitted</h2>
+      <p>Thank you — your application has been received. The landlord will be in touch once they've reviewed your details.</p>
+      <p style="margin-top:12px;">If you have any questions, please reply to the email you received.</p>
+    </div>
+
+    <!-- Form -->
+    <div id="formContent" style="display:none;">
+
+      <!-- Property info -->
+      <div class="card" id="propertyCard">
+        <div class="section-label">Property</div>
+        <div id="propertyAddress" style="font-size:17px;font-weight:600;color:#1A2E28;"></div>
+        <div id="propertyRent" style="font-size:14px;color:#6B8278;margin-top:4px;"></div>
+      </div>
+
+      <!-- Process overview -->
+      <div class="card">
+        <div class="section-label">The application process</div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num active">1</div>
+            <div>
+              <div class="step-title">Application (you are here)</div>
+              <div class="step-desc">Complete this form with your personal details, employment information and current living situation. The landlord will use this to assess your suitability and affordability.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num inactive">2</div>
+            <div>
+              <div class="step-title">Referencing</div>
+              <div class="step-desc">If your application is shortlisted, a formal reference check will be carried out by Vorensys, an independent referencing provider, covering your credit history, employment and previous landlord.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num inactive">3</div>
+            <div>
+              <div class="step-title">Tenancy Agreement</div>
+              <div class="step-desc">Once referencing is complete, a tenancy agreement will be prepared for you to review and sign digitally.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num inactive">4</div>
+            <div>
+              <div class="step-title">Inventory & Move-in</div>
+              <div class="step-desc">Before moving in, a property inventory will be completed and shared with you digitally so both parties have an agreed record of the property's condition.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data sharing warning -->
+      <div class="warning">
+        <div class="warning-title">📋 Data sharing notice</div>
+        <div class="warning-text">If your application is shortlisted, your name, contact details and rental information will be shared with Vorensys Ltd to carry out a formal reference check. You will be contacted before this occurs and may withdraw your application at any time.</div>
+      </div>
+
+      <!-- Form -->
+      <form id="applicationForm">
+
+        <!-- Personal details -->
+        <div class="card">
+          <div class="section-label">Personal details</div>
+          <div class="field">
+            <label for="fullName">Full Name</label>
+            <input type="text" id="fullName" placeholder="e.g. John Smith" required autocomplete="name">
+          </div>
+          <div class="field">
+            <label for="dateOfBirth">Date of Birth</label>
+            <input type="date" id="dateOfBirth" required>
+          </div>
+          <div class="field">
+            <label for="nationality">Nationality</label>
+            <input type="text" id="nationality" placeholder="e.g. British" required>
+          </div>
+          <div class="field">
+            <label for="preferredStartDate">Preferred Tenancy Start Date</label>
+            <input type="date" id="preferredStartDate" required>
+            <div class="field-hint">Your preferred date — the landlord may agree or suggest an alternative.</div>
+          </div>
+        </div>
+
+        <!-- Employment -->
+        <div class="card">
+          <div class="section-label">Employment & income</div>
+          <div class="field">
+            <label for="employmentType">Employment Status</label>
+            <select id="employmentType" required>
+              <option value="">Select...</option>
+              <option value="employed_full_time">Employed — Full Time</option>
+              <option value="employed_part_time">Employed — Part Time</option>
+              <option value="self_employed">Self Employed</option>
+              <option value="contract">Contractor / Freelance</option>
+              <option value="retired">Retired</option>
+              <option value="student">Student</option>
+              <option value="unemployed">Unemployed</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="employerName">Employer / Company Name</label>
+            <input type="text" id="employerName" placeholder="e.g. Acme Ltd">
+          </div>
+          <div class="field">
+            <label for="jobTitle">Job Title</label>
+            <input type="text" id="jobTitle" placeholder="e.g. Software Engineer">
+          </div>
+          <div class="field">
+            <label for="annualIncome">Gross Annual Income (£)</label>
+            <input type="number" id="annualIncome" placeholder="e.g. 35000" min="0" required>
+            <div class="field-hint">Before tax. Include all regular income sources.</div>
+          </div>
+          <div class="field">
+            <label for="employmentStartDate">Employment Start Date</label>
+            <input type="date" id="employmentStartDate">
+          </div>
+        </div>
+
+        <!-- Current address -->
+        <div class="card">
+          <div class="section-label">Current address</div>
+          <div class="field">
+            <label for="currentAddress">Current Address</label>
+            <textarea id="currentAddress" placeholder="Full address including postcode" required></textarea>
+          </div>
+          <div class="field">
+            <label for="timeAtAddress">Time at Current Address</label>
+            <select id="timeAtAddress">
+              <option value="">Select...</option>
+              <option value="less_than_6_months">Less than 6 months</option>
+              <option value="6_to_12_months">6–12 months</option>
+              <option value="1_to_2_years">1–2 years</option>
+              <option value="2_to_3_years">2–3 years</option>
+              <option value="3_plus_years">3+ years</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="currentLandlordName">Current Landlord / Agent Name</label>
+            <input type="text" id="currentLandlordName" placeholder="If renting">
+          </div>
+          <div class="field">
+            <label for="currentLandlordPhone">Current Landlord / Agent Phone</label>
+            <input type="tel" id="currentLandlordPhone" placeholder="If renting">
+          </div>
+          <div class="field">
+            <label for="currentLandlordEmail">Current Landlord / Agent Email</label>
+            <input type="email" id="currentLandlordEmail" placeholder="If renting">
+          </div>
+          <div class="field">
+            <label for="reasonForLeaving">Reason for Leaving</label>
+            <textarea id="reasonForLeaving" placeholder="Why are you looking to move?"></textarea>
+          </div>
+        </div>
+
+        <!-- Guarantor -->
+        <div class="card">
+          <div class="section-label">Guarantor</div>
+          <div class="field">
+            <label for="hasGuarantor">Do you have a guarantor?</label>
+            <select id="hasGuarantor">
+              <option value="">Select...</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+          <div id="guarantorFields" style="display:none;">
+            <div class="field">
+              <label for="guarantorName">Guarantor Full Name</label>
+              <input type="text" id="guarantorName" placeholder="e.g. Jane Smith">
+            </div>
+            <div class="field">
+              <label for="guarantorEmail">Guarantor Email</label>
+              <input type="email" id="guarantorEmail">
+            </div>
+            <div class="field">
+              <label for="guarantorPhone">Guarantor Phone</label>
+              <input type="tel" id="guarantorPhone">
+            </div>
+            <div class="field">
+              <label for="guarantorRelationship">Relationship to You</label>
+              <input type="text" id="guarantorRelationship" placeholder="e.g. Parent">
+            </div>
+          </div>
+        </div>
+
+        <!-- Data sharing acknowledgement -->
+        <div class="checkbox-row">
+          <input type="checkbox" id="dataConsent" required>
+          <label for="dataConsent">I understand that if my application is shortlisted, my details will be shared with Vorensys Ltd for referencing purposes. I confirm the information I have provided is accurate.</label>
+        </div>
+
+        <button type="submit" class="btn" id="submitBtn">Submit Application</button>
+
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://ffzknvcptqjlkxmkdxuk.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmemtudmNwdHFqbGt4bWtkeHVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3OTU1MDYsImV4cCI6MjA1OTM3MTUwNn0.kdj4eUmPBNouyV4mwAbAHXByM_5jqJNBy3HdGFPWiis';
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    let referenceId = null;
+    let tenantData = null;
+
+    async function init() {
+      if (!token) { showError(); return; }
+      showLoading();
+
+      try {
+        // Load reference by access token
+        const refRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/tenant_references?access_token=eq.${token}&select=*`,
+          { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+        );
+        const refs = await refRes.json();
+        if (!refs.length) { showError(); return; }
+
+        const ref = refs[0];
+        referenceId = ref.id;
+
+        // Already submitted?
+        if (ref.status === 'submitted' || ref.status === 'approved' || ref.status === 'rejected') {
+          showSuccess(); return;
+        }
+
+        // Load tenant for property/rent info
+        const tenantRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/tenants?id=eq.${ref.tenant_id}&select=*,properties(address,monthly_rent)`,
+          { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+        );
+        const tenants = await tenantRes.json();
+        tenantData = tenants[0];
+
+        // Populate property info
+        if (tenantData?.properties?.address) {
+          document.getElementById('propertyAddress').textContent = tenantData.properties.address;
+        }
+        if (tenantData?.monthly_rent) {
+          document.getElementById('propertyRent').textContent = `Monthly rent: £${Math.round(tenantData.monthly_rent)}`;
+        }
+
+        // Pre-fill name/email if we have them
+        if (tenantData?.name || tenantData?.full_name) {
+          document.getElementById('fullName').value = tenantData.name || tenantData.full_name || '';
+        }
+
+        // Set minimum preferred start date to today
+        document.getElementById('preferredStartDate').min = new Date().toISOString().split('T')[0];
+
+        showForm();
+      } catch (e) {
+        console.error(e);
+        showError();
+      }
+    }
+
+    function showLoading() {
+      document.getElementById('loadingState').classList.add('visible');
+    }
+    function showError() {
+      document.getElementById('loadingState').classList.remove('visible');
+      document.getElementById('errorState').classList.add('visible');
+    }
+    function showForm() {
+      document.getElementById('loadingState').classList.remove('visible');
+      document.getElementById('formContent').style.display = 'block';
+    }
+    function showSuccess() {
+      document.getElementById('loadingState').classList.remove('visible');
+      document.getElementById('formContent').style.display = 'none';
+      document.getElementById('successState').classList.add('visible');
+    }
+
+    // Guarantor toggle
+    document.getElementById('hasGuarantor').addEventListener('change', function() {
+      document.getElementById('guarantorFields').style.display = this.value === 'yes' ? 'block' : 'none';
+    });
+
+    // Form submit
+    document.getElementById('applicationForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      const hasGuarantor = document.getElementById('hasGuarantor').value === 'yes';
+      const preferredStart = document.getElementById('preferredStartDate').value || null;
+      const employmentStart = document.getElementById('employmentStartDate').value || null;
+      const dob = document.getElementById('dateOfBirth').value || null;
+
+      const payload = {
+        status: 'submitted',
+        submitted_at: new Date().toISOString(),
+        form_type: 'application',
+        data_sharing_acknowledged: true,
+        preferred_tenancy_start: preferredStart,
+        // Personal
+        date_of_birth: dob,
+        nationality: document.getElementById('nationality').value || null,
+        // Employment
+        employment_type: document.getElementById('employmentType').value || null,
+        employer_name: document.getElementById('employerName').value || null,
+        job_title: document.getElementById('jobTitle').value || null,
+        annual_income: parseFloat(document.getElementById('annualIncome').value) || null,
+        employment_start_date: employmentStart,
+        // Current address
+        current_address: document.getElementById('currentAddress').value || null,
+        time_at_address: document.getElementById('timeAtAddress').value || null,
+        current_landlord_name: document.getElementById('currentLandlordName').value || null,
+        current_landlord_phone: document.getElementById('currentLandlordPhone').value || null,
+        current_landlord_email: document.getElementById('currentLandlordEmail').value || null,
+        reason_for_leaving: document.getElementById('reasonForLeaving').value || null,
+        // Guarantor
+        has_guarantor: hasGuarantor,
+        guarantor_name: hasGuarantor ? document.getElementById('guarantorName').value || null : null,
+        guarantor_email: hasGuarantor ? document.getElementById('guarantorEmail').value || null : null,
+        guarantor_phone: hasGuarantor ? document.getElementById('guarantorPhone').value || null : null,
+        guarantor_relationship: hasGuarantor ? document.getElementById('guarantorRelationship').value || null : null,
+      };
+
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/tenant_references?id=eq.${referenceId}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify(payload)
+          }
+        );
+
+        if (res.ok) {
+          // Also update tenant preferred start date
+          if (preferredStart && tenantData?.id) {
+            await fetch(
+              `${SUPABASE_URL}/rest/v1/tenants?id=eq.${tenantData.id}`,
+              {
+                method: 'PATCH',
+                headers: {
+                  'apikey': SUPABASE_ANON_KEY,
+                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                  'Content-Type': 'application/json',
+                  'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify({ preferred_tenancy_start: preferredStart })
+              }
+            );
+          }
+          // Update tenant status to awaiting_review
+          if (tenantData?.id) {
+            await fetch(
+              `${SUPABASE_URL}/rest/v1/tenants?id=eq.${tenantData.id}`,
+              {
+                method: 'PATCH',
+                headers: {
+                  'apikey': SUPABASE_ANON_KEY,
+                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                  'Content-Type': 'application/json',
+                  'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify({ status: 'awaiting_review' })
+              }
+            );
+          }
+          showSuccess();
+        } else {
+          throw new Error('Submit failed');
+        }
+      } catch (err) {
+        console.error(err);
+        btn.disabled = false;
+        btn.textContent = 'Submit Application';
+        alert('Something went wrong. Please try again or contact your landlord.');
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
