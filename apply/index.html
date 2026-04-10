@@ -6,141 +6,67 @@
   <title>easierLet — Property Application</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #F5F7F5;
-      color: #1A2E28;
-      padding: 0 0 60px 0;
+      background: #F5F7F5; color: #1A2E28; padding: 0 0 60px 0;
     }
-
-    /* Header */
-    .header {
-      background: #1A6B55;
-      padding: 20px 20px 16px;
-      text-align: center;
-    }
-    .logo { font-size: 24px; color: #fff; }
+    .header { background: #1A6B55; padding: 20px 20px 16px; text-align: center; }
+    .logo { font-size: 24px; color: #fff; font-weight: 300; }
     .logo span { font-weight: 700; }
     .header-sub { font-size: 13px; color: rgba(255,255,255,0.75); margin-top: 4px; }
-
     .container { max-width: 600px; margin: 0 auto; padding: 20px 16px; }
-
-    /* Cards */
-    .card {
-      background: #fff;
-      border-radius: 14px;
-      padding: 20px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    }
-
-    /* Section label */
-    .section-label {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      color: #6B8278;
-      margin-bottom: 14px;
-    }
-
-    /* Process steps */
+    .card { background: #fff; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #6B8278; margin-bottom: 14px; }
     .steps { display: flex; flex-direction: column; gap: 16px; }
     .step { display: flex; gap: 14px; align-items: flex-start; }
-    .step-num {
-      width: 28px; height: 28px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 700; flex-shrink: 0;
-    }
+    .step-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
     .step-num.active { background: #1A6B55; color: #fff; }
     .step-num.inactive { background: #E0E8E4; color: #6B8278; }
     .step-title { font-size: 15px; font-weight: 600; color: #1A2E28; margin-bottom: 3px; }
     .step-desc { font-size: 13px; color: #6B8278; line-height: 1.5; }
-
-    /* Warning box */
-    .warning {
-      background: #FFF8EC;
-      border: 1px solid #F0D080;
-      border-radius: 10px;
-      padding: 14px 16px;
-      margin-bottom: 16px;
-    }
+    .property-banner { background: #1A6B55; color: white; border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+    .property-address { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .property-meta { display: flex; gap: 20px; flex-wrap: wrap; }
+    .property-meta-item { font-size: 13px; opacity: 0.85; }
+    .property-meta-item strong { display: block; font-size: 16px; font-weight: 700; opacity: 1; }
+    .warning { background: #FFF8EC; border: 1px solid #F0D080; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
     .warning-title { font-size: 13px; font-weight: 600; color: #8A6000; margin-bottom: 4px; }
     .warning-text { font-size: 13px; color: #8A6000; line-height: 1.5; }
-
-    /* Form fields */
     .field { margin-bottom: 18px; }
     .field:last-child { margin-bottom: 0; }
     label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: #6B8278; margin-bottom: 6px; }
     input, select, textarea {
-      width: 100%;
-      padding: 13px 14px;
-      border: 1px solid #E0E8E4;
-      border-radius: 10px;
-      font-size: 15px;
-      color: #1A2E28;
-      background: #fff;
-      font-family: inherit;
-      appearance: none;
-      -webkit-appearance: none;
+      width: 100%; padding: 13px 14px; border: 1px solid #E0E8E4; border-radius: 10px;
+      font-size: 15px; color: #1A2E28; background: #fff; font-family: inherit;
+      appearance: none; -webkit-appearance: none;
     }
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: #1A6B55;
-      box-shadow: 0 0 0 3px rgba(26,107,85,0.12);
-    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #1A6B55; box-shadow: 0 0 0 3px rgba(26,107,85,0.12); }
     textarea { resize: vertical; min-height: 80px; }
     .field-hint { font-size: 12px; color: #6B8278; margin-top: 5px; }
-
-    /* Checkbox */
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 480px) { .field-row { grid-template-columns: 1fr; } }
     .checkbox-row {
-      display: flex; align-items: flex-start; gap: 12px;
-      padding: 14px;
-      background: #F5F7F5;
-      border-radius: 10px;
-      margin-bottom: 16px;
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 16px; background: #F0F7F4; border: 1.5px solid #C4DDD6;
+      border-radius: 10px; margin-bottom: 16px; cursor: pointer;
     }
     .checkbox-row input[type="checkbox"] {
-      width: 20px; height: 20px; min-width: 20px;
-      border: 2px solid #E0E8E4; border-radius: 4px;
-      padding: 0; margin-top: 1px; cursor: pointer;
-      accent-color: #1A6B55;
+      width: 22px; height: 22px; min-width: 22px; border: 2px solid #1A6B55;
+      border-radius: 5px; padding: 0; margin-top: 1px; cursor: pointer;
+      accent-color: #1A6B55; flex-shrink: 0;
     }
-    .checkbox-row label {
-      text-transform: none; letter-spacing: 0; font-size: 14px;
-      font-weight: 400; color: #1A2E28; margin: 0; cursor: pointer;
-    }
-
-    /* Submit button */
-    .btn {
-      width: 100%;
-      padding: 16px;
-      background: #1A6B55;
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      font-size: 16px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
+    .checkbox-row label { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 400; color: #1A2E28; margin: 0; cursor: pointer; line-height: 1.5; }
+    .btn { width: 100%; padding: 16px; background: #1A6B55; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; font-family: inherit; cursor: pointer; }
     .btn:hover { background: #2A8A6E; }
     .btn:disabled { background: #B0C8C0; cursor: not-allowed; }
-
-    /* States */
     .loading, .success, .error-state { display: none; text-align: center; padding: 40px 20px; }
     .loading.visible, .success.visible, .error-state.visible { display: block; }
-    .spinner {
-      width: 40px; height: 40px; border: 3px solid #E0E8E4;
-      border-top-color: #1A6B55; border-radius: 50%;
-      animation: spin 0.8s linear infinite; margin: 0 auto 16px;
-    }
+    .spinner { width: 40px; height: 40px; border: 3px solid #E0E8E4; border-top-color: #1A6B55; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .success-icon { font-size: 48px; margin-bottom: 16px; }
     .success h2 { font-size: 22px; color: #1A2E28; margin-bottom: 8px; }
     .success p, .error-state p { font-size: 15px; color: #6B8278; line-height: 1.6; }
+    .divider { height: 1px; background: #E8F0ED; margin: 16px 0; }
   </style>
 </head>
 <body>
@@ -152,37 +78,34 @@
 
   <div class="container">
 
-    <!-- Loading -->
     <div class="loading" id="loadingState">
       <div class="spinner"></div>
       <p style="color:#6B8278;">Loading your application...</p>
     </div>
 
-    <!-- Error -->
     <div class="error-state" id="errorState">
       <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
       <p>This link appears to be invalid or has expired. Please contact your landlord for a new link.</p>
     </div>
 
-    <!-- Success -->
     <div class="success" id="successState">
       <div class="success-icon">✅</div>
       <h2>Application Submitted</h2>
       <p>Thank you — your application has been received. The landlord will be in touch once they've reviewed your details.</p>
-      <p style="margin-top:12px;">If you have any questions, please reply to the email you received.</p>
     </div>
 
-    <!-- Form -->
     <div id="formContent" style="display:none;">
 
-      <!-- Property info -->
-      <div class="card" id="propertyCard">
-        <div class="section-label">Property</div>
-        <div id="propertyAddress" style="font-size:17px;font-weight:600;color:#1A2E28;"></div>
-        <div id="propertyRent" style="font-size:14px;color:#6B8278;margin-top:4px;"></div>
+      <!-- Property banner -->
+      <div class="property-banner">
+        <div class="property-address" id="propertyAddress">Loading...</div>
+        <div class="property-meta">
+          <div class="property-meta-item">Monthly rent<strong id="propertyRent">—</strong></div>
+          <div class="property-meta-item">Deposit<strong id="propertyDeposit">—</strong></div>
+        </div>
       </div>
 
-      <!-- Process overview -->
+      <!-- Process steps -->
       <div class="card">
         <div class="section-label">The application process</div>
         <div class="steps">
@@ -190,37 +113,24 @@
             <div class="step-num active">1</div>
             <div>
               <div class="step-title">Application (you are here)</div>
-              <div class="step-desc">Complete this form with your personal details, employment information and current living situation. The landlord will use this to assess your suitability and affordability.</div>
+              <div class="step-desc">Tell us a little about yourself, your employment, and when you'd like to move in. This helps the landlord assess your application.</div>
             </div>
           </div>
           <div class="step">
             <div class="step-num inactive">2</div>
             <div>
               <div class="step-title">Referencing</div>
-              <div class="step-desc">If your application is shortlisted, a formal reference check will be carried out by Vorensys, an independent referencing provider, covering your credit history, employment and previous landlord.</div>
+              <div class="step-desc">If shortlisted, a formal reference check is carried out by Vorensys — covering credit history, employment, and previous landlord.</div>
             </div>
           </div>
           <div class="step">
             <div class="step-num inactive">3</div>
             <div>
-              <div class="step-title">Tenancy Agreement</div>
-              <div class="step-desc">Once referencing is complete, a tenancy agreement will be prepared for you to review and sign digitally.</div>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-num inactive">4</div>
-            <div>
-              <div class="step-title">Inventory & Move-in</div>
-              <div class="step-desc">Before moving in, a property inventory will be completed and shared with you digitally so both parties have an agreed record of the property's condition.</div>
+              <div class="step-title">Tenancy Agreement & Move-in</div>
+              <div class="step-desc">Sign your tenancy agreement digitally, complete the property inventory, and move in.</div>
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Data sharing warning -->
-      <div class="warning">
-        <div class="warning-title">📋 Data sharing notice</div>
-        <div class="warning-text">If your application is shortlisted, your name, contact details and rental information will be shared with Vorensys Ltd to carry out a formal reference check. You will be contacted before this occurs and may withdraw your application at any time.</div>
       </div>
 
       <!-- Form -->
@@ -228,29 +138,34 @@
 
         <!-- Personal details -->
         <div class="card">
-          <div class="section-label">Personal details</div>
+          <div class="section-label">About you</div>
           <div class="field">
             <label for="fullName">Full Name</label>
             <input type="text" id="fullName" placeholder="e.g. John Smith" required autocomplete="name">
           </div>
-          <div class="field">
-            <label for="dateOfBirth">Date of Birth</label>
-            <input type="date" id="dateOfBirth" required>
-          </div>
-          <div class="field">
-            <label for="nationality">Nationality</label>
-            <input type="text" id="nationality" placeholder="e.g. British" required>
-          </div>
-          <div class="field">
-            <label for="preferredStartDate">Preferred Tenancy Start Date</label>
-            <input type="date" id="preferredStartDate" required>
-            <div class="field-hint">Your preferred date — the landlord may agree or suggest an alternative.</div>
+          <div class="field-row">
+            <div class="field">
+              <label for="numberOfOccupants">How many people (including you) will live at the property?</label>
+              <select id="numberOfOccupants" required>
+                <option value="">Select...</option>
+                <option value="1">1 — just me</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5+</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="preferredStartDate">Preferred Move-in Date</label>
+              <input type="date" id="preferredStartDate" required>
+              <div class="field-hint">The landlord may suggest an alternative.</div>
+            </div>
           </div>
         </div>
 
         <!-- Employment -->
         <div class="card">
-          <div class="section-label">Employment & income</div>
+          <div class="section-label">Employment &amp; income</div>
           <div class="field">
             <label for="employmentType">Employment Status</label>
             <select id="employmentType" required>
@@ -261,62 +176,23 @@
               <option value="contract">Contractor / Freelance</option>
               <option value="retired">Retired</option>
               <option value="student">Student</option>
-              <option value="unemployed">Unemployed</option>
               <option value="other">Other</option>
             </select>
           </div>
-          <div class="field">
-            <label for="employerName">Employer / Company Name</label>
-            <input type="text" id="employerName" placeholder="e.g. Acme Ltd">
-          </div>
-          <div class="field">
-            <label for="jobTitle">Job Title</label>
-            <input type="text" id="jobTitle" placeholder="e.g. Software Engineer">
+          <div class="field-row">
+            <div class="field">
+              <label for="employerName">Employer / Company</label>
+              <input type="text" id="employerName" placeholder="e.g. Acme Ltd">
+            </div>
+            <div class="field">
+              <label for="jobTitle">Job Title</label>
+              <input type="text" id="jobTitle" placeholder="e.g. Software Engineer">
+            </div>
           </div>
           <div class="field">
             <label for="annualIncome">Gross Annual Income (£)</label>
             <input type="number" id="annualIncome" placeholder="e.g. 35000" min="0" required>
-            <div class="field-hint">Before tax. Include all regular income sources.</div>
-          </div>
-          <div class="field">
-            <label for="employmentStartDate">Employment Start Date</label>
-            <input type="date" id="employmentStartDate">
-          </div>
-        </div>
-
-        <!-- Current address -->
-        <div class="card">
-          <div class="section-label">Current address</div>
-          <div class="field">
-            <label for="currentAddress">Current Address</label>
-            <textarea id="currentAddress" placeholder="Full address including postcode" required></textarea>
-          </div>
-          <div class="field">
-            <label for="timeAtAddress">Time at Current Address</label>
-            <select id="timeAtAddress">
-              <option value="">Select...</option>
-              <option value="less_than_6_months">Less than 6 months</option>
-              <option value="6_to_12_months">6–12 months</option>
-              <option value="1_to_2_years">1–2 years</option>
-              <option value="2_to_3_years">2–3 years</option>
-              <option value="3_plus_years">3+ years</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="currentLandlordName">Current Landlord / Agent Name</label>
-            <input type="text" id="currentLandlordName" placeholder="If renting">
-          </div>
-          <div class="field">
-            <label for="currentLandlordPhone">Current Landlord / Agent Phone</label>
-            <input type="tel" id="currentLandlordPhone" placeholder="If renting">
-          </div>
-          <div class="field">
-            <label for="currentLandlordEmail">Current Landlord / Agent Email</label>
-            <input type="email" id="currentLandlordEmail" placeholder="If renting">
-          </div>
-          <div class="field">
-            <label for="reasonForLeaving">Reason for Leaving</label>
-            <textarea id="reasonForLeaving" placeholder="Why are you looking to move?"></textarea>
+            <div class="field-hint">Before tax. As a guide, income is typically expected to be at least 2.5× the annual rent (£<span id="incomeGuide">—</span>).</div>
           </div>
         </div>
 
@@ -326,35 +202,45 @@
           <div class="field">
             <label for="hasGuarantor">Do you have a guarantor?</label>
             <select id="hasGuarantor">
-              <option value="">Select...</option>
-              <option value="yes">Yes</option>
               <option value="no">No</option>
+              <option value="yes">Yes</option>
             </select>
+            <div class="field-hint">A guarantor agrees to cover rent if you are unable to. This may be required if income is below the threshold.</div>
           </div>
           <div id="guarantorFields" style="display:none;">
-            <div class="field">
-              <label for="guarantorName">Guarantor Full Name</label>
-              <input type="text" id="guarantorName" placeholder="e.g. Jane Smith">
+            <div class="divider"></div>
+            <div class="field-row">
+              <div class="field">
+                <label for="guarantorName">Guarantor Full Name</label>
+                <input type="text" id="guarantorName" placeholder="e.g. Jane Smith">
+              </div>
+              <div class="field">
+                <label for="guarantorRelationship">Relationship to You</label>
+                <input type="text" id="guarantorRelationship" placeholder="e.g. Parent">
+              </div>
             </div>
-            <div class="field">
-              <label for="guarantorEmail">Guarantor Email</label>
-              <input type="email" id="guarantorEmail">
-            </div>
-            <div class="field">
-              <label for="guarantorPhone">Guarantor Phone</label>
-              <input type="tel" id="guarantorPhone">
-            </div>
-            <div class="field">
-              <label for="guarantorRelationship">Relationship to You</label>
-              <input type="text" id="guarantorRelationship" placeholder="e.g. Parent">
+            <div class="field-row">
+              <div class="field">
+                <label for="guarantorEmail">Guarantor Email</label>
+                <input type="email" id="guarantorEmail">
+              </div>
+              <div class="field">
+                <label for="guarantorPhone">Guarantor Phone</label>
+                <input type="tel" id="guarantorPhone">
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Data sharing acknowledgement -->
-        <div class="checkbox-row">
-          <input type="checkbox" id="dataConsent" required>
-          <label for="dataConsent">I understand that if my application is shortlisted, my details will be shared with Vorensys Ltd for referencing purposes. I confirm the information I have provided is accurate.</label>
+        <!-- Data sharing -->
+        <div class="warning">
+          <div class="warning-title">📋 Data sharing notice</div>
+          <div class="warning-text">If your application is shortlisted, your name, contact details and income information will be shared with Vorensys Ltd for a formal reference check. You will be contacted before this occurs.</div>
+        </div>
+
+        <div class="checkbox-row" onclick="toggleConsent()">
+          <input type="checkbox" id="dataConsent">
+          <label for="dataConsent">I understand my details may be shared with Vorensys Ltd for referencing if shortlisted, and confirm the information I have provided is accurate.</label>
         </div>
 
         <button type="submit" class="btn" id="submitBtn">Submit Application</button>
@@ -369,46 +255,51 @@
 
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
-
     let referenceId = null;
-    let tenantData = null;
+    let tenantId = null;
+    let monthlyRent = null;
+
+    function toggleConsent() {
+      const cb = document.getElementById('dataConsent');
+      cb.checked = !cb.checked;
+    }
 
     async function init() {
       if (!token) { showError(); return; }
       showLoading();
-
       try {
-        // Load reference via Edge Function (no anon key needed)
-        const refRes = await fetch(
+        const res = await fetch(
           `${SUPABASE_URL}/functions/v1/tenant-workflow?action=get_reference&token=${token}`
         );
-        if (!refRes.ok) { showError(); return; }
-        const data = await refRes.json();
+        if (!res.ok) { showError(); return; }
+        const data = await res.json();
         if (!data.reference) { showError(); return; }
 
         const ref = data.reference;
+        const tenant = data.tenant;
         referenceId = ref.id;
-        tenantData = data.tenant;
+        tenantId = ref.tenant_id;
+        monthlyRent = tenant?.monthly_rent;
 
-        // Already submitted?
         if (ref.status === 'submitted' || ref.status === 'approved' || ref.status === 'rejected') {
           showSuccess(); return;
         }
 
-        // Populate property info from get_reference data
-        if (tenantData?.properties?.address) {
-          document.getElementById('propertyAddress').textContent = tenantData.properties.address;
-        }
-        if (tenantData?.monthly_rent) {
-          document.getElementById('propertyRent').textContent = `Monthly rent: £${Math.round(tenantData.monthly_rent)}`;
+        // Populate property banner
+        document.getElementById('propertyAddress').textContent = tenant?.properties?.address || '—';
+        document.getElementById('propertyRent').textContent = monthlyRent ? `£${Math.round(monthlyRent).toLocaleString('en-GB')} / month` : '—';
+        document.getElementById('propertyDeposit').textContent = tenant?.deposit ? `£${Math.round(tenant.deposit).toLocaleString('en-GB')}` : '—';
+
+        // Income guide (2.5× annual rent)
+        if (monthlyRent) {
+          const guide = Math.round(monthlyRent * 12 * 2.5).toLocaleString('en-GB');
+          document.getElementById('incomeGuide').textContent = guide;
         }
 
-        // Pre-fill name/email if we have them
-        if (tenantData?.name || tenantData?.full_name) {
-          document.getElementById('fullName').value = tenantData.name || tenantData.full_name || '';
-        }
+        // Pre-fill name
+        if (tenant?.name) document.getElementById('fullName').value = tenant.name;
 
-        // Set minimum preferred start date to today
+        // Min date = today
         document.getElementById('preferredStartDate').min = new Date().toISOString().split('T')[0];
 
         showForm();
@@ -418,39 +309,28 @@
       }
     }
 
-    function showLoading() {
-      document.getElementById('loadingState').classList.add('visible');
-    }
-    function showError() {
-      document.getElementById('loadingState').classList.remove('visible');
-      document.getElementById('errorState').classList.add('visible');
-    }
-    function showForm() {
-      document.getElementById('loadingState').classList.remove('visible');
-      document.getElementById('formContent').style.display = 'block';
-    }
-    function showSuccess() {
-      document.getElementById('loadingState').classList.remove('visible');
-      document.getElementById('formContent').style.display = 'none';
-      document.getElementById('successState').classList.add('visible');
-    }
+    function showLoading() { document.getElementById('loadingState').classList.add('visible'); }
+    function showError() { document.getElementById('loadingState').classList.remove('visible'); document.getElementById('errorState').classList.add('visible'); }
+    function showForm() { document.getElementById('loadingState').classList.remove('visible'); document.getElementById('formContent').style.display = 'block'; }
+    function showSuccess() { document.getElementById('loadingState').classList.remove('visible'); document.getElementById('formContent').style.display = 'none'; document.getElementById('successState').classList.add('visible'); }
 
-    // Guarantor toggle
     document.getElementById('hasGuarantor').addEventListener('change', function() {
       document.getElementById('guarantorFields').style.display = this.value === 'yes' ? 'block' : 'none';
     });
 
-    // Form submit
     document.getElementById('applicationForm').addEventListener('submit', async function(e) {
       e.preventDefault();
+      if (!document.getElementById('dataConsent').checked) {
+        alert('Please confirm the data sharing notice before submitting.');
+        return;
+      }
       const btn = document.getElementById('submitBtn');
       btn.disabled = true;
       btn.textContent = 'Submitting...';
 
       const hasGuarantor = document.getElementById('hasGuarantor').value === 'yes';
       const preferredStart = document.getElementById('preferredStartDate').value || null;
-      const employmentStart = document.getElementById('employmentStartDate').value || null;
-      const dob = document.getElementById('dateOfBirth').value || null;
+      const numberOfOccupants = parseInt(document.getElementById('numberOfOccupants').value) || null;
 
       const payload = {
         status: 'submitted',
@@ -458,23 +338,11 @@
         form_type: 'application',
         data_sharing_acknowledged: true,
         preferred_tenancy_start: preferredStart,
-        // Personal
-        date_of_birth: dob,
-        nationality: document.getElementById('nationality').value || null,
-        // Employment
+        number_of_occupants: numberOfOccupants,
         employment_type: document.getElementById('employmentType').value || null,
         employer_name: document.getElementById('employerName').value || null,
         job_title: document.getElementById('jobTitle').value || null,
         annual_income: parseFloat(document.getElementById('annualIncome').value) || null,
-        employment_start_date: employmentStart,
-        // Current address
-        current_address: document.getElementById('currentAddress').value || null,
-        time_at_address: document.getElementById('timeAtAddress').value || null,
-        current_landlord_name: document.getElementById('currentLandlordName').value || null,
-        current_landlord_phone: document.getElementById('currentLandlordPhone').value || null,
-        current_landlord_email: document.getElementById('currentLandlordEmail').value || null,
-        reason_for_leaving: document.getElementById('reasonForLeaving').value || null,
-        // Guarantor
         has_guarantor: hasGuarantor,
         guarantor_name: hasGuarantor ? document.getElementById('guarantorName').value || null : null,
         guarantor_email: hasGuarantor ? document.getElementById('guarantorEmail').value || null : null,
@@ -483,62 +351,43 @@
       };
 
       try {
-        const res = await fetch(
+        // PATCH tenant_references
+        const refRes = await fetch(
           `${SUPABASE_URL}/rest/v1/tenant_references?id=eq.${referenceId}`,
           {
             method: 'PATCH',
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=minimal'
-            },
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
             body: JSON.stringify(payload)
           }
         );
+        if (!refRes.ok) throw new Error(`ref patch failed: ${refRes.status}`);
 
-        if (res.ok) {
-          // Also update tenant preferred start date
-          if (preferredStart && tenantData?.id) {
-            await fetch(
-              `${SUPABASE_URL}/rest/v1/tenants?id=eq.${tenantData.id}`,
-              {
-                method: 'PATCH',
-                headers: {
-                  'apikey': SUPABASE_ANON_KEY,
-                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                  'Content-Type': 'application/json',
-                  'Prefer': 'return=minimal'
-                },
-                body: JSON.stringify({ preferred_tenancy_start: preferredStart })
-              }
-            );
+        // PATCH tenant status + preferred start
+        const tenantPatch = { status: 'awaiting_review' };
+        if (preferredStart) tenantPatch.preferred_tenancy_start = preferredStart;
+        if (numberOfOccupants) tenantPatch.number_of_occupants = numberOfOccupants;
+
+        const tenRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/tenants?id=eq.${tenantId}`,
+          {
+            method: 'PATCH',
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify(tenantPatch)
           }
-          // Update tenant status to awaiting_review
-          if (tenantData?.id) {
-            await fetch(
-              `${SUPABASE_URL}/rest/v1/tenants?id=eq.${tenantData.id}`,
-              {
-                method: 'PATCH',
-                headers: {
-                  'apikey': SUPABASE_ANON_KEY,
-                  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                  'Content-Type': 'application/json',
-                  'Prefer': 'return=minimal'
-                },
-                body: JSON.stringify({ status: 'awaiting_review' })
-              }
-            );
-          }
-          showSuccess();
-        } else {
-          throw new Error('Submit failed');
-        }
+        );
+        if (!tenRes.ok) throw new Error(`tenant patch failed: ${tenRes.status}`);
+
+        // Notify landlord
+        fetch(`${SUPABASE_URL}/functions/v1/tenant-workflow?action=notify_reference_submitted&token=${token}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY }
+        }).catch(() => {});
+
+        showSuccess();
       } catch (err) {
         console.error(err);
         btn.disabled = false;
         btn.textContent = 'Submit Application';
-        alert('Something went wrong. Please try again or contact your landlord.');
+        alert('Something went wrong. Please try again or contact your landlord.\n\nError: ' + err.message);
       }
     });
 
