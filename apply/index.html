@@ -24,11 +24,12 @@
     .step-num.inactive { background: #E0E8E4; color: #6B8278; }
     .step-title { font-size: 15px; font-weight: 600; color: #1A2E28; margin-bottom: 3px; }
     .step-desc { font-size: 13px; color: #6B8278; line-height: 1.5; }
-    .property-banner { background: #1A6B55; color: white; border-radius: 14px; padding: 20px; margin-bottom: 16px; }
-    .property-address { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
-    .property-meta { display: flex; gap: 20px; flex-wrap: wrap; }
-    .property-meta-item { font-size: 13px; opacity: 0.85; }
-    .property-meta-item strong { display: block; font-size: 16px; font-weight: 700; opacity: 1; }
+    .property-card { background: #fff; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid #1A6B55; }
+    .property-address { font-size: 17px; font-weight: 700; color: #1A2E28; margin-bottom: 12px; }
+    .property-meta { display: flex; gap: 0; flex-wrap: wrap; border-top: 1px solid #E8F0ED; padding-top: 12px; }
+    .property-meta-item { flex: 1; min-width: 120px; padding-right: 16px; }
+    .property-meta-item .meta-label { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #6B8278; margin-bottom: 2px; }
+    .property-meta-item .meta-value { font-size: 16px; font-weight: 700; color: #1A6B55; }
     .warning { background: #FFF8EC; border: 1px solid #F0D080; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
     .warning-title { font-size: 13px; font-weight: 600; color: #8A6000; margin-bottom: 4px; }
     .warning-text { font-size: 13px; color: #8A6000; line-height: 1.5; }
@@ -96,12 +97,19 @@
 
     <div id="formContent" style="display:none;">
 
-      <!-- Property banner -->
-      <div class="property-banner">
+      <!-- Property card -->
+      <div class="property-card">
+        <div class="section-label">Property</div>
         <div class="property-address" id="propertyAddress">Loading...</div>
         <div class="property-meta">
-          <div class="property-meta-item">Monthly rent<strong id="propertyRent">—</strong></div>
-          <div class="property-meta-item">Deposit<strong id="propertyDeposit">—</strong></div>
+          <div class="property-meta-item">
+            <div class="meta-label">Monthly rent</div>
+            <div class="meta-value" id="propertyRent">—</div>
+          </div>
+          <div class="property-meta-item">
+            <div class="meta-label">Deposit</div>
+            <div class="meta-value" id="propertyDeposit">—</div>
+          </div>
         </div>
       </div>
 
@@ -146,7 +154,7 @@
           <div class="field-row">
             <div class="field">
               <label for="numberOfOccupants">How many people (including you) will live at the property?</label>
-              <select id="numberOfOccupants" required>
+              <select id="numberOfOccupants">
                 <option value="">Select...</option>
                 <option value="1">1 — just me</option>
                 <option value="2">2</option>
@@ -235,10 +243,10 @@
         <!-- Data sharing -->
         <div class="warning">
           <div class="warning-title">📋 Data sharing notice</div>
-          <div class="warning-text">If your application is shortlisted, your name, contact details and income information will be shared with Vorensys Ltd for a formal reference check. You will be contacted before this occurs.</div>
+          <div class="warning-text">If your application is shortlisted, your details (and your guarantor's details, if applicable) will be shared with Vorensys Ltd for a formal reference check, covering credit history, employment, and previous tenancy. You will be contacted before this occurs and may withdraw at any time.</div>
         </div>
 
-        <div class="checkbox-row" >
+        <div class="checkbox-row">
           <input type="checkbox" id="dataConsent">
           <label for="dataConsent">I understand my details may be shared with Vorensys Ltd for referencing if shortlisted, and confirm the information I have provided is accurate.</label>
         </div>
@@ -259,10 +267,7 @@
     let tenantId = null;
     let monthlyRent = null;
 
-    function toggleConsent() {
-      const cb = document.getElementById('dataConsent');
-      cb.checked = !cb.checked;
-    }
+
 
     async function init() {
       if (!token) { showError(); return; }
@@ -360,7 +365,10 @@
             body: JSON.stringify(payload)
           }
         );
-        if (!refRes.ok) throw new Error(`ref patch failed: ${refRes.status}`);
+        if (!refRes.ok) {
+          const errText = await refRes.text();
+          throw new Error(`ref patch failed: ${refRes.status} — ${errText}`);
+        }
 
         // PATCH tenant status + preferred start
         const tenantPatch = { status: 'awaiting_review' };
