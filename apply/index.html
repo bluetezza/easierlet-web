@@ -365,7 +365,7 @@
 
   <script>
     const SUPABASE_URL = 'https://ffzknvcptqjlkxmkdxuk.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmemtudmNwdHFqbGt4bWtkeHVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3OTU1MDYsImV4cCI6MjA1OTM3MTUwNn0.kdj4eUmPBNouyV4mwAbAHXByM_5jqJNBy3HdGFPWiis';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmemtudmNwdHFqbGt4bWtkeHVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNTQ0ODQsImV4cCI6MjA5MDgzMDQ4NH0.YRdkBgoVm7cpUJlsK8T4nP6iNE3vgfOmODImiAkPhr4';
 
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
@@ -378,16 +378,17 @@
       showLoading();
 
       try {
-        // Load reference by access token
+        // Load reference via Edge Function (no anon key needed)
         const refRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/tenant_references?access_token=eq.${token}&select=*`,
-          { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+          `${SUPABASE_URL}/functions/v1/tenant-workflow?action=get_reference&token=${token}`
         );
-        const refs = await refRes.json();
-        if (!refs.length) { showError(); return; }
+        if (!refRes.ok) { showError(); return; }
+        const data = await refRes.json();
+        if (!data.reference) { showError(); return; }
 
-        const ref = refs[0];
+        const ref = data.reference;
         referenceId = ref.id;
+        tenantData = data.tenant;
 
         // Already submitted?
         if (ref.status === 'submitted' || ref.status === 'approved' || ref.status === 'rejected') {
