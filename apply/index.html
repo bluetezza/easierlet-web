@@ -36,7 +36,7 @@
     .field { margin-bottom: 18px; }
     .field:last-child { margin-bottom: 0; }
     label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: #6B8278; margin-bottom: 6px; }
-    input:not([type="checkbox"]), select, textarea {
+    input, select, textarea {
       width: 100%; padding: 13px 14px; border: 1px solid #E0E8E4; border-radius: 10px;
       font-size: 15px; color: #1A2E28; background: #fff; font-family: inherit;
       appearance: none; -webkit-appearance: none;
@@ -166,7 +166,7 @@
             <div class="field">
               <label for="preferredStartDate">Preferred Move-in Date</label>
               <input type="date" id="preferredStartDate" required>
-              <div class="field-hint">The landlord may suggest an alternative.</div>
+              <div class="field-hint" id="startDateHint">Your preferred move-in date.</div>
             </div>
           </div>
         </div>
@@ -306,6 +306,15 @@
 
         // Min date = today
         document.getElementById('preferredStartDate').min = new Date().toISOString().split('T')[0];
+
+        // Default preferred start date to landlord's tenancy_start if available
+        if (tenant?.tenancy_start) {
+          document.getElementById('preferredStartDate').value = tenant.tenancy_start;
+          document.getElementById('startDateHint').textContent =
+            'The landlord\'s preferred start date is ' +
+            new Date(tenant.tenancy_start + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) +
+            '. Change this if you need a different date.';
+        }
 
         showForm();
       } catch (e) {
