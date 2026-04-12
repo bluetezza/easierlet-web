@@ -83,6 +83,12 @@
         <div class="detail-row"><span class="detail-label">Tenancy Type</span><span class="detail-value">Assured Periodic (monthly rolling)</span></div>
       </div>
 
+      <div class="card" id="signingStatus" style="display:none;">
+        <span class="label">Signing Progress</span>
+        <p style="font-size:13px;color:#6B8278;margin-bottom:8px;">All tenants must sign this agreement. The landlord will sign once all tenants have signed.</p>
+        <div id="sigStatusList"></div>
+      </div>
+
       <div class="warning">
         <strong>Before signing:</strong> Please ensure you have read the Tenancy Agreement and the Renters' Rights Act Information Sheet attached to your email. By signing below you confirm that you have read and agree to all terms.
       </div>
@@ -176,14 +182,31 @@
         const data = await res.json();
         if (!res.ok || !data.agreement) { showState('errorState'); return; }
 
-        if (data.agreement.tenant_signature) { showState('alreadySignedState'); return; }
+        // Check if THIS tenant has already signed
+        if (data.currentSigner?.signature) { showState('alreadySignedState'); return; }
         if (data.agreement.status !== 'sent') { showState('errorState'); return; }
 
         document.getElementById('detailProperty').textContent = data.property?.address || '—';
-        document.getElementById('detailTenant').textContent = data.tenant?.name || '—';
+        document.getElementById('detailTenant').textContent = data.currentSigner?.tenant_name || '—';
         document.getElementById('detailStart').textContent = formatDate(data.agreement.start_date);
         document.getElementById('detailRent').textContent = `£${Number(data.agreement.monthly_rent || 0).toFixed(2)}`;
         document.getElementById('detailDeposit').textContent = `£${Number(data.agreement.deposit || 0).toFixed(2)}`;
+
+        // Show signing status for all tenants (if joint tenancy)
+        if (data.allSignatures && data.allSignatures.length > 1) {
+          const statusDiv = document.getElementById('signingStatus');
+          statusDiv.style.display = 'block';
+          const list = document.getElementById('sigStatusList');
+          list.innerHTML = '';
+          for (const s of data.allSignatures) {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #E0E8E4;font-size:14px;';
+            const icon = s.signed ? '✅' : '⏳';
+            const status = s.signed ? 'Signed' : 'Awaiting';
+            row.innerHTML = `<span>${icon} ${s.tenant_name} <span style="color:#6B8278;font-size:12px;">(${s.role === 'lead' ? 'Lead' : 'Joint'})</span></span><span style="color:${s.signed ? '#2A8A6E' : '#C8A96E'};font-weight:600;">${status}</span>`;
+            list.appendChild(row);
+          }
+        }
 
         showState('formContent');
         resizeCanvas();
