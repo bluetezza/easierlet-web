@@ -346,11 +346,7 @@
       const preferredStart = document.getElementById('preferredStartDate').value || null;
       const numberOfOccupants = parseInt(document.getElementById('numberOfOccupants').value) || null;
 
-      const payload = {
-        status: 'submitted',
-        submitted_at: new Date().toISOString(),
-        form_type: 'application',
-        data_sharing_acknowledged: true,
+      const form_data = {
         preferred_tenancy_start: preferredStart,
         number_of_occupants: numberOfOccupants,
         employment_type: document.getElementById('employmentType').value || null,
@@ -365,41 +361,21 @@
       };
 
       try {
-        // PATCH tenant_references
-        const refRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/tenant_references?id=eq.${referenceId}`,
+        const res = await fetch(
+          `${SUPABASE_URL}/functions/v1/tenant-workflow?action=submit_application`,
           {
-            method: 'PATCH',
-            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-            body: JSON.stringify(payload)
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, form_data })
           }
         );
-        if (!refRes.ok) {
-          const errText = await refRes.text();
-          throw new Error(`ref patch failed: ${refRes.status} — ${errText}`);
+
+        if (res.ok) {
+          showSuccess();
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Submit failed (${res.status})`);
         }
-
-        // PATCH tenant status + preferred start
-        const tenantPatch = { status: 'awaiting_review' };
-        if (preferredStart) tenantPatch.preferred_tenancy_start = preferredStart;
-        if (numberOfOccupants) tenantPatch.number_of_occupants = numberOfOccupants;
-
-        const tenRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/tenants?id=eq.${tenantId}`,
-          {
-            method: 'PATCH',
-            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-            body: JSON.stringify(tenantPatch)
-          }
-        );
-        if (!tenRes.ok) throw new Error(`tenant patch failed: ${tenRes.status}`);
-
-        // Notify landlord
-        fetch(`${SUPABASE_URL}/functions/v1/tenant-workflow?action=notify_reference_submitted&token=${token}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY }
-        }).catch(() => {});
-
-        showSuccess();
       } catch (err) {
         console.error(err);
         btn.disabled = false;
