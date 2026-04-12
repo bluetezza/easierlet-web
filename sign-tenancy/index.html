@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Tenancy Agreement — easierLet</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F5F7F5; color: #1A2E28; min-height: 100vh; }
+    .container { max-width: 540px; margin: 0 auto; padding: 24px 16px; }
+    .logo { text-align: center; padding: 20px 0 24px; }
+    .logo span:first-child { font-size: 26px; font-weight: 300; color: #1A2E28; }
+    .logo span:last-child { font-size: 26px; font-weight: 700; color: #1A6B55; }
+    .card { background: #fff; border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .card h2 { font-size: 20px; margin-bottom: 12px; color: #1A2E28; }
+    .card p { font-size: 15px; color: #6B8278; line-height: 1.6; margin-bottom: 8px; }
+    .label { font-size: 10px; font-weight: 600; color: #6B8278; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px; display: block; }
+    .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E0E8E4; }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { font-size: 13px; color: #6B8278; }
+    .detail-value { font-size: 13px; font-weight: 600; color: #1A2E28; text-align: right; }
+    .warning { background: #FFF8EC; border: 1px solid #F0D080; border-radius: 12px; padding: 16px; margin-bottom: 16px; font-size: 13px; color: #8A6000; line-height: 1.5; }
+    .sig-container { background: #fff; border: 2px dashed #E0E8E4; border-radius: 12px; margin: 12px 0; position: relative; touch-action: none; }
+    canvas { width: 100%; height: 180px; display: block; border-radius: 10px; cursor: crosshair; }
+    .sig-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .sig-actions button { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-clear { background: #E0E8E4; color: #6B8278; }
+    .btn-submit { background: #1A6B55; color: #fff; padding: 16px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; width: 100%; cursor: pointer; margin-top: 8px; }
+    .btn-submit:disabled { background: #6B8278; cursor: not-allowed; }
+    .checkbox-row { display: flex; align-items: flex-start; gap: 10px; margin: 16px 0; }
+    .checkbox-row input[type="checkbox"] { margin-top: 3px; width: 18px; height: 18px; accent-color: #1A6B55; flex-shrink: 0; }
+    .checkbox-row label { font-size: 13px; color: #6B8278; line-height: 1.5; cursor: pointer; }
+    .state { text-align: center; padding: 60px 20px; }
+    .state-icon { font-size: 48px; margin-bottom: 16px; }
+    .state h2 { font-size: 22px; margin-bottom: 12px; }
+    .state p { font-size: 15px; color: #6B8278; line-height: 1.6; }
+    .loading { text-align: center; padding: 80px 20px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid #E0E8E4; border-top-color: #1A6B55; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo"><span>easier</span><span>Let</span></div>
+
+    <div class="loading" id="loadingState">
+      <div class="spinner"></div>
+      <p>Loading your tenancy agreement...</p>
+    </div>
+
+    <div class="state" id="errorState" style="display:none;">
+      <div class="state-icon">⚠️</div>
+      <h2>Unable to Load</h2>
+      <p>This signing link may have expired or is invalid. Please contact your landlord.</p>
+    </div>
+
+    <div class="state" id="alreadySignedState" style="display:none;">
+      <div class="state-icon">✅</div>
+      <h2>Already Signed</h2>
+      <p>You have already signed this agreement. Your landlord will be in touch once they have also signed.</p>
+    </div>
+
+    <div class="state" id="successState" style="display:none;">
+      <div class="state-icon">✅</div>
+      <h2>Agreement Signed</h2>
+      <p>Thank you — your signature has been recorded. Your landlord will now add their signature to finalise the agreement. You will receive a copy of the fully signed document by email.</p>
+    </div>
+
+    <div id="formContent" style="display:none;">
+
+      <div class="card">
+        <h2>Assured Periodic Tenancy Agreement</h2>
+        <p>Please review the details below and sign to accept the terms of your tenancy agreement.</p>
+      </div>
+
+      <div class="card">
+        <span class="label">Tenancy Details</span>
+        <div class="detail-row"><span class="detail-label">Property</span><span class="detail-value" id="detailProperty">—</span></div>
+        <div class="detail-row"><span class="detail-label">Tenant</span><span class="detail-value" id="detailTenant">—</span></div>
+        <div class="detail-row"><span class="detail-label">Start Date</span><span class="detail-value" id="detailStart">—</span></div>
+        <div class="detail-row"><span class="detail-label">Monthly Rent</span><span class="detail-value" id="detailRent">—</span></div>
+        <div class="detail-row"><span class="detail-label">Deposit</span><span class="detail-value" id="detailDeposit">—</span></div>
+        <div class="detail-row"><span class="detail-label">Tenancy Type</span><span class="detail-value">Assured Periodic (monthly rolling)</span></div>
+      </div>
+
+      <div class="warning">
+        <strong>Before signing:</strong> Please ensure you have read the Tenancy Agreement and the Renters' Rights Act Information Sheet attached to your email. By signing below you confirm that you have read and agree to all terms.
+      </div>
+
+      <div class="card">
+        <span class="label">Your Signature</span>
+        <p style="font-size:13px;">Draw your signature in the box below using your finger or mouse.</p>
+        <div class="sig-container">
+          <canvas id="sigCanvas"></canvas>
+        </div>
+        <div class="sig-actions">
+          <button class="btn-clear" onclick="clearSig()">Clear</button>
+        </div>
+      </div>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="agreeCheck">
+        <label for="agreeCheck">I confirm that I have read and understood the Tenancy Agreement and the Renters' Rights Act Information Sheet 2026. I agree to the terms set out in the agreement.</label>
+      </div>
+
+      <button class="btn-submit" id="submitBtn" disabled onclick="submitSignature()">Sign Agreement</button>
+
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://ffzknvcptqjlkxmkdxuk.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmemtudmNwdHFqbGt4bWtkeHVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3OTU1MDYsImV4cCI6MjA1OTM3MTUwNn0.kdj4eUmPBNouyV4mwAbAHXByM_5jqJNBy3HdGFPWiis';
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    let hasDrawn = false;
+
+    // Canvas setup
+    const canvas = document.getElementById('sigCanvas');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    let lines = [];
+    let currentLine = [];
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = 180;
+      redraw();
+    }
+
+    function redraw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#1A2E28';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (const line of lines) {
+        if (line.length < 2) continue;
+        ctx.beginPath();
+        ctx.moveTo(line[0].x, line[0].y);
+        for (let i = 1; i < line.length; i++) ctx.lineTo(line[i].x, line[i].y);
+        ctx.stroke();
+      }
+    }
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const t = e.touches ? e.touches[0] : e;
+      return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+    }
+
+    canvas.addEventListener('mousedown', e => { drawing = true; currentLine = [getPos(e)]; });
+    canvas.addEventListener('mousemove', e => { if (!drawing) return; currentLine.push(getPos(e)); lines.push([...currentLine]); lines = lines.slice(-100); redraw(); });
+    canvas.addEventListener('mouseup', () => { drawing = false; if (currentLine.length) { lines.push([...currentLine]); hasDrawn = true; updateSubmitBtn(); } currentLine = []; });
+    canvas.addEventListener('mouseleave', () => { drawing = false; currentLine = []; });
+
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; currentLine = [getPos(e)]; }, { passive: false });
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!drawing) return; currentLine.push(getPos(e)); lines.push([...currentLine]); lines = lines.slice(-100); redraw(); }, { passive: false });
+    canvas.addEventListener('touchend', e => { e.preventDefault(); drawing = false; if (currentLine.length) { lines.push([...currentLine]); hasDrawn = true; updateSubmitBtn(); } currentLine = []; }, { passive: false });
+
+    function clearSig() { lines = []; hasDrawn = false; redraw(); updateSubmitBtn(); }
+
+    document.getElementById('agreeCheck').addEventListener('change', updateSubmitBtn);
+    function updateSubmitBtn() {
+      document.getElementById('submitBtn').disabled = !(hasDrawn && document.getElementById('agreeCheck').checked);
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    async function init() {
+      if (!token) { showState('errorState'); return; }
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/tenancy-workflow?action=get_agreement&token=${token}`);
+        const data = await res.json();
+        if (!res.ok || !data.agreement) { showState('errorState'); return; }
+
+        if (data.agreement.tenant_signature) { showState('alreadySignedState'); return; }
+        if (data.agreement.status !== 'sent') { showState('errorState'); return; }
+
+        document.getElementById('detailProperty').textContent = data.property?.address || '—';
+        document.getElementById('detailTenant').textContent = data.tenant?.name || '—';
+        document.getElementById('detailStart').textContent = formatDate(data.agreement.start_date);
+        document.getElementById('detailRent').textContent = `£${Number(data.agreement.monthly_rent || 0).toFixed(2)}`;
+        document.getElementById('detailDeposit').textContent = `£${Number(data.agreement.deposit || 0).toFixed(2)}`;
+
+        showState('formContent');
+        resizeCanvas();
+      } catch (e) {
+        console.error(e);
+        showState('errorState');
+      }
+    }
+
+    function formatDate(str) {
+      if (!str) return '—';
+      const parts = str.split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return str;
+    }
+
+    function showState(id) {
+      ['loadingState', 'errorState', 'alreadySignedState', 'successState', 'formContent'].forEach(s => {
+        document.getElementById(s).style.display = s === id ? 'block' : 'none';
+      });
+    }
+
+    async function submitSignature() {
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Signing...';
+
+      try {
+        const sigData = canvas.toDataURL('image/png');
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/tenancy-workflow?action=tenant_sign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ token, signature: sigData })
+        });
+        if (res.ok) {
+          showState('successState');
+        } else {
+          const err = await res.json();
+          alert(err.error || 'Failed to sign. Please try again.');
+          btn.disabled = false;
+          btn.textContent = 'Sign Agreement';
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Network error. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Sign Agreement';
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
