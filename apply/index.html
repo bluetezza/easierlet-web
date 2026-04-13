@@ -333,10 +333,13 @@
           document.getElementById('preferredStartDate').value = tenant.tenancy_start;
           const formattedDate = new Date(tenant.tenancy_start + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
           if (tenant?.role === 'joint') {
-            // Joint tenant — start date is set by lead tenant, read-only
-            document.getElementById('preferredStartDate').readOnly = true;
-            document.getElementById('preferredStartDate').style.backgroundColor = '#F5F7F5';
-            document.getElementById('preferredStartDate').style.color = '#6B8278';
+            // Joint tenant — start date is set by lead tenant, not editable
+            const dateInput = document.getElementById('preferredStartDate');
+            dateInput.disabled = true;
+            dateInput.style.backgroundColor = '#F5F7F5';
+            dateInput.style.color = '#6B8278';
+            dateInput.style.opacity = '1';
+            dateInput.style.webkitTextFillColor = '#6B8278';
             document.getElementById('startDateHint').textContent =
               'The tenancy start date is ' + formattedDate + '. This is set by the lead tenant and cannot be changed.';
           } else {
