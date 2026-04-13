@@ -310,10 +310,18 @@
         // Default preferred start date to landlord's tenancy_start if available
         if (tenant?.tenancy_start) {
           document.getElementById('preferredStartDate').value = tenant.tenancy_start;
-          document.getElementById('startDateHint').textContent =
-            'The landlord\'s preferred start date is ' +
-            new Date(tenant.tenancy_start + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) +
-            '. Change this if you need a different date.';
+          const formattedDate = new Date(tenant.tenancy_start + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+          if (tenant?.role === 'joint') {
+            // Joint tenant — start date is set by lead tenant, read-only
+            document.getElementById('preferredStartDate').readOnly = true;
+            document.getElementById('preferredStartDate').style.backgroundColor = '#F5F7F5';
+            document.getElementById('preferredStartDate').style.color = '#6B8278';
+            document.getElementById('startDateHint').textContent =
+              'The tenancy start date is ' + formattedDate + '. This is set by the lead tenant and cannot be changed.';
+          } else {
+            document.getElementById('startDateHint').textContent =
+              'The landlord\'s preferred start date is ' + formattedDate + '. Change this if you need a different date.';
+          }
         }
 
         showForm();

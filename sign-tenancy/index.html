@@ -158,13 +158,23 @@
     }
 
     canvas.addEventListener('mousedown', e => { drawing = true; currentLine = [getPos(e)]; });
-    canvas.addEventListener('mousemove', e => { if (!drawing) return; currentLine.push(getPos(e)); lines.push([...currentLine]); lines = lines.slice(-100); redraw(); });
-    canvas.addEventListener('mouseup', () => { drawing = false; if (currentLine.length) { lines.push([...currentLine]); hasDrawn = true; updateSubmitBtn(); } currentLine = []; });
-    canvas.addEventListener('mouseleave', () => { drawing = false; currentLine = []; });
+    canvas.addEventListener('mousemove', e => { if (!drawing) return; currentLine.push(getPos(e)); redrawWithCurrent(); });
+    canvas.addEventListener('mouseup', () => { if (drawing && currentLine.length > 1) { lines.push([...currentLine]); hasDrawn = true; updateSubmitBtn(); } drawing = false; currentLine = []; redraw(); });
+    canvas.addEventListener('mouseleave', () => { if (drawing && currentLine.length > 1) { lines.push([...currentLine]); hasDrawn = true; updateSubmitBtn(); } drawing = false; currentLine = []; redraw(); });
 
     canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; currentLine = [getPos(e)]; }, { passive: false });
-    canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!drawing) return; currentLine.push(getPos(e)); lines.push([...currentLine]); lines = lines.slice(-100); redraw(); }, { passive: false });
-    canvas.addEventListener('touchend', e => { e.preventDefault(); drawing = false; if (currentLine.length) { lines.push([...currentLine]); hasDrawn = true; updateSubmitBtn(); } currentLine = []; }, { passive: false });
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!drawing) return; currentLine.push(getPos(e)); redrawWithCurrent(); }, { passive: false });
+    canvas.addEventListener('touchend', e => { e.preventDefault(); if (drawing && currentLine.length > 1) { lines.push([...currentLine]); hasDrawn = true; updateSubmitBtn(); } drawing = false; currentLine = []; redraw(); }, { passive: false });
+
+    function redrawWithCurrent() {
+      redraw();
+      if (currentLine.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(currentLine[0].x, currentLine[0].y);
+        for (let i = 1; i < currentLine.length; i++) ctx.lineTo(currentLine[i].x, currentLine[i].y);
+        ctx.stroke();
+      }
+    }
 
     function clearSig() { lines = []; hasDrawn = false; redraw(); updateSubmitBtn(); }
 
