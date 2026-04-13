@@ -113,6 +113,17 @@
         </div>
       </div>
 
+      <!-- Tenant role banner -->
+      <div class="card" id="roleBanner" style="display:none;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div id="roleIcon" style="width:28px;height:28px;border-radius:50%;background:#1A6B55;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;"></div>
+          <div>
+            <div id="roleTitle" style="font-size:15px;font-weight:600;color:#1A2E28;"></div>
+          </div>
+        </div>
+        <div id="roleDesc" style="font-size:13px;color:#6B8278;line-height:1.5;"></div>
+      </div>
+
       <!-- Process steps -->
       <div class="card">
         <div class="section-label">The application process</div>
@@ -303,6 +314,16 @@
 
         // Pre-fill name
         if (tenant?.name) document.getElementById('fullName').value = tenant.name;
+
+        // Show role banner
+        const isJoint = tenant?.role === 'joint';
+        const roleBanner = document.getElementById('roleBanner');
+        roleBanner.style.display = 'block';
+        document.getElementById('roleIcon').textContent = isJoint ? '👥' : '★';
+        document.getElementById('roleTitle').textContent = isJoint ? 'You are a joint tenant' : 'You are the lead tenant';
+        document.getElementById('roleDesc').textContent = isJoint
+          ? 'As a joint tenant, you share equal responsibility for the rent and property with the lead tenant under joint and several liability. This means each tenant is individually responsible for the full rent if the other cannot pay.'
+          : 'As the lead tenant, you are the primary point of contact for the landlord and the tenancy deposit scheme. You share equal responsibility for the rent and property with any joint tenants under joint and several liability.';
 
         // Min date = today
         document.getElementById('preferredStartDate').min = new Date().toISOString().split('T')[0];
