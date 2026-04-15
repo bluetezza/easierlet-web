@@ -17,6 +17,9 @@
     .intro-card h1 { font-size: 18px; color: #1A2E28; margin-bottom: 8px; }
     .intro-card p { color: #6B8278; font-size: 14px; line-height: 1.5; margin-top: 8px; }
     .address { color: #1A6B55; font-weight: 600; }
+    .type-badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; margin-top: 8px; }
+    .type-badge.move-in { background: #E8F4F0; color: #1A6B55; }
+    .type-badge.move-out { background: #F0E8F4; color: #6B3FA0; }
     .room { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #E0E8E4; }
     .room-title { font-size: 16px; font-weight: 700; color: #1A6B55; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #E0E8E4; }
     .item { padding: 14px 0; border-bottom: 1px solid #F0F4F2; }
@@ -27,9 +30,26 @@
     .landlord-notes { font-size: 12px; color: #6B8278; margin-bottom: 10px; font-style: italic; }
     .field-group { margin-top: 10px; }
     .field-group label { display: block; font-size: 11px; font-weight: 600; color: #6B8278; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; margin-top: 10px; }
-    select, textarea { width: 100%; padding: 10px 12px; border: 1px solid #E0E8E4; border-radius: 8px; font-size: 14px; font-family: inherit; background: #F5F7F5; color: #1A2E28; -webkit-appearance: none; }
-    select:focus, textarea:focus { outline: none; border-color: #1A6B55; }
+    select, textarea, input[type="text"] { width: 100%; padding: 10px 12px; border: 1px solid #E0E8E4; border-radius: 8px; font-size: 14px; font-family: inherit; background: #F5F7F5; color: #1A2E28; -webkit-appearance: none; }
+    select:focus, textarea:focus, input[type="text"]:focus { outline: none; border-color: #1A6B55; }
     textarea { min-height: 72px; resize: vertical; }
+    .meter-section { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #E0E8E4; }
+    .meter-section h2 { font-size: 16px; margin-bottom: 6px; }
+    .meter-section p { font-size: 13px; color: #6B8278; margin-bottom: 16px; }
+    .meter-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .meter-icon { font-size: 20px; width: 32px; text-align: center; }
+    .meter-label { flex: 0 0 80px; font-size: 14px; font-weight: 600; color: #1A2E28; }
+    .meter-landlord { flex: 0 0 90px; text-align: center; font-size: 13px; color: #6B8278; background: #E8F4F0; padding: 6px 8px; border-radius: 6px; }
+    .meter-input { flex: 1; }
+    .meter-input input { width: 100%; padding: 10px 12px; border: 1px solid #E0E8E4; border-radius: 8px; font-size: 14px; font-family: inherit; background: #F5F7F5; color: #1A2E28; }
+    .meter-input input:focus { outline: none; border-color: #1A6B55; }
+    .meter-header { display: flex; gap: 12px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #E0E8E4; }
+    .meter-header span { font-size: 10px; font-weight: 600; color: #6B8278; text-transform: uppercase; letter-spacing: 0.5px; }
+    .meter-header .mh-icon { width: 32px; }
+    .meter-header .mh-label { flex: 0 0 80px; }
+    .meter-header .mh-landlord { flex: 0 0 90px; text-align: center; }
+    .meter-header .mh-tenant { flex: 1; }
+    .discrepancy { font-size: 11px; color: #C87000; margin-top: 2px; margin-left: 124px; }
     .overall-notes { background: white; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #E0E8E4; }
     .overall-notes h2 { font-size: 16px; margin-bottom: 12px; }
     .signature-section { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #E0E8E4; }
@@ -119,8 +139,55 @@
     }
 
     function renderForm(report, property, rooms, allItems) {
-      let html = '<div class="intro-card"><h1>Inventory for <span class="address">' + (property ? property.address : 'Your Property') + '</span></h1><p>Hello ' + (report.tenant_name || 'there') + ', please review each room and item below and add your own observations. Once you are happy, sign at the bottom and submit.</p></div><form id="inventoryForm">'
+      const invType = report.inventory_type || 'move_in'
+      const typeLabel = invType === 'move_in' ? 'Move-in' : 'Move-out'
+      const typeBadgeClass = invType === 'move_in' ? 'move-in' : 'move-out'
+      const landlordMeters = report.meter_readings_landlord || {}
+      const tenantMeters = report.meter_readings_tenant || {}
+      const hasLandlordMeters = landlordMeters.gas || landlordMeters.electric || landlordMeters.water
 
+      let html = '<div class="intro-card"><h1>Inventory for <span class="address">' + (property ? property.address : 'Your Property') + '</span></h1>'
+      html += '<span class="type-badge ' + typeBadgeClass + '">' + typeLabel + ' Inventory</span>'
+      html += '<p>Hello ' + (report.tenant_name || 'there') + ', please review each room and item below and add your own observations. Once you are happy, sign at the bottom and submit.</p></div><form id="inventoryForm">'
+
+      // Meter readings section
+      html += '<div class="meter-section"><h2>Meter Readings</h2>'
+      html += '<p>Please confirm or provide your own meter readings for this ' + typeLabel.toLowerCase() + '.</p>'
+
+      html += '<div class="meter-header">'
+      html += '<span class="mh-icon"></span>'
+      html += '<span class="mh-label">Meter</span>'
+      if (hasLandlordMeters) html += '<span class="mh-landlord">Landlord</span>'
+      html += '<span class="mh-tenant">Your reading</span>'
+      html += '</div>'
+
+      // Gas
+      html += '<div class="meter-row">'
+      html += '<div class="meter-icon">🔥</div>'
+      html += '<div class="meter-label">Gas</div>'
+      if (hasLandlordMeters) html += '<div class="meter-landlord">' + (landlordMeters.gas || '—') + '</div>'
+      html += '<div class="meter-input"><input type="text" name="meter_gas" inputmode="decimal" placeholder="Enter gas reading" value="' + (tenantMeters.gas || '') + '"></div>'
+      html += '</div>'
+
+      // Electric
+      html += '<div class="meter-row">'
+      html += '<div class="meter-icon">⚡</div>'
+      html += '<div class="meter-label">Electric</div>'
+      if (hasLandlordMeters) html += '<div class="meter-landlord">' + (landlordMeters.electric || '—') + '</div>'
+      html += '<div class="meter-input"><input type="text" name="meter_electric" inputmode="decimal" placeholder="Enter electric reading" value="' + (tenantMeters.electric || '') + '"></div>'
+      html += '</div>'
+
+      // Water
+      html += '<div class="meter-row">'
+      html += '<div class="meter-icon">💧</div>'
+      html += '<div class="meter-label">Water</div>'
+      if (hasLandlordMeters) html += '<div class="meter-landlord">' + (landlordMeters.water || '—') + '</div>'
+      html += '<div class="meter-input"><input type="text" name="meter_water" inputmode="decimal" placeholder="Enter water reading (if metered)" value="' + (tenantMeters.water || '') + '"></div>'
+      html += '</div>'
+
+      html += '</div>'
+
+      // Rooms and items
       for (const room of rooms) {
         const items = allItems[room.id] || []
         html += '<div class="room"><h2 class="room-title">' + room.name + '</h2>'
@@ -187,6 +254,7 @@
         const formData = new FormData(e.target)
         const signatureData = signaturePad.toDataURL('image/png')
 
+        // Save room and item data
         for (const room of rooms) {
           await patch('inventory_rooms', room.id, { tenant_condition: formData.get('room_notes_' + room.id) })
           for (const item of (allItems[room.id] || [])) {
@@ -197,13 +265,29 @@
           }
         }
 
-        await patch('inventory_reports', report.id, {
+        // Build tenant meter readings
+        const tenantMeterReadings = {}
+        const mGas = formData.get('meter_gas')
+        const mElec = formData.get('meter_electric')
+        const mWater = formData.get('meter_water')
+        if (mGas) tenantMeterReadings.gas = mGas
+        if (mElec) tenantMeterReadings.electric = mElec
+        if (mWater) tenantMeterReadings.water = mWater
+
+        const updateData = {
           tenant_notes: formData.get('tenant_notes'),
           tenant_signature: signatureData,
           tenant_signed_at: new Date().toISOString(),
           status: 'completed',
           completed_at: new Date().toISOString()
-        })
+        }
+
+        // Only include meter readings if at least one was provided
+        if (Object.keys(tenantMeterReadings).length > 0) {
+          updateData.meter_readings_tenant = tenantMeterReadings
+        }
+
+        await patch('inventory_reports', report.id, updateData)
 
         fetch(SUPABASE_URL + '/functions/v1/inventory-workflow?action=notify_landlord&token=' + token, {
           method: 'POST',
