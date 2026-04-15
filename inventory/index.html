@@ -198,7 +198,8 @@
           html += '</div>'
           if (item.landlord_notes) html += '<p class="landlord-notes">Landlord notes: ' + item.landlord_notes + '</p>'
           html += '<div class="field-group"><label>Your assessment of condition</label><select name="item_condition_' + item.id + '"><option value="">Select condition</option>'
-          for (const c of conditions) html += '<option value="' + c + '"' + (item.tenant_condition === c ? ' selected' : '') + '>' + c + '</option>'
+          const defaultCond = item.tenant_condition || item.landlord_condition
+          for (const c of conditions) html += '<option value="' + c + '"' + (defaultCond === c ? ' selected' : '') + '>' + c + '</option>'
           html += '</select><label>Your notes (optional)</label><textarea name="item_notes_' + item.id + '" placeholder="Any comments...">' + (item.tenant_notes || '') + '</textarea></div></div>'
         }
         html += '<div class="field-group"><label>Overall notes for this room (optional)</label><textarea name="room_notes_' + room.id + '" placeholder="Any general comments...">' + (room.tenant_condition || '') + '</textarea></div></div>'
