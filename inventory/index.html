@@ -60,6 +60,8 @@
     .sig-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
     .clear-btn { font-size: 13px; color: #6B8278; background: none; border: 1px solid #E0E8E4; padding: 6px 14px; border-radius: 6px; cursor: pointer; }
     .sig-error { color: #D94F4F; font-size: 12px; margin-top: 6px; display: none; }
+    .signature-section ul { list-style: disc; }
+    .signature-section li { margin-bottom: 2px; }
     .submit-btn { width: 100%; padding: 16px; background: #1A6B55; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 40px; -webkit-appearance: none; }
     .submit-btn:disabled { opacity: 0.6; }
     .success { text-align: center; padding: 60px 20px; }
@@ -148,7 +150,8 @@
 
       let html = '<div class="intro-card"><h1>Inventory for <span class="address">' + (property ? property.address : 'Your Property') + '</span></h1>'
       html += '<span class="type-badge ' + typeBadgeClass + '">' + typeLabel + ' Inventory</span>'
-      html += '<p>Hello ' + (report.tenant_name || 'there') + ', please review each room and item below and add your own observations. Once you are happy, sign at the bottom and submit.</p></div><form id="inventoryForm">'
+      html += '<p>Hello ' + (report.tenant_name || 'there') + ', as the lead tenant you are asked to review each room and item below and provide your own condition assessment. Your landlord has already completed their assessment — you can agree with it or provide a different rating. Please also confirm the meter readings and sign at the bottom.</p>'
+      html += '<p style="font-size:12px;color:#6B8278;margin-top:8px;">This inventory forms part of the tenancy record and may be used as evidence in any deposit dispute under a government-approved Tenancy Deposit Protection scheme.</p></div><form id="inventoryForm">'
 
       // Meter readings section
       html += '<div class="meter-section"><h2>Meter Readings</h2>'
@@ -187,6 +190,16 @@
 
       html += '</div>'
 
+      // Condition ratings guide
+      html += '<div class="room" style="border-left: 4px solid #1A6B55;"><h2 class="room-title" style="color: #1A2E28;">Condition Ratings Guide</h2>'
+      html += '<div style="font-size:13px;color:#6B8278;line-height:1.8;">'
+      html += '<p><strong style="color:#1A6B55;">Excellent</strong> — As new or near-new condition with no visible wear, marks or damage</p>'
+      html += '<p><strong style="color:#1A6B55;">Good</strong> — Well-maintained with only minor wear consistent with careful use; fully functional</p>'
+      html += '<p><strong style="color:#6B8278;">Fair</strong> — Noticeable wear and tear consistent with normal use over time; functional but showing age</p>'
+      html += '<p><strong style="color:#C87000;">Poor</strong> — Significant wear, damage or deterioration beyond normal use; may need repair or replacement</p>'
+      html += '<p><strong style="color:#D94F4F;">Damaged</strong> — Broken, non-functional or requiring immediate repair; beyond normal wear and tear</p>'
+      html += '</div></div>'
+
       // Rooms and items
       for (const room of rooms) {
         const items = allItems[room.id] || []
@@ -209,8 +222,14 @@
 
       html += `
         <div class="signature-section">
-          <h2>Your Signature</h2>
-          <p>By signing below, you confirm that the information you have provided is accurate to the best of your knowledge.</p>
+          <h2>Lead Tenant Signature</h2>
+          <p style="margin-bottom:12px;">By signing below, you as the lead tenant confirm that:</p>
+          <ul style="font-size:13px;color:#6B8278;margin:0 0 16px 16px;line-height:1.8;">
+            <li>You have reviewed each room and item in this inventory</li>
+            <li>The condition ratings and notes you have provided are accurate to the best of your knowledge</li>
+            <li>You understand this document forms the baseline record of the property's condition</li>
+            <li>This signed inventory may be used as evidence in any deposit dispute adjudication under a government-approved Tenancy Deposit Protection scheme</li>
+          </ul>
           <div class="signature-pad-container">
             <canvas id="signatureCanvas"></canvas>
           </div>
