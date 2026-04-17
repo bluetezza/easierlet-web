@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Apply · easierLet</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/easierlet.css">
+
+<style>
+  :root { --font-serif: "Fraunces", Georgia, serif; }
+  body { background: var(--el-bg); }
+  .page-container {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+
+  .page-header {
+    padding: 8px 0 28px;
+  }
+  .back-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--el-muted); font-size: 13px; margin-bottom: 18px;
+  }
+  .page-title {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 32px;
+    line-height: 1.15;
+    color: var(--el-ink);
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+  }
+  .page-sub {
+    font-size: 14px;
+    color: var(--el-muted);
+    line-height: 1.55;
+  }
+
+  .property-card {
+    background: #fff;
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--el-line-soft);
+  }
+  .property-address {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 18px;
+    color: var(--el-ink);
+    line-height: 1.3;
+    margin-bottom: 4px;
+  }
+  .property-meta {
+    font-size: 13px;
+    color: var(--el-muted);
+  }
+
+  .info-banner {
+    background: var(--el-green-pale);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 28px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 13px;
+    color: var(--el-ink-soft);
+    line-height: 1.5;
+  }
+  .info-banner svg { flex-shrink: 0; margin-top: 1px; color: var(--el-green); }
+
+  .section {
+    background: #fff;
+    border-radius: var(--radius-lg);
+    padding: 22px 20px;
+    margin-bottom: 16px;
+    border: 1px solid var(--el-line-soft);
+  }
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--el-muted);
+    margin-bottom: 18px;
+  }
+
+  /* Joint applicants */
+  .joint-block {
+    border: 1px dashed var(--el-line);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .joint-remove {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 11px;
+    color: var(--el-muted);
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+  }
+  .joint-remove:hover { color: var(--el-danger); }
+  .add-joint {
+    background: transparent;
+    border: 1px dashed var(--el-green-border);
+    color: var(--el-green);
+    padding: 10px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    width: 100%;
+    cursor: pointer;
+    margin-bottom: 4px;
+  }
+  .add-joint:hover { background: var(--el-green-pale); }
+
+  /* Radio group (yes/no) */
+  .radio-group {
+    display: flex;
+    gap: 0;
+    background: var(--el-bg);
+    border-radius: var(--radius);
+    padding: 4px;
+  }
+  .radio-group label {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    font-size: 14px;
+    color: var(--el-muted);
+    border-radius: calc(var(--radius) - 4px);
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease;
+    font-weight: 500;
+  }
+  .radio-group input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .radio-group input:checked + label {
+    background: #fff;
+    color: var(--el-ink);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+
+  .consents {
+    background: #fff;
+    border-radius: var(--radius-lg);
+    padding: 22px 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--el-line-soft);
+  }
+
+  .affordability-indicator {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    display: none;
+  }
+  .affordability-indicator.pass { background: #E4F1EA; color: #1A6B55; display: block; }
+  .affordability-indicator.marginal { background: #FFF6E2; color: #B58A1F; display: block; }
+  .affordability-indicator.fail { background: #F8E4DF; color: #B5462D; display: block; }
+
+  .submit-block { margin-top: 24px; }
+
+  .progress {
+    position: sticky;
+    top: 0;
+    background: var(--el-bg);
+    padding: 8px 0 12px;
+    z-index: 10;
+    margin: -8px -20px 20px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .progress-bar {
+    height: 3px;
+    background: var(--el-line);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--el-green);
+    width: 0%;
+    transition: width 300ms ease;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-container">
+
+  <div class="page-header">
+    <a class="back-link" id="backLink" style="display:none;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      Back to listing
+    </a>
+    <h1 class="page-title">Apply for this home</h1>
+    <p class="page-sub">A short pre-application — takes about 5 minutes. Hear back within 48 hours.</p>
+  </div>
+
+  <div id="loadingState" style="text-align:center; padding: 60px 20px; color: var(--el-muted);">Loading…</div>
+
+  <div class="el-error" id="errorState" style="display:none;">
+    <h2>This application link isn't valid</h2>
+    <p>The listing may have been taken down, or the invite may have expired. If a landlord sent you this link, ask them to resend.</p>
+  </div>
+
+  <div class="el-success" id="successState" style="display:none;">
+    <h2>Application received</h2>
+    <p>Thank you. The landlord will review your application and be in touch, usually within 48 hours.</p>
+  </div>
+
+  <div id="formBlock" style="display:none;">
+    <div class="progress">
+      <div class="progress-bar"><div class="progress-bar-fill" id="progressBar"></div></div>
+    </div>
+
+    <div class="property-card">
+      <div class="property-address" id="propAddress">—</div>
+      <div class="property-meta" id="propMeta">—</div>
+    </div>
+
+    <div class="info-banner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div>
+        Honest answers now save time later. Formal referencing will verify what you tell us — declaring things upfront (even imperfect ones) is viewed positively by most landlords.
+      </div>
+    </div>
+
+    <form id="applyForm" autocomplete="on">
+
+      <!-- ABOUT YOU -->
+      <div class="section">
+        <div class="section-label">About you</div>
+
+        <div class="el-field">
+          <label class="el-label" for="full_name">Full name</label>
+          <input class="el-input" id="full_name" type="text" required autocomplete="name">
+        </div>
+
+        <div class="el-field-row">
+          <div class="el-field">
+            <label class="el-label" for="email">Email</label>
+            <input class="el-input" id="email" type="email" required autocomplete="email">
+          </div>
+          <div class="el-field">
+            <label class="el-label" for="phone">Phone</label>
+            <input class="el-input" id="phone" type="tel" required autocomplete="tel">
+          </div>
+        </div>
+
+        <div class="el-field-row">
+          <div class="el-field">
+            <label class="el-label" for="date_of_birth">Date of birth</label>
+            <input class="el-input" id="date_of_birth" type="date">
+          </div>
+          <div class="el-field">
+            <label class="el-label" for="nationality">Nationality</label>
+            <input class="el-input" id="nationality" type="text" placeholder="e.g. British">
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT TO RENT -->
+      <div class="section">
+        <div class="section-label">Right to Rent</div>
+
+        <div class="el-field">
+          <label class="el-label" for="right_to_rent_status">Your status in the UK</label>
+          <select class="el-select" id="right_to_rent_status">
+            <option value="">Select…</option>
+            <option value="uk_citizen">UK citizen</option>
+            <option value="eu_settled">EU / EEA settled status</option>
+            <option value="indefinite_leave">Indefinite leave to remain</option>
+            <option value="visa">Visa (time-limited)</option>
+            <option value="other">Other</option>
+          </select>
+          <button class="el-why-toggle" type="button" data-why="why-rtr">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 17v.01M12 13a3 3 0 10-2.83-4"/></svg>
+            Why we ask
+          </button>
+          <div class="el-why-content" id="why-rtr">
+            UK landlords are legally required to verify that every adult tenant has the right to live in the UK. If you're on a visa we'll need to see it before move-in — we don't need it now.
+          </div>
+        </div>
+
+        <div id="visaFields" style="display:none;">
+          <div class="el-field-row">
+            <div class="el-field">
+              <label class="el-label" for="right_to_rent_visa_type">Visa type</label>
+              <input class="el-input" id="right_to_rent_visa_type" type="text" placeholder="e.g. Skilled Worker">
+            </div>
+            <div class="el-field">
+              <label class="el-label" for="right_to_rent_visa_expiry">Expiry date</label>
+              <input class="el-input" id="right_to_rent_visa_expiry" type="date">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HOUSEHOLD -->
+      <div class="section">
+        <div class="section-label">Who's moving in</div>
+
+        <div class="el-field-row">
+          <div class="el-field">
+            <label class="el-label" for="number_of_adults">Adults (18+)</label>
+            <select class="el-select" id="number_of_adults">
+              <option value="1">1 — just me</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5+</option>
+            </select>
+          </div>
+          <div class="el-field">
+            <label class="el-label" for="number_of_children">Children</label>
+            <select class="el-select" id="number_of_children">
+              <option value="0">0</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4+</option>
+            </select>
+          </div>
+        </div>
+        <button class="el-why-toggle" type="button" data-why="why-occupants">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 17v.01M12 13a3 3 0 10-2.83-4"/></svg>
+          Why we ask
+        </button>
+        <div class="el-why-content" id="why-occupants">
+          Properties have legal capacity limits. Knowing how many people will live there upfront avoids surprises for everyone.
+        </div>
+
+        <!-- Joint applicants -->
+        <div id="jointApplicantsContainer" style="margin-top: 20px;"></div>
+        <button type="button" class="add-joint" id="addJointBtn" style="display:none;">+ Add another adult applicant</button>
+
+        <div class="el-field" style="margin-top: 20px;">
+          <label class="el-label">Pets</label>
+          <div class="radio-group">
+            <input type="radio" name="has_pets" id="has_pets_no" value="no" checked>
+            <label for="has_pets_no">No pets</label>
+            <input type="radio" name="has_pets" id="has_pets_yes" value="yes">
+            <label for="has_pets_yes">Yes, pets</label>
+          </div>
+          <div id="petDetailsBlock" style="margin-top: 10px; display:none;">
+            <input class="el-input" id="pet_details" type="text" placeholder="What pets? e.g. 1 small dog, 2 cats">
+          </div>
+          <button class="el-why-toggle" type="button" data-why="why-pets">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 17v.01M12 13a3 3 0 10-2.83-4"/></svg>
+            Why we ask
+          </button>
+          <div class="el-why-content" id="why-pets">
+            Whether pets are accepted depends on the property, number and type. Additional deposit or cleaning fees may apply — within legal limits. Being upfront avoids disappointment.
+          </div>
+        </div>
+
+        <div class="el-field">
+          <label class="el-label">Do you smoke?</label>
+          <div class="radio-group">
+            <input type="radio" name="is_smoker" id="smoke_no" value="no" checked>
+            <label for="smoke_no">Non-smoker</label>
+            <input type="radio" name="is_smoker" id="smoke_yes" value="yes">
+            <label for="smoke_yes">Smoker</label>
+          </div>
+          <button class="el-why-toggle" type="button" data-why="why-smoke">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 17v.01M12 13a3 3 0 10-2.83-4"/></svg>
+            Why we ask
+          </button>
+          <div class="el-why-content" id="why-smoke">
+            Smoking inside the property isn't permitted. Smokers are welcome to apply — smoking just needs to take place outside.
+          </div>
+        </div>
+      </div>
+
+      <!-- TENANCY PREFERENCES -->
+      <div class="section">
+        <div class="section-label">Tenancy preferences</div>
+
+        <div class="el-field-row">
+          <div class="el-field">
+            <label class="el-label" for="preferred_tenancy_start">Move-in date</label>
+            <input class="el-input" id="preferred_tenancy_start" type="date">
+          </div>
+          <div class="el-field">
+            <label class="el-label" for="preferred_tenancy_length">Length</label>
+            <select class="el-select" id="preferred_tenancy_length">
+              <option value="">Select…</option>
+              <option value="6_months">6 months</option>
+              <option value="12_months">12 months</option>
+              <option value="longer">Longer than 12 months</option>
+              <option value="flexible">Flexible</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="el-field">
+          <label class="el-label">Do you have a guarantor available?</label>
+          <div class="radio-group">
+            <input type="radio" name="guarantor" id="guar_no" value="no" checked>
+            <label for="guar_no">No</label>
+            <input type="radio" name="guarantor" id="guar_yes" value="yes">
+            <label for="guar_yes">Yes</label>
+          </div>
+          <button class="el-why-toggle" type="button" data-why="why-guar">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 17v.01M12 13a3 3 0 10-2.83-4"/></svg>
+            Why we ask
+          </button>
+          <div class="el-why-content" id="why-guar">
+            A guarantor agrees to cover rent if you can't. This strengthens your application — especially helpful if your income is below 30× monthly rent, if you're a student, or self-employed.
+          </div>
+        </div>
+      </div>
+
+      <!-- EMPLOYMENT & INCOME -->
+      <div class="section">
+        <div class="section-label">Employment & income</div>
+
+        <div class="el-field">
+          <label class="el-label" for="employment_status">Employment status</label>
+          <select class="el-select" id="employment_status" required>
+            <option value="">Select…</option>
+            <option value="employed_full_time">Employed — full time</option>
+            <option value="employed_part_time">Employed — part time</option>
+            <option value="self_employed">Self-employed</option>
+            <option value="contract">Contractor / freelance</option>
+            <option value="retired">Retired</option>
+            <option value="student">Student</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div id="employmentDetailBlock">
+          <div class="el-field-row">
+            <div class="el-field">
+              <label class="el-label" for="employer_name">Employer</label>
+              <input class="el-input" id="employer_name" type="text" placeholder="Company name">
+            </div>
+            <div class="el-field">
+              <label class="el-label" for="job_title">Job title</label>
+              <input class="el-input" id="job_title" type="text">
+            </div>
+          </div>
+          <div class="el-field">
+            <label class="el-label" for="years_in_role">Years in this role</label>
+            <input class="el-input" id="years_in_role" type="number" step="0.5" min="0" placeholder="e.g. 2.5">
+          </div>
+        </div>
+
+        <div class="el-field">
+          <label class="el-label" for="annual_income">Gross annual income (£)</label>
+          <input class="el-input" id="annual_income" type="number" min="0" placeholder="e.g. 35000" inputmode="numeric">
+          <div class="el-hint">Before tax. This is a key factor in whether you'll pass referencing.</div>
+          <div class="affordability-indicator" id="affordabilityIndicator"></div>
+          <button class="el-why-toggle" type="button" data-why="why-income">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 17v.01M12 13a3 3 0 10-2.83-4"/></svg>
+            Why we ask
+          </button>
+          <div class="el-why-content" id="why-income">
+            Most UK referencing providers require gross income of around 30× the monthly rent — that's the standard threshold for passing without a guarantor.
+          </div>
+        </div>
+
+        <div class="el-field">
+          <label class="el-label" for="additional_income">Additional income (£ / year) <span style="text-transform:none; font-weight:400; letter-spacing:0;">(optional)</span></label>
+          <input class="el-input" id="additional_income" type="number" min="0" placeholder="e.g. 6000" inputmode="numeric">
+          <div class="el-hint">Second job, freelance, pension, investments, benefits — anything regular.</div>
+        </div>
+        <div class="el-field" id="additionalIncomeSourceBlock" style="display:none;">
+          <label class="el-label" for="additional_income_source">Source of additional income</label>
+          <input class="el-input" id="additional_income_source" type="text" placeholder="e.g. Freelance design work">
+        </div>
+      </div>
+
+      <!-- CREDIT & HISTORY -->
+      <div class="section">
+        <div class="section-label">Credit & rental history</div>
+        <div style="font-size: 13px; color: var(--el-muted); line-height: 1.55; margin-bottom: 18px;">
+          Be honest — referencing will check all of this anyway. Landlords value honesty over a perfect record.
+        </div>
+
+        <div class="el-field">
+          <label class="el-label">Any adverse credit (CCJs, bankruptcy, IVAs)?</label>
+          <div class="radio-group">
+            <input type="radio" name="adverse_credit" id="ac_no" value="no" checked>
+            <label for="ac_no">No</label>
+            <input type="radio" name="adverse_credit" id="ac_yes" value="yes">
+            <label for="ac_yes">Yes</label>
+          </div>
+          <div id="adverseCreditDetails" style="margin-top: 10px; display:none;">
+            <textarea class="el-textarea" id="adverse_credit_details" placeholder="Briefly: what, when, and how it's been resolved"></textarea>
+          </div>
+          <button class="el-why-toggle" type="button" data-why="why-credit">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 17v.01M12 13a3 3 0 10-2.83-4"/></svg>
+            Why we ask
+          </button>
+          <div class="el-why-content" id="why-credit">
+            A CCJ or bankruptcy doesn't automatically disqualify you — many landlords consider context. Declaring it now means no surprises at the referencing stage, and often works in your favour.
+          </div>
+        </div>
+
+        <div class="el-field">
+          <label class="el-label">Ever been evicted in the last 5 years?</label>
+          <div class="radio-group">
+            <input type="radio" name="evicted" id="ev_no" value="no" checked>
+            <label for="ev_no">No</label>
+            <input type="radio" name="evicted" id="ev_yes" value="yes">
+            <label for="ev_yes">Yes</label>
+          </div>
+          <div id="evictionDetails" style="margin-top: 10px; display:none;">
+            <textarea class="el-textarea" id="eviction_details" placeholder="Briefly — what happened"></textarea>
+          </div>
+        </div>
+
+        <div class="el-field">
+          <label class="el-label">Any rent arrears in the last 3 years?</label>
+          <div class="radio-group">
+            <input type="radio" name="arrears" id="ar_no" value="no" checked>
+            <label for="ar_no">No</label>
+            <input type="radio" name="arrears" id="ar_yes" value="yes">
+            <label for="ar_yes">Yes</label>
+          </div>
+          <div id="arrearsDetails" style="margin-top: 10px; display:none;">
+            <textarea class="el-textarea" id="arrears_details" placeholder="Briefly — what happened and how it was resolved"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- REASON (optional) -->
+      <div class="section">
+        <div class="section-label">Anything else</div>
+        <div class="el-field">
+          <label class="el-label" for="reason_for_moving">Reason for moving <span style="text-transform:none; font-weight:400; letter-spacing:0;">(optional)</span></label>
+          <textarea class="el-textarea" id="reason_for_moving" placeholder="e.g. Relocating for work, growing family, current landlord selling"></textarea>
+        </div>
+      </div>
+
+      <!-- CONSENTS -->
+      <div class="consents">
+        <div class="section-label">Consent</div>
+
+        <label class="el-checkbox">
+          <input type="checkbox" id="consent_accuracy" required>
+          <div class="el-checkbox-label">I confirm the information I've provided is accurate and complete to the best of my knowledge.</div>
+        </label>
+        <label class="el-checkbox">
+          <input type="checkbox" id="consent_referencing" required>
+          <div class="el-checkbox-label">I consent to my details being shared with an independent referencing provider if the landlord shortlists my application. I can withdraw consent at any time.</div>
+        </label>
+        <label class="el-checkbox">
+          <input type="checkbox" id="consent_privacy" required>
+          <div class="el-checkbox-label">I've read the <a href="../privacy/" style="color: var(--el-green); text-decoration: underline;">privacy notice</a> and agree to my data being processed for this application.</div>
+        </label>
+      </div>
+
+      <div id="formError" style="color: var(--el-danger); font-size: 13px; margin-bottom: 14px; display:none;"></div>
+
+      <div class="submit-block">
+        <button type="submit" class="el-btn el-btn-primary el-btn-full" id="submitBtn">Submit application</button>
+        <div style="text-align: center; font-size: 11px; color: var(--el-muted-soft); margin-top: 14px;">
+          Your application goes directly to the landlord. No fees.
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="../assets/easierlet.js"></script>
+<script>
+const params = new URLSearchParams(window.location.search);
+const slug = params.get("slug");
+const token = params.get("token");
+
+let monthlyRent = null;
+let context = null;   // "listing" | "invite"
+
+init();
+
+async function init() {
+  if (!slug && !token) { showError(); return; }
+
+  try {
+    if (slug) {
+      context = "listing";
+      const listings = await EL.rest(`property_listings?select=*,properties(address,postcode,bedrooms,bathrooms)&slug=eq.${encodeURIComponent(slug)}`);
+      if (!listings.length || listings[0].status !== "live") { showError(); return; }
+      const l = listings[0];
+      monthlyRent = l.advertised_rent || null;
+      setPropertyCard(l.properties.address, l.properties.bedrooms, l.advertised_rent, l.properties.postcode);
+      document.getElementById("backLink").style.display = "inline-flex";
+      document.getElementById("backLink").href = `../listings/?slug=${encodeURIComponent(slug)}`;
+    }
+    else if (token) {
+      context = "invite";
+      const tenants = await EL.rest(`tenants?select=full_name,email,phone,monthly_rent,property_id,properties(address,postcode,bedrooms)&invite_token=eq.${encodeURIComponent(token)}`);
+      if (!tenants.length) { showError(); return; }
+      const t = tenants[0];
+      monthlyRent = t.monthly_rent || null;
+      setPropertyCard(t.properties?.address, t.properties?.bedrooms, t.monthly_rent, t.properties?.postcode);
+      // Pre-fill
+      if (t.full_name) document.getElementById("full_name").value = t.full_name;
+      if (t.email) document.getElementById("email").value = t.email;
+      if (t.phone) document.getElementById("phone").value = t.phone;
+    }
+
+    document.getElementById("loadingState").style.display = "none";
+    document.getElementById("formBlock").style.display = "block";
+    wireInteractions();
+    EL.wireWhyToggles();
+  } catch (err) {
+    console.error(err);
+    showError();
+  }
+}
+
+function setPropertyCard(address, beds, rent, postcode) {
+  const parts = (address || "").split(",").map(s => s.trim());
+  document.getElementById("propAddress").textContent = parts[0] || address || "—";
+  const meta = [];
+  if (beds) meta.push(`${beds} bed`);
+  if (rent) meta.push(`${EL.gbp(rent)} / month`);
+  if (postcode) meta.push(postcode);
+  document.getElementById("propMeta").textContent = meta.join(" · ");
+}
+
+function showError() {
+  document.getElementById("loadingState").style.display = "none";
+  document.getElementById("errorState").style.display = "block";
+}
+
+function wireInteractions() {
+  // Visa detail fields toggle
+  document.getElementById("right_to_rent_status").addEventListener("change", (e) => {
+    document.getElementById("visaFields").style.display = e.target.value === "visa" ? "block" : "none";
+  });
+
+  // Pets details toggle
+  document.querySelectorAll('input[name="has_pets"]').forEach(r => r.addEventListener("change", () => {
+    const show = document.getElementById("has_pets_yes").checked;
+    document.getElementById("petDetailsBlock").style.display = show ? "block" : "none";
+  }));
+
+  // Joint applicants
+  const nAdultsEl = document.getElementById("number_of_adults");
+  nAdultsEl.addEventListener("change", renderJointSection);
+  renderJointSection();
+  document.getElementById("addJointBtn").addEventListener("click", () => {
+    addJointApplicant();
+  });
+
+  // Employment detail shown unless unemployed/retired/student
+  document.getElementById("employment_status").addEventListener("change", (e) => {
+    const v = e.target.value;
+    const show = ["employed_full_time","employed_part_time","self_employed","contract"].includes(v);
+    document.getElementById("employmentDetailBlock").style.display = show ? "block" : "none";
+  });
+
+  // Additional income source toggle
+  document.getElementById("additional_income").addEventListener("input", (e) => {
+    const show = parseFloat(e.target.value) > 0;
+    document.getElementById("additionalIncomeSourceBlock").style.display = show ? "block" : "none";
+  });
+
+  // Affordability live indicator
+  document.getElementById("annual_income").addEventListener("input", updateAffordability);
+  document.getElementById("additional_income").addEventListener("input", updateAffordability);
+
+  // Adverse credit / eviction / arrears detail toggles
+  ["adverse_credit","evicted","arrears"].forEach(name => {
+    document.querySelectorAll(`input[name="${name}"]`).forEach(r => r.addEventListener("change", () => {
+      const yes = document.querySelector(`input[name="${name}"]:checked`).value === "yes";
+      const id = { adverse_credit: "adverseCreditDetails", evicted: "evictionDetails", arrears: "arrearsDetails" }[name];
+      document.getElementById(id).style.display = yes ? "block" : "none";
+    }));
+  });
+
+  // Progress bar based on fields completed
+  document.querySelectorAll("input, select, textarea").forEach(el => {
+    el.addEventListener("change", updateProgress);
+    el.addEventListener("input", updateProgress);
+  });
+  updateProgress();
+
+  // Submit
+  document.getElementById("applyForm").addEventListener("submit", submit);
+}
+
+function renderJointSection() {
+  const n = parseInt(document.getElementById("number_of_adults").value, 10) || 1;
+  const container = document.getElementById("jointApplicantsContainer");
+  const addBtn = document.getElementById("addJointBtn");
+  const needed = Math.max(0, n - 1);
+
+  // Trim if too many
+  while (container.children.length > needed) {
+    container.removeChild(container.lastChild);
+  }
+  // Add if too few
+  while (container.children.length < needed) {
+    addJointApplicant();
+  }
+  addBtn.style.display = n >= 2 && container.children.length < needed ? "block" : "none";
+}
+
+function addJointApplicant() {
+  const container = document.getElementById("jointApplicantsContainer");
+  const idx = container.children.length + 1;
+  const block = document.createElement("div");
+  block.className = "joint-block";
+  block.innerHTML = `
+    <div style="font-size: 12px; font-weight: 500; color: var(--el-muted); margin-bottom: 10px; letter-spacing: 0.3px; text-transform: uppercase;">
+      Joint applicant ${idx}
+    </div>
+    <div class="el-field">
+      <label class="el-label">Full name</label>
+      <input class="el-input" type="text" data-joint="name">
+    </div>
+    <div class="el-field-row">
+      <div class="el-field">
+        <label class="el-label">Email</label>
+        <input class="el-input" type="email" data-joint="email">
+      </div>
+      <div class="el-field">
+        <label class="el-label">Phone</label>
+        <input class="el-input" type="tel" data-joint="phone">
+      </div>
+    </div>
+    <div class="el-field">
+      <label class="el-label">Date of birth</label>
+      <input class="el-input" type="date" data-joint="date_of_birth">
+    </div>
+  `;
+  container.appendChild(block);
+}
+
+function updateAffordability() {
+  if (!monthlyRent) return;
+  const annual = parseFloat(document.getElementById("annual_income").value) || 0;
+  const additional = parseFloat(document.getElementById("additional_income").value) || 0;
+  const total = annual + additional;
+  if (total <= 0) {
+    document.getElementById("affordabilityIndicator").style.display = "none";
+    return;
+  }
+  const annualRent = monthlyRent * 12;
+  const multiple = total / annualRent;
+  const el = document.getElementById("affordabilityIndicator");
+  el.classList.remove("pass", "marginal", "fail");
+  if (multiple >= 2.5) {
+    el.classList.add("pass");
+    el.textContent = `✓ Affordability looks good (${multiple.toFixed(1)}× annual rent)`;
+  } else if (multiple >= 2.0) {
+    el.classList.add("marginal");
+    el.textContent = `Marginal (${multiple.toFixed(1)}× annual rent). A guarantor would help.`;
+  } else {
+    el.classList.add("fail");
+    el.textContent = `Below typical threshold (${multiple.toFixed(1)}× annual rent). Consider adding a guarantor.`;
+  }
+}
+
+function updateProgress() {
+  const requiredIds = ["full_name","email","phone","employment_status","annual_income"];
+  const completed = requiredIds.filter(id => {
+    const el = document.getElementById(id);
+    return el && el.value && el.value.trim() !== "";
+  }).length;
+  const consents = ["consent_accuracy","consent_referencing","consent_privacy"].filter(id =>
+    document.getElementById(id)?.checked).length;
+  const total = requiredIds.length + 3;
+  const done = completed + consents;
+  document.getElementById("progressBar").style.width = Math.round((done / total) * 100) + "%";
+}
+
+async function submit(e) {
+  e.preventDefault();
+  const btn = document.getElementById("submitBtn");
+  const errEl = document.getElementById("formError");
+  errEl.style.display = "none";
+
+  // Collect joint applicants
+  const jointApplicants = [];
+  document.querySelectorAll(".joint-block").forEach(block => {
+    const name = block.querySelector('[data-joint="name"]').value.trim();
+    const email = block.querySelector('[data-joint="email"]').value.trim();
+    const phone = block.querySelector('[data-joint="phone"]').value.trim();
+    const date_of_birth = block.querySelector('[data-joint="date_of_birth"]').value || null;
+    if (name && email) jointApplicants.push({ name, email, phone, date_of_birth });
+  });
+
+  const payload = {
+    slug: context === "listing" ? slug : undefined,
+    invite_token: context === "invite" ? token : undefined,
+
+    full_name: document.getElementById("full_name").value.trim(),
+    email: document.getElementById("email").value.trim(),
+    phone: document.getElementById("phone").value.trim(),
+    date_of_birth: document.getElementById("date_of_birth").value || null,
+    nationality: document.getElementById("nationality").value.trim() || null,
+
+    right_to_rent_status: document.getElementById("right_to_rent_status").value || null,
+    right_to_rent_visa_type: document.getElementById("right_to_rent_visa_type").value.trim() || null,
+    right_to_rent_visa_expiry: document.getElementById("right_to_rent_visa_expiry").value || null,
+
+    number_of_adults: parseInt(document.getElementById("number_of_adults").value, 10),
+    number_of_children: parseInt(document.getElementById("number_of_children").value, 10),
+    has_pets: document.getElementById("has_pets_yes").checked,
+    pet_details: document.getElementById("pet_details").value.trim() || null,
+    is_smoker: document.getElementById("smoke_yes").checked,
+    joint_applicants: jointApplicants,
+
+    preferred_tenancy_start: document.getElementById("preferred_tenancy_start").value || null,
+    preferred_tenancy_length: document.getElementById("preferred_tenancy_length").value || null,
+    guarantor_available: document.getElementById("guar_yes").checked,
+
+    employment_status: document.getElementById("employment_status").value || null,
+    employer_name: document.getElementById("employer_name").value.trim() || null,
+    job_title: document.getElementById("job_title").value.trim() || null,
+    years_in_role: parseFloat(document.getElementById("years_in_role").value) || null,
+    annual_income: parseFloat(document.getElementById("annual_income").value) || null,
+    additional_income: parseFloat(document.getElementById("additional_income").value) || null,
+    additional_income_source: document.getElementById("additional_income_source").value.trim() || null,
+
+    has_adverse_credit: document.querySelector('input[name="adverse_credit"]:checked').value === "yes",
+    adverse_credit_details: document.getElementById("adverse_credit_details").value.trim() || null,
+    has_been_evicted: document.querySelector('input[name="evicted"]:checked').value === "yes",
+    eviction_details: document.getElementById("eviction_details").value.trim() || null,
+    has_been_in_arrears: document.querySelector('input[name="arrears"]:checked').value === "yes",
+    arrears_details: document.getElementById("arrears_details").value.trim() || null,
+
+    reason_for_moving: document.getElementById("reason_for_moving").value.trim() || null,
+
+    consented_accuracy: document.getElementById("consent_accuracy").checked,
+    consented_referencing: document.getElementById("consent_referencing").checked,
+    consented_privacy: document.getElementById("consent_privacy").checked,
+  };
+
+  if (!payload.full_name || !payload.email || !payload.phone) {
+    errEl.textContent = "Name, email and phone are required.";
+    errEl.style.display = "block";
+    return;
+  }
+  if (!payload.consented_accuracy || !payload.consented_referencing || !payload.consented_privacy) {
+    errEl.textContent = "Please tick the three consent boxes at the bottom to submit.";
+    errEl.style.display = "block";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Sending…";
+
+  const { ok, data } = await EL.callFn("listing-apply", payload);
+  if (!ok) {
+    errEl.textContent = (data && data.error) ? `Something went wrong (${data.error}). Please try again.` : "Network error. Please try again.";
+    errEl.style.display = "block";
+    btn.disabled = false;
+    btn.textContent = "Submit application";
+    return;
+  }
+
+  document.getElementById("formBlock").style.display = "none";
+  document.querySelector(".page-header").style.display = "none";
+  document.getElementById("successState").style.display = "block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+</script>
+</body>
+</html>

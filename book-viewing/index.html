@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Book a viewing · easierLet</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/easierlet.css">
+
+<style>
+  :root { --font-serif: "Fraunces", Georgia, serif; }
+  body { background: var(--el-bg); }
+  .page-container {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+  .page-header {
+    padding: 8px 0 32px;
+  }
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--el-muted);
+    font-size: 13px;
+    margin-bottom: 18px;
+  }
+  .page-title {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 32px;
+    line-height: 1.15;
+    color: var(--el-ink);
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+  }
+  .page-sub {
+    font-size: 14px;
+    color: var(--el-muted);
+    line-height: 1.55;
+  }
+  .property-card {
+    background: #fff;
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    margin-bottom: 28px;
+    border: 1px solid var(--el-line-soft);
+  }
+  .property-address {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 18px;
+    color: var(--el-ink);
+    line-height: 1.3;
+    margin-bottom: 4px;
+  }
+  .property-meta {
+    font-size: 13px;
+    color: var(--el-muted);
+  }
+</style>
+</head>
+<body>
+
+<div class="page-container">
+  <div class="page-header">
+    <a class="back-link" id="backLink">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      Back to listing
+    </a>
+    <div id="formContent" style="display:none;">
+      <h1 class="page-title">Book a viewing</h1>
+      <p class="page-sub">Tell us when works and we'll come back to you quickly. You'll hear from the landlord directly.</p>
+    </div>
+  </div>
+
+  <div id="loadingState" style="text-align:center; padding: 60px 20px; color: var(--el-muted);">Loading…</div>
+
+  <div class="el-error" id="errorState" style="display:none;">
+    <h2>This listing isn't available</h2>
+    <p>The listing may have been taken down, or the link may be incorrect.</p>
+  </div>
+
+  <div class="el-success" id="successState" style="display:none;">
+    <h2>Request sent</h2>
+    <p>The landlord will be in touch soon to confirm a time. Keep an eye on your email.</p>
+  </div>
+
+  <div id="formBlock" style="display:none;">
+    <div class="property-card">
+      <div class="property-address" id="propAddress">—</div>
+      <div class="property-meta" id="propMeta">—</div>
+    </div>
+
+    <form id="viewingForm">
+      <div class="el-field">
+        <label class="el-label" for="name">Full name</label>
+        <input class="el-input" id="name" type="text" required autocomplete="name">
+      </div>
+
+      <div class="el-field-row">
+        <div class="el-field">
+          <label class="el-label" for="email">Email</label>
+          <input class="el-input" id="email" type="email" required autocomplete="email">
+        </div>
+        <div class="el-field">
+          <label class="el-label" for="phone">Phone</label>
+          <input class="el-input" id="phone" type="tel" autocomplete="tel">
+        </div>
+      </div>
+
+      <div class="el-field">
+        <label class="el-label" for="preferred">When works for you?</label>
+        <textarea class="el-textarea" id="preferred" placeholder="e.g. Weekday evenings, or any Saturday morning"></textarea>
+        <div class="el-hint">Give a few options so we can find a time that works for both sides.</div>
+      </div>
+
+      <div class="el-field">
+        <label class="el-label" for="message">Anything to add? <span style="text-transform: none; font-weight: 400; letter-spacing: 0;">(optional)</span></label>
+        <textarea class="el-textarea" id="message" placeholder="A question about the property, who'll be viewing, etc."></textarea>
+      </div>
+
+      <div id="formError" style="color: var(--el-danger); font-size: 13px; margin-bottom: 14px; display:none;"></div>
+
+      <button type="submit" class="el-btn el-btn-primary el-btn-full" id="submitBtn">Request viewing</button>
+      <div style="text-align: center; font-size: 11px; color: var(--el-muted-soft); margin-top: 14px;">
+        No fees. No obligation. Your details go straight to the landlord.
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="../assets/easierlet.js"></script>
+<script>
+const params = new URLSearchParams(window.location.search);
+const slug = params.get("slug");
+
+if (slug) {
+  document.getElementById("backLink").href = `../listings/?slug=${encodeURIComponent(slug)}`;
+}
+
+init();
+
+async function init() {
+  if (!slug) return showError();
+  try {
+    const listings = await EL.rest(`property_listings?select=*,properties(address,postcode,bedrooms,bathrooms)&slug=eq.${encodeURIComponent(slug)}`);
+    if (!listings.length) return showError();
+    const listing = listings[0];
+    if (listing.status !== "live") return showError();
+
+    const addressParts = (listing.properties.address || "").split(",").map(s => s.trim());
+    document.getElementById("propAddress").textContent = addressParts[0];
+    const metaBits = [];
+    if (listing.properties.bedrooms) metaBits.push(`${listing.properties.bedrooms} bed`);
+    if (listing.advertised_rent) metaBits.push(`${EL.gbp(listing.advertised_rent)} / month`);
+    if (listing.properties.postcode) metaBits.push(listing.properties.postcode);
+    document.getElementById("propMeta").textContent = metaBits.join(" · ");
+
+    document.getElementById("loadingState").style.display = "none";
+    document.getElementById("formContent").style.display = "block";
+    document.getElementById("formBlock").style.display = "block";
+    document.getElementById("viewingForm").addEventListener("submit", submit);
+  } catch (e) {
+    showError();
+  }
+}
+
+function showError() {
+  document.getElementById("loadingState").style.display = "none";
+  document.getElementById("errorState").style.display = "block";
+}
+
+async function submit(e) {
+  e.preventDefault();
+  const btn = document.getElementById("submitBtn");
+  const errEl = document.getElementById("formError");
+  errEl.style.display = "none";
+  btn.disabled = true;
+  btn.textContent = "Sending…";
+
+  const payload = {
+    slug,
+    name: document.getElementById("name").value.trim(),
+    email: document.getElementById("email").value.trim(),
+    phone: document.getElementById("phone").value.trim() || null,
+    preferred_times: document.getElementById("preferred").value.trim() || null,
+    message: document.getElementById("message").value.trim() || null,
+  };
+
+  if (!payload.name || !payload.email) {
+    errEl.textContent = "Name and email are required.";
+    errEl.style.display = "block";
+    btn.disabled = false;
+    btn.textContent = "Request viewing";
+    return;
+  }
+
+  const { ok, data } = await EL.callFn("viewing-request", payload);
+  if (!ok) {
+    errEl.textContent = (data && data.error) ? "Something went wrong. Please try again." : "Network error. Please try again.";
+    errEl.style.display = "block";
+    btn.disabled = false;
+    btn.textContent = "Request viewing";
+    return;
+  }
+
+  document.getElementById("formBlock").style.display = "none";
+  document.getElementById("formContent").style.display = "none";
+  document.getElementById("successState").style.display = "block";
+}
+</script>
+</body>
+</html>
