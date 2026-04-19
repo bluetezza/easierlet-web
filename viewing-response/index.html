@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>easierLet — Confirm your viewing</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F5F7F5;
+      color: #1A2E28;
+      padding: 0 0 60px 0;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: #1A6B55;
+      padding: 20px 20px 16px;
+      text-align: center;
+    }
+    .logo { font-size: 24px; color: #fff; }
+    .logo .light { font-weight: 300; }
+    .logo .bold { font-weight: 700; }
+    .header-sub { font-size: 13px; color: rgba(255,255,255,0.75); margin-top: 4px; }
+
+    .container { max-width: 560px; margin: 0 auto; padding: 20px 16px; }
+
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .property-card { border-left: 4px solid #1A6B55; }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #6B8278;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 22px;
+      color: #1A2E28;
+      margin-bottom: 10px;
+    }
+    h2 { font-size: 18px; color: #1A2E28; margin-bottom: 10px; }
+
+    .address { font-size: 17px; font-weight: 600; color: #1A2E28; line-height: 1.4; }
+
+    .time-callout {
+      background: #FFF8EC;
+      border-left: 3px solid #F0D080;
+      padding: 16px;
+      border-radius: 8px;
+      margin: 16px 0;
+    }
+    .time-callout-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: #8A6000;
+      margin-bottom: 4px;
+    }
+    .time-callout-value {
+      font-size: 17px;
+      font-weight: 600;
+      color: #8A6000;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 16px;
+      background: #1A6B55;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-bottom: 10px;
+    }
+    .btn:hover:not(:disabled) { background: #2A8A6E; }
+    .btn:disabled { background: #B0C8C0; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: #fff;
+      color: #1A6B55;
+      border: 1px solid #1A6B55;
+    }
+    .btn-secondary:hover:not(:disabled) { background: #F0F9F5; }
+
+    textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #E0E8E4;
+      border-radius: 10px;
+      font-size: 15px;
+      font-family: inherit;
+      color: #1A2E28;
+      background: #fff;
+      resize: vertical;
+      min-height: 90px;
+      margin-bottom: 12px;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #1A6B55;
+      box-shadow: 0 0 0 3px rgba(26,107,85,0.12);
+    }
+
+    .landlord-line {
+      font-size: 13px;
+      color: #6B8278;
+      margin-top: 12px;
+    }
+
+    .state { display: none; }
+    .state.visible { display: block; }
+    .loading { text-align: center; padding: 40px 20px; }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid #E0E8E4;
+      border-top-color: #1A6B55;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 14px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-state, .success-state { text-align: center; padding: 30px 20px; }
+    .state-icon { font-size: 48px; margin-bottom: 14px; }
+    .state-msg { font-size: 15px; color: #4A6560; line-height: 1.6; margin-bottom: 10px; }
+
+    .decline-form { display: none; }
+    .decline-form.visible { display: block; }
+
+    a { color: #1A6B55; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo"><span class="light">easier</span><span class="bold">Let</span></div>
+    <div class="header-sub">Viewing response</div>
+  </div>
+
+  <div class="container">
+
+    <!-- Loading -->
+    <div class="state loading visible" id="loadingState">
+      <div class="spinner"></div>
+      <p style="color:#6B8278;">Loading your viewing details…</p>
+    </div>
+
+    <!-- Error -->
+    <div class="state error-state" id="errorState">
+      <div class="state-icon">⚠️</div>
+      <h2>Link invalid or expired</h2>
+      <p class="state-msg">This viewing link is no longer valid. Please contact the landlord directly if you need to arrange a viewing.</p>
+    </div>
+
+    <!-- Already confirmed / wrong status -->
+    <div class="state error-state" id="alreadyDoneState">
+      <div class="state-icon">✓</div>
+      <h2 id="alreadyDoneTitle">Already confirmed</h2>
+      <p class="state-msg" id="alreadyDoneMsg">This viewing has already been confirmed. Check your inbox for the calendar invite.</p>
+    </div>
+
+    <!-- Main form -->
+    <div class="state" id="formState">
+      <div class="card property-card">
+        <div class="section-label">Property</div>
+        <div class="address" id="propertyAddress">—</div>
+        <div class="landlord-line" id="landlordLine">—</div>
+      </div>
+
+      <div class="card">
+        <div class="section-label">Proposed time</div>
+        <p style="font-size:14px;color:#4A6560;line-height:1.5;">
+          <span id="viewerGreeting">Hi</span>, the landlord has proposed this time for you to view the property:
+        </p>
+        <div class="time-callout">
+          <div class="time-callout-label">Proposed viewing</div>
+          <div class="time-callout-value" id="proposedTime">—</div>
+        </div>
+
+        <button class="btn" id="acceptBtn">Confirm this time</button>
+        <button class="btn btn-secondary" id="showDeclineBtn">Suggest a different time</button>
+
+        <div class="decline-form" id="declineForm">
+          <div style="margin-top:16px;">
+            <div class="section-label">Your message to the landlord</div>
+            <textarea id="declineNote" placeholder="e.g. 'Evening after 6pm would work better, or weekends.' (Optional)"></textarea>
+            <button class="btn" id="sendDeclineBtn">Send message</button>
+            <button class="btn btn-secondary" id="cancelDeclineBtn">Back</button>
+          </div>
+        </div>
+
+        <p class="landlord-line" style="margin-top:18px;">
+          By confirming, you'll receive a calendar invite to your email. The landlord is notified automatically.
+        </p>
+      </div>
+    </div>
+
+    <!-- Success: accepted -->
+    <div class="state success-state" id="acceptedState">
+      <div class="state-icon">🎉</div>
+      <h2>Viewing confirmed</h2>
+      <p class="state-msg">A calendar invite is on its way to your email. The landlord has been notified and will see you at the proposed time.</p>
+      <p class="state-msg" style="font-size:13px;">If anything changes, just reply to the confirmation email.</p>
+    </div>
+
+    <!-- Success: declined -->
+    <div class="state success-state" id="declinedState">
+      <div class="state-icon">📩</div>
+      <h2>Message sent</h2>
+      <p class="state-msg">The landlord has been notified and will get back to you with an alternative time.</p>
+    </div>
+
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://ffzknvcptqjlkxmkdxuk.supabase.co';
+    const FN_URL = `${SUPABASE_URL}/functions/v1/viewing-response`;
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    function $(id) { return document.getElementById(id); }
+    function showState(id) {
+      document.querySelectorAll('.state').forEach(el => el.classList.remove('visible'));
+      $(id).classList.add('visible');
+    }
+
+    function humanDate(iso) {
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString('en-GB', {
+          weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+          hour: 'numeric', minute: '2-digit',
+          timeZone: 'Europe/London'
+        });
+      } catch (e) { return iso; }
+    }
+
+    async function init() {
+      if (!token) { showState('errorState'); return; }
+      try {
+        const res = await fetch(`${FN_URL}?token=${encodeURIComponent(token)}`);
+        if (!res.ok) { showState('errorState'); return; }
+        const data = await res.json();
+
+        const v = data.viewing;
+        if (!v) { showState('errorState'); return; }
+
+        // Status gate: only "proposed" rows are actionable.
+        if (v.status === 'confirmed') {
+          $('alreadyDoneTitle').textContent = 'Already confirmed';
+          $('alreadyDoneMsg').textContent = 'This viewing has already been confirmed. Check your inbox for the calendar invite.';
+          showState('alreadyDoneState');
+          return;
+        }
+        if (v.status !== 'proposed' || !v.proposed_datetime) {
+          $('alreadyDoneTitle').textContent = 'No time to respond to';
+          $('alreadyDoneMsg').textContent = 'There isn\u2019t a proposed time waiting for your response right now. The landlord will be in touch.';
+          showState('alreadyDoneState');
+          return;
+        }
+
+        // Populate
+        $('propertyAddress').textContent = data.property?.address ?? 'the property';
+        $('landlordLine').textContent = `Proposed by ${data.landlord?.name ?? 'your landlord'}`;
+        $('proposedTime').textContent = humanDate(v.proposed_datetime);
+        if (v.prospect_name) {
+          $('viewerGreeting').textContent = `Hi ${v.prospect_name.split(' ')[0]}`;
+        }
+        showState('formState');
+      } catch (e) {
+        console.error(e);
+        showState('errorState');
+      }
+    }
+
+    async function accept() {
+      const btn = $('acceptBtn');
+      btn.disabled = true;
+      btn.textContent = 'Confirming…';
+      try {
+        const res = await fetch(FN_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, action: 'accept' })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error ?? 'failed');
+        showState('acceptedState');
+      } catch (e) {
+        console.error(e);
+        btn.disabled = false;
+        btn.textContent = 'Confirm this time';
+        alert('Sorry, something went wrong. Please try again or reply to the landlord by email.');
+      }
+    }
+
+    function showDecline() { $('declineForm').classList.add('visible'); }
+    function hideDecline() { $('declineForm').classList.remove('visible'); }
+
+    async function sendDecline() {
+      const btn = $('sendDeclineBtn');
+      const note = $('declineNote').value.trim();
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      try {
+        const res = await fetch(FN_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, action: 'decline', note: note || null })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error ?? 'failed');
+        showState('declinedState');
+      } catch (e) {
+        console.error(e);
+        btn.disabled = false;
+        btn.textContent = 'Send message';
+        alert('Sorry, something went wrong. Please try again or reply to the landlord by email.');
+      }
+    }
+
+    $('acceptBtn').addEventListener('click', accept);
+    $('showDeclineBtn').addEventListener('click', showDecline);
+    $('cancelDeclineBtn').addEventListener('click', hideDecline);
+    $('sendDeclineBtn').addEventListener('click', sendDecline);
+
+    init();
+  </script>
+
+</body>
+</html>
