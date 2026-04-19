@@ -1,1152 +1,1042 @@
 <!DOCTYPE html>
-<html lang="en-GB">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>easierLet</title>
-<meta name="description" content="A home, listed on easierLet.">
-<meta property="og:type" content="website">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Dynamic title/description/og are updated once the listing loads -->
+  <title>Property to Let — easierLet</title>
+  <meta name="description" content="View this property to let, book a viewing, or apply.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="easierLet">
+  <meta property="og:title" content="Property to Let">
+  <meta property="og:description" content="A home available to rent, listed on easierLet.">
+  <meta property="og:image" content="https://easierlet.com/og-default.png">
+  <meta name="twitter:card" content="summary_large_image">
 
-<link rel="stylesheet" href="../assets/easierlet.css">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
 
-<!-- Leaflet for the map -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin>
+  <!-- Leaflet (OpenStreetMap) — loaded lazily only when the map is shown -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 
-<!-- Pannellum for 360 photos -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
+  <!-- Pannellum for 360° photos — loaded lazily when a 360 photo is opened -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.css">
 
-<style>
-  :root { --font-serif: "Fraunces", Georgia, serif; }
-
-  body { background: #fff; padding-bottom: 0; }
-
-  /* ---------- Floating header ---------- */
-  .header {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 50;
-    padding: 16px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    pointer-events: none;
-    transition: background 200ms ease, backdrop-filter 200ms ease;
-  }
-  .header.scrolled {
-    background: rgba(255,255,255,0.92);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 0.5px solid var(--el-line);
-  }
-  .header > * { pointer-events: auto; }
-  .header .el-logo {
-    color: #fff;
-    font-size: 19px;
-    text-shadow: 0 1px 6px rgba(0,0,0,0.35);
-    transition: color 200ms ease, text-shadow 200ms ease;
-  }
-  .header.scrolled .el-logo {
-    color: var(--el-ink);
-    text-shadow: none;
-  }
-  .header-chip {
-    background: rgba(0,0,0,0.38);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    color: #fff;
-    padding: 7px 14px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: background 200ms ease, color 200ms ease;
-  }
-  .header.scrolled .header-chip {
-    background: var(--el-green-pale);
-    color: var(--el-green);
-  }
-  .status-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: #1D9E75;
-    display: inline-block;
-  }
-
-  /* ---------- HERO ---------- */
-  .hero {
-    position: relative;
-    width: 100%;
-    height: 100vh;
-    min-height: 540px;
-    max-height: 900px;
-    background: #1A2E28;
-    overflow: hidden;
-  }
-  .hero-media {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  .hero-media-video {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .hero-360-wrapper {
-    position: absolute;
-    inset: 0;
-  }
-  /* Gradient overlay — subtle at top for header readability, at bottom for controls */
-  .hero::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background:
-      linear-gradient(180deg, rgba(0,0,0,0.35) 0%, transparent 18%, transparent 70%, rgba(0,0,0,0.45) 100%);
-    z-index: 2;
-  }
-
-  /* Counter in top-right */
-  .hero-counter {
-    position: absolute;
-    top: 18px;
-    right: 20px;
-    z-index: 3;
-    background: rgba(0,0,0,0.40);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    color: #fff;
-    padding: 5px 11px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
-  }
-  .header.scrolled ~ .hero .hero-counter {
-    top: 72px;  /* push down when header has background */
-  }
-
-  /* Left/right arrows */
-  .hero-nav {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 3;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: rgba(0,0,0,0.35);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    border: none;
-    opacity: 0;
-    transition: opacity 200ms ease;
-  }
-  .hero:hover .hero-nav { opacity: 1; }
-  .hero-nav.left { left: 16px; }
-  .hero-nav.right { right: 16px; }
-  @media (max-width: 720px) { .hero-nav { display: none; } }
-
-  /* Swipe area indicator dots */
-  .hero-dots {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 86px;
-    z-index: 3;
-    display: flex;
-    gap: 6px;
-    pointer-events: none;
-  }
-  .hero-dots span {
-    width: 8px; height: 3px;
-    border-radius: 2px;
-    background: rgba(255,255,255,0.4);
-    transition: width 180ms ease, background 180ms ease;
-  }
-  .hero-dots span.active {
-    width: 24px;
-    background: #fff;
-  }
-
-  /* Media type filter buttons - bottom center */
-  .hero-filters {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 28px;
-    z-index: 3;
-    display: flex;
-    gap: 6px;
-    background: rgba(0,0,0,0.40);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    padding: 4px;
-    border-radius: 999px;
-  }
-  .hero-filter {
-    background: transparent;
-    color: rgba(255,255,255,0.7);
-    padding: 8px 14px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 0.3px;
-    transition: background 180ms ease, color 180ms ease;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .hero-filter:hover { color: #fff; }
-  .hero-filter.active {
-    background: #fff;
-    color: var(--el-ink);
-  }
-  .hero-filter-count {
-    font-size: 10px;
-    opacity: 0.7;
-    font-variant-numeric: tabular-nums;
-  }
-  .hero-filter.active .hero-filter-count { opacity: 0.5; }
-
-  /* Tap zones on the hero itself for next/prev (mobile) */
-  .hero-tap-left,
-  .hero-tap-right {
-    position: absolute;
-    top: 0;
-    bottom: 160px;   /* don't block filter buttons */
-    width: 33%;
-    z-index: 2;
-    cursor: pointer;
-  }
-  .hero-tap-left { left: 0; }
-  .hero-tap-right { right: 0; }
-
-  /* ---------- Under-hero summary block ---------- */
-  .summary {
-    background: #fff;
-    padding: 32px 20px 20px;
-    max-width: 720px;
-    margin: 0 auto;
-  }
-  .summary-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 6px;
-  }
-  .summary-status span {
-    font-size: 11px;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    color: var(--el-green-light);
-    font-weight: 500;
-  }
-  .summary-address {
-    font-family: var(--font-serif);
-    font-weight: 400;
-    font-size: clamp(26px, 4vw, 32px);
-    line-height: 1.15;
-    letter-spacing: -0.4px;
-    color: var(--el-ink);
-    margin-bottom: 2px;
-  }
-  .summary-locality {
-    font-size: 14px;
-    color: var(--el-muted);
-    margin-bottom: 26px;
-  }
-
-  .summary-money {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    border-top: 1px solid var(--el-line);
-    padding-top: 18px;
-    margin-bottom: 18px;
-  }
-  .summary-money-cell {
-    padding-right: 20px;
-  }
-  .summary-money-cell + .summary-money-cell {
-    padding-left: 20px;
-    border-left: 1px solid var(--el-line);
-  }
-  .summary-money-label {
-    font-size: 10px;
-    letter-spacing: 0.7px;
-    text-transform: uppercase;
-    color: var(--el-muted-soft);
-    margin-bottom: 3px;
-  }
-  .summary-money-value {
-    font-size: 22px;
-    font-weight: 500;
-    color: var(--el-ink);
-    line-height: 1.1;
-  }
-  .summary-money-value small {
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--el-muted);
-    margin-left: 3px;
-  }
-
-  .summary-facts {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-    padding-top: 18px;
-    border-top: 1px solid var(--el-line);
-  }
-  .summary-fact { text-align: center; }
-  .summary-fact-value {
-    font-size: 18px;
-    font-weight: 500;
-    color: var(--el-ink);
-    line-height: 1;
-  }
-  .summary-fact-label {
-    font-size: 10px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    color: var(--el-muted-soft);
-    margin-top: 5px;
-  }
-
-  /* ---------- Headline + description ---------- */
-  .headline-block {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 28px 20px 12px;
-    background: #fff;
-  }
-  .headline {
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-weight: 400;
-    font-size: 18px;
-    line-height: 1.5;
-    color: var(--el-ink-soft);
-    margin-bottom: 16px;
-  }
-  .description {
-    font-size: 15px;
-    line-height: 1.7;
-    color: var(--el-ink-soft);
-  }
-
-  /* ---------- Chips ---------- */
-  .chips-block {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 16px 20px 28px;
-    background: #fff;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  /* ---------- Map ---------- */
-  .map-section {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 8px 20px 40px;
-    background: #fff;
-  }
-  .map-title {
-    font-size: 11px;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    color: var(--el-muted);
-    margin-bottom: 12px;
-  }
-  .map-canvas {
-    height: 240px;
-    border-radius: var(--radius);
-    overflow: hidden;
-    background: #EAEDE5;
-  }
-  .leaflet-container { font: inherit; }
-
-  /* ---------- Process timeline ---------- */
-  .process-section {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 0 20px 40px;
-    background: #fff;
-  }
-  .process-card {
-    background: var(--el-bg);
-    border-radius: var(--radius-lg);
-    padding: 24px;
-  }
-  .process-title {
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-size: 18px;
-    font-weight: 400;
-    color: var(--el-ink);
-    margin-bottom: 20px;
-  }
-  .process-steps {
-    display: flex;
-    gap: 0;
-    position: relative;
-    margin-bottom: 18px;
-  }
-  .process-steps::before {
-    content: "";
-    position: absolute;
-    top: 11px;
-    left: 14px;
-    right: 14px;
-    height: 1px;
-    background: var(--el-line);
-  }
-  .process-step {
-    flex: 1;
-    text-align: center;
-    position: relative;
-  }
-  .process-step-dot {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    margin: 0 auto 8px;
-    background: #fff;
-    border: 1.5px solid var(--el-green-border);
-    position: relative;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .process-step.current .process-step-dot {
-    background: var(--el-green);
-    border-color: var(--el-green);
-  }
-  .process-step-label {
-    font-size: 11px;
-    color: var(--el-muted);
-    font-weight: 500;
-    letter-spacing: 0.2px;
-  }
-  .process-step.current .process-step-label {
-    color: var(--el-ink);
-    font-weight: 600;
-  }
-  .process-tagline {
-    font-size: 13px;
-    color: var(--el-muted);
-    text-align: center;
-    line-height: 1.55;
-    max-width: 340px;
-    margin: 0 auto;
-  }
-
-  /* ---------- CTA block ---------- */
-  .cta-section {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 8px 20px 40px;
-    background: #fff;
-  }
-  .cta-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .cta-footnote {
-    font-size: 11px;
-    color: var(--el-muted-soft);
-    text-align: center;
-    margin-top: 14px;
-    letter-spacing: 0.1px;
-  }
-
-  /* ---------- Landlord footer block ---------- */
-  .landlord-section {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 24px 20px 60px;
-    background: #fff;
-    border-top: 1px solid var(--el-line);
-  }
-  .landlord-row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .landlord-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: var(--el-green-pale);
-    color: var(--el-green);
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-  }
-  .landlord-name { font-size: 14px; font-weight: 500; color: var(--el-ink); margin-bottom: 2px; }
-  .landlord-sub { font-size: 12px; color: var(--el-muted); }
-  .verified-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 9px;
-    background: var(--el-green-pale);
-    color: var(--el-green);
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 500;
-    margin-left: 8px;
-  }
-
-  /* ---------- Site footer ---------- */
-  .site-footer {
-    background: var(--el-bg);
-    padding: 40px 20px;
-    text-align: center;
-    color: var(--el-muted);
-    font-size: 12px;
-  }
-  .site-footer .el-logo {
-    color: var(--el-ink);
-    margin-bottom: 10px;
-    font-size: 17px;
-  }
-
-  /* ---------- Lightbox / fullscreen gallery ---------- */
-  .lightbox {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: #000;
-    z-index: 100;
-    flex-direction: column;
-  }
-  .lightbox.open { display: flex; }
-  .lightbox-header {
-    padding: 16px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: #fff;
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    z-index: 2;
-    background: linear-gradient(180deg, rgba(0,0,0,0.5), transparent);
-  }
-  .lightbox-close {
-    background: rgba(0,0,0,0.4);
-    backdrop-filter: blur(10px);
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .lightbox-body {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-  }
-  .lightbox-img, .lightbox-video {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
-
-  /* Desktop adjustments */
-  @media (min-width: 900px) {
-    .hero { height: 80vh; min-height: 620px; }
-    .summary, .headline-block, .chips-block, .map-section, .process-section, .cta-section, .landlord-section {
-      max-width: 860px;
+  <style>
+    :root {
+      --teal-dark:  #0F6E56;
+      --teal:       #1A6B55;
+      --teal-light: #1D9E75;
+      --bg:         #FAFAF7;
+      --bg-card:    #FFFFFF;
+      --bg-soft:    #F0F7F4;
+      --text:       #1A2E28;
+      --text-muted: #5E7A72;
+      --text-quiet: #8A9E96;
+      --border:     #E0E8E4;
+      --border-soft:#EDF2EF;
+      --amber:      #C8A96E;
+      --danger:     #B5462D;
+      --radius:     12px;
+      --radius-lg:  16px;
+      --shadow-sm:  0 1px 2px rgba(15, 46, 40, 0.04);
+      --shadow:     0 4px 14px rgba(15, 46, 40, 0.07);
     }
-    .summary-address { font-size: 36px; }
-    .map-canvas { height: 320px; }
-  }
 
-  /* Loading/error states */
-  .full-state {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-    text-align: center;
-  }
-  .full-state h1 {
-    font-family: var(--font-serif);
-    font-weight: 400;
-    font-size: 32px;
-    color: var(--el-ink);
-    margin-bottom: 12px;
-  }
-  .full-state p { color: var(--el-muted); max-width: 440px; }
-</style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    body { min-height: 100vh; }
+    a { color: var(--teal); text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+    img { display: block; max-width: 100%; }
+
+    /* =========================================================================
+       App shell
+       ========================================================================= */
+    .page { max-width: 560px; margin: 0 auto; padding-bottom: 80px; }
+    @media (min-width: 720px) {
+      .page { max-width: 720px; }
+    }
+
+    /* Sticky header */
+    .header {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: saturate(180%) blur(14px);
+      -webkit-backdrop-filter: saturate(180%) blur(14px);
+      border-bottom: 1px solid var(--border-soft);
+      padding: 14px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { font-size: 20px; letter-spacing: -0.3px; color: var(--text); }
+    .logo .e { font-family: 'DM Serif Display', serif; font-weight: 400; }
+    .logo .l { font-weight: 500; }
+    .verified-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px; color: var(--text-muted);
+      background: var(--bg-soft);
+      padding: 4px 10px; border-radius: 999px;
+    }
+    .verified-badge .dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--teal-light);
+    }
+
+    /* =========================================================================
+       Loading / error states
+       ========================================================================= */
+    .state {
+      padding: 80px 24px; text-align: center;
+    }
+    .state .spinner {
+      width: 28px; height: 28px; margin: 0 auto 16px;
+      border: 2.5px solid var(--border); border-top-color: var(--teal);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .state h1 { font-size: 20px; margin-bottom: 6px; }
+    .state p { color: var(--text-muted); font-size: 14px; }
+
+    /* =========================================================================
+       Hero gallery
+       ========================================================================= */
+    .hero {
+      position: relative;
+      background: #E7EEE9;
+      aspect-ratio: 4 / 5;
+      overflow: hidden;
+    }
+    @media (min-width: 720px) {
+      .hero { aspect-ratio: 16 / 10; }
+    }
+    .hero-img {
+      width: 100%; height: 100%; object-fit: cover;
+      opacity: 0; transition: opacity 0.35s ease;
+    }
+    .hero-img.show { opacity: 1; }
+    .hero-controls {
+      position: absolute; left: 0; right: 0; bottom: 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 14px;
+    }
+    .hero-counter {
+      font-size: 12px; font-weight: 500; color: #fff;
+      background: rgba(15, 46, 40, 0.55); backdrop-filter: blur(10px);
+      padding: 5px 11px; border-radius: 999px;
+    }
+    .hero-type-badge {
+      font-size: 11px; font-weight: 600; color: #fff;
+      background: rgba(15, 46, 40, 0.55); backdrop-filter: blur(10px);
+      padding: 5px 10px; border-radius: 999px;
+      letter-spacing: 0.4px; text-transform: uppercase;
+    }
+    .hero-nav {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.9); color: var(--text);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 600;
+      box-shadow: var(--shadow-sm);
+      transition: background 0.15s ease;
+    }
+    .hero-nav:hover { background: #fff; }
+    .hero-nav.prev { left: 12px; }
+    .hero-nav.next { right: 12px; }
+    .hero-nav:disabled { opacity: 0; pointer-events: none; }
+
+    /* Fullscreen gallery */
+    .lightbox {
+      position: fixed; inset: 0; z-index: 100;
+      background: #0A1512;
+      display: none; flex-direction: column;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox-close {
+      position: absolute; top: 16px; right: 16px; z-index: 2;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+    .lightbox-viewer { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+    .lightbox-viewer img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .lightbox-viewer video { max-width: 100%; max-height: 100%; }
+    .lightbox-viewer #pannellum-container { width: 100%; height: 100%; }
+    .lightbox-caption {
+      color: #fff; text-align: center; padding: 12px 20px 24px;
+      font-size: 14px; background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.4));
+    }
+    .lightbox-thumbs {
+      display: flex; gap: 8px; padding: 12px 16px 20px;
+      overflow-x: auto; scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+    .lightbox-thumbs::-webkit-scrollbar { height: 0; }
+    .lightbox-thumb {
+      width: 60px; height: 60px; border-radius: 8px; overflow: hidden;
+      flex-shrink: 0; opacity: 0.55; transition: opacity 0.2s ease;
+      border: 2px solid transparent; position: relative;
+    }
+    .lightbox-thumb.active { opacity: 1; border-color: #fff; }
+    .lightbox-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .lightbox-thumb .type-dot {
+      position: absolute; top: 3px; right: 3px; width: 8px; height: 8px;
+      border-radius: 50%; background: var(--teal-light);
+    }
+
+    /* =========================================================================
+       Key facts strip
+       ========================================================================= */
+    .key-facts {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      padding: 20px 20px 4px;
+    }
+    .fact { text-align: center; }
+    .fact .label {
+      font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase;
+      color: var(--text-quiet); margin-bottom: 4px;
+    }
+    .fact .value {
+      font-size: 17px; font-weight: 500; color: var(--text);
+    }
+    .fact .value .unit {
+      font-size: 11px; color: var(--text-muted); font-weight: 400;
+    }
+
+    /* Rent + deposit strip */
+    .price-strip {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 12px; padding: 14px 20px 18px;
+    }
+    .price-card {
+      background: var(--bg-card); padding: 16px;
+      border-radius: var(--radius); box-shadow: var(--shadow-sm);
+    }
+    .price-card .label {
+      font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 4px;
+    }
+    .price-card .value { font-size: 22px; font-weight: 600; color: var(--text); }
+    .price-card .sub   { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* =========================================================================
+       Section heading + address
+       ========================================================================= */
+    .addr-block {
+      padding: 8px 20px 14px;
+    }
+    .addr-headline {
+      font-family: 'DM Serif Display', serif; font-size: 20px; line-height: 1.3;
+      color: var(--text); font-style: italic; margin-bottom: 8px;
+    }
+    .addr-line { font-size: 14px; color: var(--text-muted); }
+
+    .section { padding: 22px 20px; }
+    .section-label {
+      font-size: 11px; letter-spacing: 0.7px; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 12px; font-weight: 500;
+    }
+
+    /* =========================================================================
+       Description
+       ========================================================================= */
+    .description { font-size: 15px; color: var(--text); line-height: 1.65; white-space: pre-wrap; }
+    .description.collapsed {
+      display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .see-more {
+      display: inline-block; margin-top: 10px; font-size: 14px;
+      color: var(--teal); font-weight: 500;
+    }
+
+    /* =========================================================================
+       Amenities
+       ========================================================================= */
+    .amenity-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .amenity-tag {
+      font-size: 13px; color: var(--text);
+      background: var(--bg-card); border: 1px solid var(--border);
+      padding: 7px 12px; border-radius: 999px;
+    }
+
+    /* =========================================================================
+       Map
+       ========================================================================= */
+    .map-wrap {
+      height: 220px; border-radius: var(--radius); overflow: hidden;
+      background: var(--bg-soft);
+      box-shadow: var(--shadow-sm);
+    }
+    #map { height: 100%; width: 100%; }
+    .map-fallback {
+      height: 100%; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 6px; color: var(--text-muted); font-size: 13px;
+    }
+    .map-note {
+      font-size: 12px; color: var(--text-quiet); margin-top: 8px;
+    }
+
+    /* =========================================================================
+       How renting works
+       ========================================================================= */
+    .steps { display: flex; flex-direction: column; gap: 14px; }
+    .step { display: flex; gap: 14px; align-items: flex-start; }
+    .step-num {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--bg-soft); color: var(--teal);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+    .step-title { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .step-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+    /* =========================================================================
+       Footer
+       ========================================================================= */
+    .foot {
+      padding: 28px 20px 16px; text-align: center;
+      font-size: 12px; color: var(--text-quiet); border-top: 1px solid var(--border-soft);
+      margin-top: 8px;
+    }
+    .foot a { color: var(--text-muted); }
+
+    /* =========================================================================
+       Sticky CTA bar
+       ========================================================================= */
+    .cta-bar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: saturate(180%) blur(14px);
+      -webkit-backdrop-filter: saturate(180%) blur(14px);
+      border-top: 1px solid var(--border-soft);
+      padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); display: flex;
+      justify-content: center;
+    }
+    .cta-bar .inner {
+      max-width: 560px; width: 100%;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .cta-primary {
+      flex: 1; min-height: 48px; border-radius: 12px;
+      background: var(--teal); color: #fff;
+      font-size: 15px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 6px rgba(26, 107, 85, 0.25);
+      transition: background 0.15s ease;
+    }
+    .cta-primary:hover { background: var(--teal-dark); }
+    .cta-sub {
+      font-size: 12px; color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* =========================================================================
+       Modal (book viewing)
+       ========================================================================= */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 60;
+      background: rgba(15, 46, 40, 0.45);
+      backdrop-filter: blur(3px);
+      display: none; align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg); width: 100%; max-width: 560px;
+      border-radius: 20px 20px 0 0;
+      max-height: 92vh; overflow-y: auto;
+      padding: 20px 20px 28px;
+      animation: slide-up 0.28s ease-out;
+    }
+    @media (min-width: 560px) {
+      .modal-overlay { align-items: center; }
+      .modal { border-radius: 20px; max-height: 86vh; }
+    }
+    @keyframes slide-up { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    .modal-handle {
+      width: 40px; height: 4px; border-radius: 2px;
+      background: var(--border); margin: -4px auto 16px;
+    }
+    .modal-title { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+    .modal-sub   { font-size: 14px; color: var(--text-muted); margin-bottom: 22px; }
+
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 12px; font-weight: 600;
+      letter-spacing: 0.4px; color: var(--text-muted); text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .field input, .field textarea {
+      width: 100%; padding: 12px 14px; font-size: 15px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text);
+      font-family: inherit; -webkit-appearance: none;
+    }
+    .field input:focus, .field textarea:focus {
+      outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(26, 107, 85, 0.1);
+    }
+    .field textarea { min-height: 70px; resize: vertical; }
+    .field-hint { font-size: 12px; color: var(--text-quiet); margin-top: 4px; }
+
+    .turnstile-wrap { margin: 6px 0 18px; display: flex; justify-content: center; }
+
+    .submit-btn {
+      width: 100%; min-height: 48px; border-radius: 12px;
+      background: var(--teal); color: #fff;
+      font-size: 15px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .submit-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .success-panel, .error-panel { text-align: center; padding: 24px 0 8px; }
+    .success-panel .icon, .error-panel .icon {
+      width: 48px; height: 48px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 14px; font-size: 24px;
+    }
+    .success-panel .icon { background: var(--bg-soft); color: var(--teal); }
+    .error-panel .icon   { background: #FBEEE9; color: var(--danger); }
+    .success-panel h3 { font-size: 18px; margin-bottom: 6px; }
+    .success-panel p { color: var(--text-muted); font-size: 14px; }
+
+    .hidden { display: none !important; }
+  </style>
 </head>
 <body>
+  <div class="page">
+    <div class="header">
+      <div class="logo"><span class="e">easier</span><span class="l">Let</span></div>
+      <div id="verifiedBadge" class="verified-badge hidden"><span class="dot"></span><span>Verified landlord</span></div>
+    </div>
 
-<!-- Loading state shown initially -->
-<div id="loadingState" class="full-state">
-  <div class="el-logo" style="font-size: 22px; margin-bottom: 32px;">
-    <span class="mark-easier">easier</span><span class="mark-let">Let</span>
+    <!-- Loading -->
+    <div class="state" id="loadingState">
+      <div class="spinner"></div>
+      <p>Loading this home...</p>
+    </div>
+
+    <!-- Error -->
+    <div class="state hidden" id="errorState">
+      <h1>Home not found</h1>
+      <p id="errorMsg">This listing may have been taken down or the link might be wrong. Please check the link or contact the landlord.</p>
+    </div>
+
+    <!-- Main content -->
+    <div class="hidden" id="content">
+
+      <!-- Hero gallery -->
+      <div class="hero" id="hero">
+        <img id="heroImg" class="hero-img" alt="">
+        <button class="hero-nav prev" id="heroPrev" aria-label="Previous photo">‹</button>
+        <button class="hero-nav next" id="heroNext" aria-label="Next photo">›</button>
+        <div class="hero-controls">
+          <span class="hero-type-badge hidden" id="heroTypeBadge">Photo</span>
+          <span class="hero-counter" id="heroCounter">1 / 1</span>
+        </div>
+      </div>
+
+      <!-- Key facts -->
+      <div class="key-facts" id="keyFacts"></div>
+
+      <!-- Rent + deposit strip -->
+      <div class="price-strip">
+        <div class="price-card">
+          <div class="label">Monthly rent</div>
+          <div class="value" id="rentVal">—</div>
+          <div class="sub">per calendar month</div>
+        </div>
+        <div class="price-card">
+          <div class="label">Deposit</div>
+          <div class="value" id="depositVal">—</div>
+          <div class="sub" id="depositSub">refundable</div>
+        </div>
+      </div>
+
+      <!-- Address -->
+      <div class="addr-block">
+        <div class="addr-headline" id="addrHeadline">A home on the edge of town.</div>
+        <div class="addr-line" id="addrLine"></div>
+      </div>
+
+      <!-- Description -->
+      <div class="section" id="descSection" hidden>
+        <div class="section-label">About this home</div>
+        <div class="description collapsed" id="description"></div>
+        <a href="#" class="see-more hidden" id="seeMore">Read more</a>
+      </div>
+
+      <!-- Amenities -->
+      <div class="section" id="amenSection" hidden>
+        <div class="section-label">At a glance</div>
+        <div class="amenity-tags" id="amenityTags"></div>
+      </div>
+
+      <!-- Map -->
+      <div class="section" id="mapSection">
+        <div class="section-label">Location</div>
+        <div class="map-wrap">
+          <div id="map"></div>
+          <div class="map-fallback hidden" id="mapFallback">
+            <span>📍</span>
+            <span id="mapFallbackText">Location available on viewing</span>
+          </div>
+        </div>
+        <div class="map-note" id="mapNote"></div>
+      </div>
+
+      <!-- How renting works -->
+      <div class="section">
+        <div class="section-label">How this works</div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div>
+              <div class="step-title">Book a viewing</div>
+              <div class="step-desc">We usually confirm within 24 hours. Viewings typically happen within 3 days.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div>
+              <div class="step-title">See the property</div>
+              <div class="step-desc">Visit in person. Ask questions. Decide if it's right for you.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div>
+              <div class="step-title">Apply and move in</div>
+              <div class="step-desc">If you'd like to take it, the landlord will send you an application link and guide you through referencing and the tenancy agreement.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="foot">
+        <div>Listed on <strong>easierLet</strong></div>
+        <div style="margin-top:4px;">Viewings handled directly by the landlord.</div>
+      </div>
+    </div>
   </div>
-  <p>Loading…</p>
-</div>
 
-<!-- Not-found state -->
-<div id="notFoundState" class="full-state" style="display:none;">
-  <h1>This home isn't listed.</h1>
-  <p>The listing may have been taken down, or the link may be incorrect. Check back soon.</p>
-</div>
-
-<!-- Delisted state -->
-<div id="delistedState" class="full-state" style="display:none;">
-  <h1>Not currently available</h1>
-  <p>This home isn't accepting applications at the moment. Check back soon or look at other listings.</p>
-</div>
-
-<!-- Main listing content -->
-<main id="listing" style="display:none;">
-  <header class="header" id="header">
-    <div class="el-logo">
-      <span class="mark-easier">easier</span><span class="mark-let">Let</span>
+  <!-- Sticky CTA -->
+  <div class="cta-bar hidden" id="ctaBar">
+    <div class="inner">
+      <button class="cta-primary" id="openViewingBtn">Book a viewing</button>
     </div>
-    <div class="header-chip" id="headerStatus">
-      <span class="status-dot"></span>
-      <span id="headerStatusText">Available</span>
-    </div>
-  </header>
-
-  <!-- Fullscreen hero gallery -->
-  <section class="hero" id="hero">
-    <div class="hero-counter" id="heroCounter">1 / 1</div>
-
-    <!-- Tap zones -->
-    <div class="hero-tap-left" onclick="prevMedia()"></div>
-    <div class="hero-tap-right" onclick="nextMedia()"></div>
-
-    <!-- Arrow buttons -->
-    <button class="hero-nav left" aria-label="Previous" onclick="prevMedia()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-    </button>
-    <button class="hero-nav right" aria-label="Next" onclick="nextMedia()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-
-    <!-- Media container -->
-    <div id="mediaContainer"></div>
-
-    <!-- Dots indicating position within current filter -->
-    <div class="hero-dots" id="heroDots"></div>
-
-    <!-- Filter buttons -->
-    <div class="hero-filters" id="heroFilters"></div>
-  </section>
-
-  <!-- Summary -->
-  <section class="summary">
-    <div class="summary-status">
-      <span class="status-dot"></span>
-      <span id="summaryAvailability">Available now</span>
-    </div>
-    <h1 class="summary-address" id="summaryAddress">—</h1>
-    <div class="summary-locality" id="summaryLocality">—</div>
-
-    <div class="summary-money">
-      <div class="summary-money-cell">
-        <div class="summary-money-label">Monthly rent</div>
-        <div class="summary-money-value" id="summaryRent">—</div>
-      </div>
-      <div class="summary-money-cell">
-        <div class="summary-money-label">Deposit</div>
-        <div class="summary-money-value" id="summaryDeposit">—</div>
-      </div>
-    </div>
-
-    <div class="summary-facts" id="summaryFacts"></div>
-  </section>
-
-  <!-- Headline + description -->
-  <section class="headline-block">
-    <div class="headline" id="headline"></div>
-    <div class="description" id="description"></div>
-  </section>
-
-  <!-- Amenity chips -->
-  <section class="chips-block" id="amenityChips"></section>
-
-  <!-- Map -->
-  <section class="map-section" id="mapSection" style="display:none;">
-    <div class="map-title">Location</div>
-    <div class="map-canvas" id="mapCanvas"></div>
-  </section>
-
-  <!-- Process timeline -->
-  <section class="process-section">
-    <div class="process-card">
-      <div class="process-title">How renting here works</div>
-      <div class="process-steps">
-        <div class="process-step current">
-          <div class="process-step-dot"></div>
-          <div class="process-step-label">View</div>
-        </div>
-        <div class="process-step">
-          <div class="process-step-dot"></div>
-          <div class="process-step-label">Apply</div>
-        </div>
-        <div class="process-step">
-          <div class="process-step-dot"></div>
-          <div class="process-step-label">Reference</div>
-        </div>
-        <div class="process-step">
-          <div class="process-step-dot"></div>
-          <div class="process-step-label">Sign</div>
-        </div>
-        <div class="process-step">
-          <div class="process-step-dot"></div>
-          <div class="process-step-label">Move in</div>
-        </div>
-      </div>
-      <div class="process-tagline">
-        Everything digital, nothing chased by phone. Hear back within 48 hours.
-      </div>
-    </div>
-  </section>
-
-  <!-- Primary CTA -->
-  <section class="cta-section">
-    <div class="cta-stack">
-      <a class="el-btn el-btn-primary el-btn-full" id="ctaBookViewing">Book a viewing</a>
-      <a class="el-btn el-btn-secondary el-btn-full" id="ctaApply">Apply without viewing</a>
-    </div>
-    <div class="cta-footnote">No fees to apply. Viewings typically within 3 days.</div>
-  </section>
-
-  <!-- Landlord footer -->
-  <section class="landlord-section">
-    <div class="landlord-row">
-      <div class="landlord-avatar" id="landlordAvatar">—</div>
-      <div>
-        <div class="landlord-name">
-          <span id="landlordName">—</span>
-          <span class="verified-badge" id="verifiedBadge" style="display:none;">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
-            Verified
-          </span>
-        </div>
-        <div class="landlord-sub" id="landlordSub">Landlord</div>
-      </div>
-    </div>
-  </section>
-
-  <footer class="site-footer">
-    <div class="el-logo">
-      <span class="mark-easier">easier</span><span class="mark-let">Let</span>
-    </div>
-    <div>Listed on easierLet · The simple way to rent in the UK</div>
-  </footer>
-</main>
-
-<!-- Fullscreen lightbox -->
-<div class="lightbox" id="lightbox">
-  <div class="lightbox-header">
-    <span id="lightboxCount">1 / 1</span>
-    <button class="lightbox-close" aria-label="Close" onclick="closeLightbox()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-    </button>
   </div>
-  <div class="lightbox-body" id="lightboxBody"></div>
-</div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin></script>
-<script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
-<script src="../assets/easierlet.js"></script>
-<script>
-//
-// ─── Public listing page ─────────────────────────────────────────────────────
-//
-// URL pattern: /listings/?slug=my-property-abcd
-//
+  <!-- Book-viewing modal -->
+  <div class="modal-overlay" id="viewingModal">
+    <div class="modal">
+      <div class="modal-handle"></div>
 
-const params = new URLSearchParams(window.location.search);
-const slug = params.get("slug");
+      <div id="viewingForm">
+        <div class="modal-title">Book a viewing</div>
+        <div class="modal-sub">We'll let the landlord know and they'll be in touch to confirm a time.</div>
 
-let listing = null;
-let property = null;
-let landlord = null;
-let allMedia = [];          // raw from DB
-let filteredMedia = [];     // current filter applied
-let currentFilter = "all";
-let currentIndex = 0;
-let currentPanorama = null;
-let heroVideoEl = null;
+        <div class="field">
+          <label for="vName">Full name</label>
+          <input type="text" id="vName" autocomplete="name" required>
+        </div>
+        <div class="field">
+          <label for="vEmail">Email</label>
+          <input type="email" id="vEmail" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="vPhone">Phone</label>
+          <input type="tel" id="vPhone" autocomplete="tel">
+          <div class="field-hint">Optional, but helps arrange a time faster.</div>
+        </div>
+        <div class="field">
+          <label for="vTimes">Preferred times</label>
+          <textarea id="vTimes" placeholder="e.g. Weekday evenings after 6pm, Saturday mornings"></textarea>
+        </div>
+        <div class="field">
+          <label for="vMsg">Anything else?</label>
+          <textarea id="vMsg" placeholder="Optional — questions, specific needs, etc."></textarea>
+        </div>
 
-const filterConfig = [
-  { key: "all", label: "All", types: ["photo", "photo_360", "video"] },
-  { key: "photo", label: "Photos", types: ["photo"] },
-  { key: "photo_360", label: "360°", types: ["photo_360"] },
-  { key: "video", label: "Video", types: ["video"] },
-];
+        <div class="turnstile-wrap" id="turnstileWrap"></div>
 
-// ─── Entry ───────────────────────────────────────────────────────────────────
-init();
+        <button class="submit-btn" id="submitViewingBtn">Send request</button>
+        <div style="text-align:center; margin-top:10px;">
+          <button type="button" id="cancelViewingBtn" style="color: var(--text-muted); font-size: 14px; padding: 10px;">Cancel</button>
+        </div>
+      </div>
 
-async function init() {
-  if (!slug) { showNotFound(); return; }
+      <div id="viewingSuccess" class="success-panel hidden">
+        <div class="icon">✓</div>
+        <h3>Request sent</h3>
+        <p>The landlord will be in touch at the email you provided.</p>
+        <button class="submit-btn" style="margin-top: 22px;" id="closeSuccessBtn">Close</button>
+      </div>
 
-  try {
-    // Fetch listing with embedded property + media (public, anon key)
-    const listings = await EL.rest(`property_listings?select=*,properties(*),listing_media(*),landlord_profiles:properties!inner(user_id)&slug=eq.${encodeURIComponent(slug)}`);
-    if (!listings.length) { showNotFound(); return; }
-    listing = listings[0];
-    property = listing.properties;
-    allMedia = (listing.listing_media || []).sort((a, b) => {
-      const typeOrder = { photo: 0, photo_360: 1, video: 2, floorplan: 3 };
-      const ta = typeOrder[a.media_type] ?? 9, tb = typeOrder[b.media_type] ?? 9;
-      if (ta !== tb) return ta - tb;
-      return (a.sort_order ?? 0) - (b.sort_order ?? 0);
-    });
+      <div id="viewingError" class="error-panel hidden">
+        <div class="icon">!</div>
+        <h3>Something went wrong</h3>
+        <p id="viewingErrorMsg">Please try again in a moment.</p>
+        <button class="submit-btn" style="margin-top: 22px;" id="retryViewingBtn">Try again</button>
+      </div>
+    </div>
+  </div>
 
-    // Also fetch landlord profile (needed for verified badge and name)
-    try {
-      const profiles = await EL.rest(`landlord_profiles?select=company_name,director_name,verification_level&user_id=eq.${property.user_id}`);
-      landlord = profiles[0] || null;
-    } catch (e) { /* optional */ }
+  <!-- Lightbox for fullscreen gallery -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightboxClose" aria-label="Close">×</button>
+    <div class="lightbox-viewer" id="lightboxViewer"></div>
+    <div class="lightbox-caption" id="lightboxCaption"></div>
+    <div class="lightbox-thumbs" id="lightboxThumbs"></div>
+  </div>
 
-    // Gate on status
-    if (listing.status === "delisted") { showDelisted(); return; }
-    if (listing.status !== "live" && listing.status !== "let_agreed") {
-      showNotFound(); return;
+  <!-- =========================================================================
+       SCRIPT
+       ========================================================================= -->
+  <script>
+    // -------- Config ----------------------------------------------------------
+    const SUPABASE_URL  = 'https://ffzknvcptqjlkxmkdxuk.supabase.co';
+    // Anon key is required by Supabase's gateway to call Edge Functions even
+    // when verify_jwt is false. It's safe to expose — anon role can only
+    // see rows allowed by RLS policies.
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmemtudmNwdHFqbGt4bWtkeHVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNTQ0ODQsImV4cCI6MjA5MDgzMDQ4NH0.YRdkBgoVm7cpUJlsK8T4nP6iNE3vgfOmODImiAkPhr4';
+
+    // Cloudflare Turnstile SITE key (public — safe to expose).
+    // The matching secret key is set as TURNSTILE_SECRET_KEY on Supabase.
+    const TURNSTILE_SITE_KEY = '0x4AAAAAAC_qyS_vO4XbyHFw';
+
+    // -------- State -----------------------------------------------------------
+    const state = {
+      slug: new URLSearchParams(window.location.search).get('slug'),
+      listing: null,
+      property: null,
+      media: [],
+      landlord: null,
+      currentHeroIdx: 0,
+      lightboxIdx: 0,
+      turnstileToken: null,
+    };
+
+    // -------- DOM -------------------------------------------------------------
+    const $ = (id) => document.getElementById(id);
+
+    // -------- Init ------------------------------------------------------------
+    async function init() {
+      if (!state.slug) {
+        showError('No listing specified in the URL.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/listing-public-fetch?slug=${encodeURIComponent(state.slug)}`, {
+          headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` }
+        });
+
+        if (res.status === 404) {
+          showError('This listing is no longer available.');
+          return;
+        }
+        if (!res.ok) {
+          showError('Could not load this home. Please try again.');
+          return;
+        }
+
+        const data = await res.json();
+        state.listing = data.listing;
+        state.property = data.property;
+        state.media = data.media || [];
+        state.landlord = data.landlord;
+
+        render();
+      } catch (e) {
+        console.error(e);
+        showError('Network error. Please check your connection and try again.');
+      }
     }
 
-    render();
-    bumpViewCount();
-  } catch (err) {
-    console.error(err);
-    showNotFound();
-  }
-}
+    function showError(msg) {
+      $('loadingState').classList.add('hidden');
+      $('errorMsg').textContent = msg;
+      $('errorState').classList.remove('hidden');
+    }
 
-function showNotFound() {
-  document.getElementById("loadingState").style.display = "none";
-  document.getElementById("notFoundState").style.display = "flex";
-}
-function showDelisted() {
-  document.getElementById("loadingState").style.display = "none";
-  document.getElementById("delistedState").style.display = "flex";
-}
+    function render() {
+      const { listing, property, media, landlord } = state;
 
-async function bumpViewCount() {
-  try { await EL.rpc("increment_listing_view", { listing_slug: slug }); } catch (_) { /* non-fatal */ }
-}
+      // -- Page meta -----------------------------------------------------------
+      const addrShort = property.address_line1 || property.address;
+      const priceLabel = listing.advertised_rent
+        ? `£${Number(listing.advertised_rent).toLocaleString('en-GB')}/mo`
+        : 'Price on request';
+      document.title = `${addrShort} — ${priceLabel} — easierLet`;
+      setMeta('description', listing.headline || `${addrShort}. ${priceLabel}. View photos and book a viewing.`);
+      setMeta('og:title', `${addrShort} — ${priceLabel}`, 'property');
+      setMeta('og:description', listing.headline || 'A home available to rent.', 'property');
 
-// ─── Render ──────────────────────────────────────────────────────────────────
-function render() {
-  document.getElementById("loadingState").style.display = "none";
-  document.getElementById("listing").style.display = "block";
-  document.title = `${property.address} · easierLet`;
+      const heroPhoto = media.find(m => m.is_hero) || media.find(m => m.media_type === 'photo') || media[0];
+      if (heroPhoto) setMeta('og:image', heroPhoto.public_url, 'property');
 
-  // Title & address
-  const addressParts = property.address.split(",").map(p => p.trim());
-  document.getElementById("summaryAddress").textContent = addressParts[0] || property.address;
-  document.getElementById("summaryLocality").textContent = addressParts.slice(1).join(", ") || property.postcode || "";
+      // -- Verified badge ------------------------------------------------------
+      if (landlord && landlord.verified) {
+        $('verifiedBadge').classList.remove('hidden');
+      }
 
-  // Availability
-  const availability = listing.available_from
-    ? `Available ${EL.formatDate(listing.available_from)}`
-    : "Available now";
-  document.getElementById("summaryAvailability").textContent = availability;
-  document.getElementById("headerStatusText").textContent = listing.status === "let_agreed" ? "Let agreed" : "Available";
+      // -- Hero gallery --------------------------------------------------------
+      if (media.length > 0) {
+        setHero(0);
+      } else {
+        $('hero').style.aspectRatio = '16 / 9';
+        $('heroImg').style.display = 'none';
+        $('heroCounter').textContent = 'No photos yet';
+        $('heroPrev').disabled = true;
+        $('heroNext').disabled = true;
+      }
+      $('heroPrev').onclick = () => setHero(state.currentHeroIdx - 1);
+      $('heroNext').onclick = () => setHero(state.currentHeroIdx + 1);
+      $('heroImg').onclick = () => openLightbox(state.currentHeroIdx);
 
-  // Money
-  document.getElementById("summaryRent").innerHTML = `${EL.gbp(listing.advertised_rent || property.monthly_rent)}<small>/mo</small>`;
-  document.getElementById("summaryDeposit").textContent = EL.gbp(listing.advertised_deposit);
+      // -- Key facts -----------------------------------------------------------
+      const facts = [
+        property.bedrooms  != null ? { label: 'Bed', value: property.bedrooms }              : null,
+        property.bathrooms != null ? { label: 'Bath', value: property.bathrooms }            : null,
+        property.square_feet       ? { label: 'Size', value: property.square_feet, unit: 'ft²' } : null,
+        property.furnished_status  ? { label: 'Furnished', value: humanFurnished(property.furnished_status) } : null,
+      ].filter(Boolean);
+      const factsHtml = facts.map(f =>
+        `<div class="fact">
+           <div class="label">${escapeHtml(f.label)}</div>
+           <div class="value">${escapeHtml(String(f.value))}${f.unit ? `<span class="unit"> ${escapeHtml(f.unit)}</span>` : ''}</div>
+         </div>`
+      ).join('');
+      $('keyFacts').innerHTML = factsHtml || '';
+      if (!facts.length) $('keyFacts').style.display = 'none';
 
-  // Facts
-  const facts = [];
-  if (property.bedrooms != null) facts.push({ v: property.bedrooms, l: "Beds" });
-  if (property.bathrooms != null) facts.push({ v: property.bathrooms, l: "Baths" });
-  if (property.square_feet) facts.push({ v: property.square_feet.toLocaleString(), l: "Sq ft" });
-  if (property.epc_rating) facts.push({ v: property.epc_rating, l: "EPC" });
-  if (property.furnished_status) facts.push({ v: furnishedLabel(property.furnished_status), l: "" });
-  const factsEl = document.getElementById("summaryFacts");
-  factsEl.innerHTML = facts.map(f => `
-    <div class="summary-fact">
-      <div class="summary-fact-value">${EL.esc(f.v)}</div>
-      ${f.l ? `<div class="summary-fact-label">${EL.esc(f.l)}</div>` : ""}
-    </div>`).join("");
+      // -- Price ---------------------------------------------------------------
+      if (listing.advertised_rent) {
+        $('rentVal').textContent = `£${Number(listing.advertised_rent).toLocaleString('en-GB')}`;
+      }
+      if (listing.advertised_deposit) {
+        $('depositVal').textContent = `£${Number(listing.advertised_deposit).toLocaleString('en-GB')}`;
+      } else {
+        $('depositVal').textContent = '—';
+        $('depositSub').textContent = 'Confirmed on application';
+      }
 
-  // Headline / description
-  if (listing.headline) {
-    document.getElementById("headline").textContent = `"${listing.headline}"`;
-  } else {
-    document.getElementById("headline").style.display = "none";
-  }
-  document.getElementById("description").textContent = listing.description || "";
+      // -- Address -------------------------------------------------------------
+      $('addrHeadline').textContent = listing.headline || `A home in ${property.city || property.postcode || 'the area'}.`;
+      $('addrLine').textContent = [property.city, property.postcode].filter(Boolean).join(', ')
+                                 || property.address;
 
-  // Chips
-  const chipsEl = document.getElementById("amenityChips");
-  chipsEl.innerHTML = (listing.amenity_tags || []).map(t => `<span class="el-chip">${EL.esc(t)}</span>`).join("");
+      // -- Description ---------------------------------------------------------
+      if (listing.description && listing.description.trim()) {
+        $('descSection').hidden = false;
+        $('description').textContent = listing.description;
+        // Show "read more" if description is long
+        setTimeout(() => {
+          const el = $('description');
+          if (el.scrollHeight > el.clientHeight + 4) {
+            $('seeMore').classList.remove('hidden');
+            $('seeMore').onclick = (e) => {
+              e.preventDefault();
+              el.classList.remove('collapsed');
+              $('seeMore').remove();
+            };
+          }
+        }, 50);
+      }
 
-  // Map
-  if (property.latitude && property.longitude) {
-    document.getElementById("mapSection").style.display = "block";
-    setTimeout(() => renderMap(property.latitude, property.longitude), 100);
-  }
+      // -- Amenities -----------------------------------------------------------
+      if (listing.amenity_tags && listing.amenity_tags.length) {
+        $('amenSection').hidden = false;
+        $('amenityTags').innerHTML = listing.amenity_tags.map(t =>
+          `<span class="amenity-tag">${escapeHtml(t)}</span>`
+        ).join('');
+      }
 
-  // Landlord
-  const landlordName = landlord?.director_name || landlord?.company_name || "Private landlord";
-  document.getElementById("landlordName").textContent = landlordName;
-  document.getElementById("landlordAvatar").textContent = (landlordName.match(/\b\w/g) || []).slice(0, 2).join("").toUpperCase();
-  if (landlord?.verification_level && landlord.verification_level !== "none") {
-    document.getElementById("verifiedBadge").style.display = "inline-flex";
-  }
+      // -- Map -----------------------------------------------------------------
+      if (property.latitude != null && property.longitude != null) {
+        $('mapNote').textContent = `Approximate location shown. Full address shared on viewing confirmation.`;
+        initMap(Number(property.latitude), Number(property.longitude), property.postcode);
+      } else if (property.postcode) {
+        $('mapNote').textContent = `Full address shared on viewing confirmation.`;
+        $('mapFallback').classList.remove('hidden');
+        $('mapFallbackText').textContent = property.postcode;
+      } else {
+        $('mapSection').style.display = 'none';
+      }
 
-  // CTAs
-  document.getElementById("ctaBookViewing").href = `../book-viewing/?slug=${encodeURIComponent(slug)}`;
-  document.getElementById("ctaApply").href = `../apply-v2/?slug=${encodeURIComponent(slug)}`;
+      // -- Reveal --------------------------------------------------------------
+      $('loadingState').classList.add('hidden');
+      $('content').classList.remove('hidden');
+      $('ctaBar').classList.remove('hidden');
 
-  // Hide CTAs if let_agreed
-  if (listing.status === "let_agreed") {
-    document.querySelector(".cta-stack").innerHTML = `
-      <div style="text-align: center; padding: 20px; background: var(--el-bg); border-radius: var(--radius-lg); color: var(--el-muted);">
-        This home is let agreed. Applications are closed.
-      </div>`;
-  }
+      // -- Bind CTAs -----------------------------------------------------------
+      $('openViewingBtn').onclick = openViewingModal;
+      $('cancelViewingBtn').onclick = closeViewingModal;
+      $('closeSuccessBtn').onclick = closeViewingModal;
+      $('retryViewingBtn').onclick = () => {
+        $('viewingError').classList.add('hidden');
+        $('viewingForm').classList.remove('hidden');
+      };
+      $('submitViewingBtn').onclick = submitViewing;
 
-  // Media + filters
-  renderFilters();
-  applyFilter("all");
+      // Close modal when clicking the overlay background
+      $('viewingModal').addEventListener('click', (e) => {
+        if (e.target.id === 'viewingModal') closeViewingModal();
+      });
 
-  // Scroll listener for header
-  window.addEventListener("scroll", onScroll, { passive: true });
-  onScroll();
-}
+      // Lightbox close
+      $('lightboxClose').onclick = closeLightbox;
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeLightbox();
+      });
+    }
 
-function furnishedLabel(s) {
-  return { unfurnished: "Unfurn.", part_furnished: "Part", furnished: "Furn." }[s] || s;
-}
+    // -------- Hero gallery ----------------------------------------------------
+    function setHero(idx) {
+      if (state.media.length === 0) return;
+      const total = state.media.length;
+      const next = ((idx % total) + total) % total;
+      state.currentHeroIdx = next;
 
-function onScroll() {
-  const header = document.getElementById("header");
-  if (window.scrollY > 60) header.classList.add("scrolled");
-  else header.classList.remove("scrolled");
-}
+      const m = state.media[next];
+      const img = $('heroImg');
+      img.classList.remove('show');
 
-// ─── Filters ─────────────────────────────────────────────────────────────────
-function renderFilters() {
-  const el = document.getElementById("heroFilters");
-  const counts = {};
-  allMedia.forEach(m => { counts[m.media_type] = (counts[m.media_type] || 0) + 1; });
+      // For 360s we still use a flat image preview on the hero — opening the
+      // lightbox shows the immersive Pannellum view.
+      img.onload = () => img.classList.add('show');
+      img.src = m.public_url;
+      img.alt = m.caption || '';
 
-  const visible = filterConfig.filter(cfg => {
-    if (cfg.key === "all") return allMedia.length > 1;   // only show "All" if there's variety
-    return cfg.types.some(t => (counts[t] || 0) > 0);
-  });
+      $('heroCounter').textContent = `${next + 1} / ${total}`;
 
-  // If only one category available, don't show filter bar
-  if (visible.length <= 1) {
-    el.style.display = "none";
-    return;
-  }
+      const badge = $('heroTypeBadge');
+      if (m.media_type === 'photo_360') {
+        badge.textContent = '360°'; badge.classList.remove('hidden');
+      } else if (m.media_type === 'video') {
+        badge.textContent = 'Video'; badge.classList.remove('hidden');
+      } else if (m.media_type === 'floorplan') {
+        badge.textContent = 'Floorplan'; badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
 
-  el.innerHTML = visible.map(cfg => {
-    const count = cfg.key === "all"
-      ? allMedia.length
-      : cfg.types.reduce((s, t) => s + (counts[t] || 0), 0);
-    const icon = cfg.key === "photo_360"
-      ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M2 12h20M12 2a14 14 0 010 20M12 2a14 14 0 000 20"/></svg>`
-      : cfg.key === "video"
-        ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`
-        : "";
-    return `<button class="hero-filter" data-filter="${cfg.key}">
-      ${icon}${cfg.label}<span class="hero-filter-count">${count}</span>
-    </button>`;
-  }).join("");
+      $('heroPrev').disabled = total <= 1;
+      $('heroNext').disabled = total <= 1;
+    }
 
-  el.querySelectorAll("[data-filter]").forEach(btn => {
-    btn.addEventListener("click", () => applyFilter(btn.dataset.filter));
-  });
-}
+    // -------- Lightbox --------------------------------------------------------
+    let panoViewer = null;
+    function openLightbox(idx) {
+      state.lightboxIdx = idx;
+      renderLightbox();
+      $('lightbox').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+      $('lightbox').classList.remove('open');
+      document.body.style.overflow = '';
+      if (panoViewer) { try { panoViewer.destroy(); } catch (_) {} panoViewer = null; }
+    }
+    function renderLightbox() {
+      const m = state.media[state.lightboxIdx];
+      const viewer = $('lightboxViewer');
+      viewer.innerHTML = '';
+      if (panoViewer) { try { panoViewer.destroy(); } catch (_) {} panoViewer = null; }
 
-function applyFilter(key) {
-  currentFilter = key;
-  const cfg = filterConfig.find(c => c.key === key) || filterConfig[0];
-  filteredMedia = allMedia.filter(m => cfg.types.includes(m.media_type));
-  if (filteredMedia.length === 0) filteredMedia = allMedia; // fallback
-  currentIndex = 0;
+      if (m.media_type === 'photo_360') {
+        const container = document.createElement('div');
+        container.id = 'pannellum-container';
+        viewer.appendChild(container);
+        // Lazy-load Pannellum JS
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js', () => {
+          panoViewer = window.pannellum.viewer('pannellum-container', {
+            type: 'equirectangular',
+            panorama: m.public_url,
+            autoLoad: true,
+            autoRotate: -2,
+            showControls: false,
+            compass: false,
+          });
+        });
+      } else if (m.media_type === 'video') {
+        const video = document.createElement('video');
+        video.src = m.public_url; video.controls = true; video.autoplay = true;
+        video.playsInline = true; video.muted = false;
+        viewer.appendChild(video);
+      } else {
+        const img = document.createElement('img');
+        img.src = m.public_url; img.alt = m.caption || '';
+        viewer.appendChild(img);
+      }
 
-  // Mark filter button
-  document.querySelectorAll(".hero-filter").forEach(b => {
-    b.classList.toggle("active", b.dataset.filter === key);
-  });
+      $('lightboxCaption').textContent = m.caption || m.room_caption || '';
 
-  renderCurrentMedia();
-  renderDots();
-}
+      // Thumbs
+      const thumbs = $('lightboxThumbs');
+      thumbs.innerHTML = '';
+      state.media.forEach((mm, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'lightbox-thumb' + (i === state.lightboxIdx ? ' active' : '');
+        const ti = document.createElement('img');
+        ti.src = mm.public_url;
+        ti.alt = '';
+        btn.appendChild(ti);
+        if (mm.media_type !== 'photo') {
+          const dot = document.createElement('span');
+          dot.className = 'type-dot';
+          btn.appendChild(dot);
+        }
+        btn.onclick = () => { state.lightboxIdx = i; renderLightbox(); };
+        thumbs.appendChild(btn);
+      });
+    }
 
-// ─── Media rendering ─────────────────────────────────────────────────────────
-function renderCurrentMedia() {
-  // Clean up previous
-  if (currentPanorama) { try { currentPanorama.destroy(); } catch (_) {} currentPanorama = null; }
-  if (heroVideoEl) { heroVideoEl.pause(); heroVideoEl = null; }
+    // -------- Map -------------------------------------------------------------
+    function initMap(lat, lng, postcode) {
+      loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', () => {
+        const L = window.L;
+        const mapEl = $('map');
+        // Offset a little so the pin looks like a neighbourhood indicator
+        // rather than a precise property marker (fairer to tenant privacy
+        // and correct for "approximate location").
+        const map = L.map(mapEl, {
+          zoomControl: false,
+          scrollWheelZoom: false,
+          dragging: true,
+          attributionControl: false,
+        }).setView([lat, lng], 15);
 
-  const container = document.getElementById("mediaContainer");
-  container.innerHTML = "";
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+        }).addTo(map);
 
-  if (filteredMedia.length === 0) {
-    container.innerHTML = `<div style="position:absolute;inset:0;background:linear-gradient(135deg,#5E7A72,#2A3D38);"></div>`;
-    document.getElementById("heroCounter").textContent = "0 / 0";
-    return;
-  }
+        // Draw a soft circle rather than a pin, to communicate "approximate"
+        L.circle([lat, lng], {
+          radius: 180,
+          color: '#1A6B55',
+          fillColor: '#1D9E75',
+          fillOpacity: 0.25,
+          weight: 2,
+        }).addTo(map);
+      });
+    }
 
-  const m = filteredMedia[currentIndex];
+    // -------- Book viewing modal ---------------------------------------------
+    let turnstileRendered = false;
+    function openViewingModal() {
+      $('viewingModal').classList.add('open');
+      $('viewingForm').classList.remove('hidden');
+      $('viewingSuccess').classList.add('hidden');
+      $('viewingError').classList.add('hidden');
 
-  if (m.media_type === "photo") {
-    const img = document.createElement("img");
-    img.className = "hero-media";
-    img.src = m.public_url;
-    img.alt = m.caption || "Property photo";
-    img.loading = "eager";
-    img.addEventListener("click", () => openLightbox());
-    container.appendChild(img);
-  }
-  else if (m.media_type === "photo_360") {
-    const wrap = document.createElement("div");
-    wrap.className = "hero-360-wrapper";
-    wrap.id = "pano-" + Math.random().toString(36).slice(2, 8);
-    container.appendChild(wrap);
-    currentPanorama = pannellum.viewer(wrap.id, {
-      type: "equirectangular",
-      panorama: m.public_url,
-      autoLoad: true,
-      showControls: false,
-      autoRotate: -2,
-      mouseZoom: true,
-      compass: false,
-      hfov: 100,
-    });
-  }
-  else if (m.media_type === "video") {
-    const video = document.createElement("video");
-    video.className = "hero-media-video";
-    video.src = m.public_url;
-    video.controls = true;
-    video.playsInline = true;
-    video.muted = true;
-    video.autoplay = true;
-    video.loop = true;
-    heroVideoEl = video;
-    container.appendChild(video);
-  }
+      if (TURNSTILE_SITE_KEY && !turnstileRendered) {
+        loadScript('https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit', () => {
+          window.turnstile.render('#turnstileWrap', {
+            sitekey: TURNSTILE_SITE_KEY,
+            theme: 'light',
+            callback: (token) => { state.turnstileToken = token; },
+            'expired-callback': () => { state.turnstileToken = null; },
+          });
+          turnstileRendered = true;
+        });
+      }
+    }
+    function closeViewingModal() {
+      $('viewingModal').classList.remove('open');
+    }
+    async function submitViewing() {
+      const name = $('vName').value.trim();
+      const email = $('vEmail').value.trim();
+      const phone = $('vPhone').value.trim();
+      const times = $('vTimes').value.trim();
+      const msg = $('vMsg').value.trim();
 
-  document.getElementById("heroCounter").textContent = `${currentIndex + 1} / ${filteredMedia.length}`;
-  renderDots();
-}
+      if (!name || !email) {
+        alert('Please add your name and email.');
+        return;
+      }
+      if (TURNSTILE_SITE_KEY && !state.turnstileToken) {
+        alert('Please complete the security check.');
+        return;
+      }
 
-function renderDots() {
-  const el = document.getElementById("heroDots");
-  if (filteredMedia.length <= 1 || filteredMedia.length > 8) {
-    el.innerHTML = "";
-    return;
-  }
-  el.innerHTML = filteredMedia.map((_, i) =>
-    `<span class="${i === currentIndex ? "active" : ""}"></span>`).join("");
-}
+      const btn = $('submitViewingBtn');
+      btn.disabled = true; btn.textContent = 'Sending...';
 
-function nextMedia() {
-  if (filteredMedia.length === 0) return;
-  currentIndex = (currentIndex + 1) % filteredMedia.length;
-  renderCurrentMedia();
-}
-function prevMedia() {
-  if (filteredMedia.length === 0) return;
-  currentIndex = (currentIndex - 1 + filteredMedia.length) % filteredMedia.length;
-  renderCurrentMedia();
-}
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/viewing-request`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON,
+            'Authorization': `Bearer ${SUPABASE_ANON}`,
+          },
+          body: JSON.stringify({
+            slug: state.slug,
+            name, email, phone,
+            preferred_times: times || undefined,
+            message: msg || undefined,
+            turnstile_token: state.turnstileToken || undefined,
+          }),
+        });
 
-// Keyboard nav
-document.addEventListener("keydown", (e) => {
-  if (document.getElementById("lightbox").classList.contains("open")) {
-    if (e.key === "Escape") closeLightbox();
-    if (e.key === "ArrowRight") nextMedia();
-    if (e.key === "ArrowLeft") prevMedia();
-    return;
-  }
-  if (e.key === "ArrowRight") nextMedia();
-  if (e.key === "ArrowLeft") prevMedia();
-});
+        if (res.ok) {
+          $('viewingForm').classList.add('hidden');
+          $('viewingSuccess').classList.remove('hidden');
+        } else {
+          const err = await res.json().catch(() => ({}));
+          const msg = err.error === 'captcha_failed'
+            ? 'The security check failed. Please try again.'
+            : err.error === 'listing_not_accepting_viewings'
+              ? 'This listing is not currently accepting viewings.'
+              : 'Something went wrong. Please try again in a moment.';
+          $('viewingErrorMsg').textContent = msg;
+          $('viewingForm').classList.add('hidden');
+          $('viewingError').classList.remove('hidden');
+        }
+      } catch (e) {
+        $('viewingErrorMsg').textContent = 'Network error. Please check your connection and try again.';
+        $('viewingForm').classList.add('hidden');
+        $('viewingError').classList.remove('hidden');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Send request';
+      }
+    }
 
-// ─── Lightbox ────────────────────────────────────────────────────────────────
-function openLightbox() {
-  const m = filteredMedia[currentIndex];
-  if (!m || m.media_type === "photo_360") return;   // 360s already fullscreen-ish on hover-drag
-  const body = document.getElementById("lightboxBody");
-  body.innerHTML = m.media_type === "video"
-    ? `<video class="lightbox-video" src="${EL.esc(m.public_url)}" controls autoplay playsinline></video>`
-    : `<img class="lightbox-img" src="${EL.esc(m.public_url)}" alt="">`;
-  document.getElementById("lightboxCount").textContent = `${currentIndex + 1} / ${filteredMedia.length}`;
-  document.getElementById("lightbox").classList.add("open");
-  document.body.style.overflow = "hidden";
-}
-function closeLightbox() {
-  document.getElementById("lightbox").classList.remove("open");
-  document.body.style.overflow = "";
-}
+    // -------- Utils -----------------------------------------------------------
+    function setMeta(nameOrProp, value, attr = 'name') {
+      let el = document.querySelector(`meta[${attr}="${nameOrProp}"]`);
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute(attr, nameOrProp);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', value);
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;" }[c]));
+    }
+    function humanFurnished(s) {
+      const map = { furnished: 'Yes', unfurnished: 'No', part_furnished: 'Part' };
+      return map[s] || s;
+    }
+    const loadedScripts = new Set();
+    function loadScript(src, cb) {
+      if (loadedScripts.has(src)) { cb(); return; }
+      const s = document.createElement('script');
+      s.src = src; s.async = true;
+      s.onload = () => { loadedScripts.add(src); cb(); };
+      document.head.appendChild(s);
+    }
 
-// ─── Map ─────────────────────────────────────────────────────────────────────
-function renderMap(lat, lng) {
-  const map = L.map("mapCanvas", { zoomControl: false, scrollWheelZoom: false, attributionControl: false })
-    .setView([lat, lng], 15);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    subdomains: "abcd",
-    maxZoom: 19,
-  }).addTo(map);
-  const icon = L.divIcon({
-    className: "el-pin",
-    iconSize: [28, 28],
-    iconAnchor: [14, 28],
-    html: `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:#1A6B55;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;">
-           <div style="width:8px;height:8px;background:#fff;border-radius:50%;transform:rotate(45deg);"></div></div>`,
-  });
-  L.marker([lat, lng], { icon }).addTo(map);
-}
-
-// ─── Touch swipe (mobile) ────────────────────────────────────────────────────
-let touchStartX = 0;
-document.getElementById("hero").addEventListener("touchstart", e => {
-  touchStartX = e.touches[0].clientX;
-}, { passive: true });
-document.getElementById("hero").addEventListener("touchend", e => {
-  const dx = e.changedTouches[0].clientX - touchStartX;
-  if (Math.abs(dx) > 60) {
-    if (dx < 0) nextMedia(); else prevMedia();
-  }
-}, { passive: true });
-</script>
+    // -------- Kickoff ---------------------------------------------------------
+    init();
+  </script>
 </body>
 </html>
