@@ -719,14 +719,55 @@
         state.listing = data.listing;
         state.property = data.property;
 
-        // Sort media: photos first, then videos, then 360s, then floorplans.
-        // Within each type, preserve the landlord's sort_order.
+        // Sort media into a natural house-tour order so the gallery reads
+        // like a walk through the home rather than upload order.
+        //
+        // Ordering rules (first tiebreaker wins):
+        //   1. Hero photo — always first. The landlord has explicitly chosen
+        //      this as the face of the listing; it leads regardless of type
+        //      or room.
+        //   2. Media type — photos, then videos, then 360°, then floorplans.
+        //   3. Narrative room order — exterior first (arriving), then
+        //      hallway (entering), main social rooms, bedrooms, bathrooms,
+        //      outdoor, utility, unclassified last.
+        //   4. Landlord's own sort_order within the same room, to respect
+        //      any manual ordering they did in the app.
         const TYPE_ORDER = { photo: 0, video: 1, photo_360: 2, floorplan: 3 };
+        const ROOM_ORDER = {
+          exterior:      0,   // arrive at the property
+          hallway:       1,   // step inside
+          living:        2,   // primary living space
+          kitchen:       3,
+          kitchen_diner: 4,
+          dining:        5,
+          bedroom_main:  6,   // main bedroom before others
+          bedroom:       7,
+          ensuite:       8,
+          bathroom:      9,
+          wc:            10,
+          garden:        11,  // outside again
+          garage:        12,
+          parking:       13,
+          other:         14,
+        };
+
+        function mediaSortKey(m) {
+          // Hero = pole position, everything else ranked normally
+          const heroBucket = m.is_hero === true ? 0 : 1;
+          const typeBucket = TYPE_ORDER[m.media_type] ?? 99;
+          const roomBucket = (m.room_type && m.room_type in ROOM_ORDER)
+                              ? ROOM_ORDER[m.room_type]
+                              : 999; // unclassified → end of its type bucket
+          const order = m.sort_order ?? 0;
+          return [heroBucket, typeBucket, roomBucket, order];
+        }
+
         state.media = (data.media || []).slice().sort((a, b) => {
-          const ao = TYPE_ORDER[a.media_type] ?? 99;
-          const bo = TYPE_ORDER[b.media_type] ?? 99;
-          if (ao !== bo) return ao - bo;
-          return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+          const ka = mediaSortKey(a), kb = mediaSortKey(b);
+          for (let i = 0; i < ka.length; i++) {
+            if (ka[i] !== kb[i]) return ka[i] - kb[i];
+          }
+          return 0;
         });
 
         state.landlord = data.landlord;
