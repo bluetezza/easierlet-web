@@ -109,6 +109,7 @@
       background: #E7EEE9;
       aspect-ratio: 4 / 5;
       overflow: hidden;
+      touch-action: pan-y; /* allow vertical scroll, we handle horizontal */
     }
     @media (min-width: 720px) {
       .hero { aspect-ratio: 16 / 10; }
@@ -116,13 +117,17 @@
     .hero-img {
       width: 100%; height: 100%; object-fit: cover;
       opacity: 0; transition: opacity 0.35s ease;
+      user-select: none; -webkit-user-select: none;
+      -webkit-user-drag: none;
     }
     .hero-img.show { opacity: 1; }
     .hero-controls {
       position: absolute; left: 0; right: 0; bottom: 14px;
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 14px;
+      pointer-events: none; /* let swipes pass through */
     }
+    .hero-controls > * { pointer-events: auto; }
     .hero-counter {
       font-size: 12px; font-weight: 500; color: #fff;
       background: rgba(15, 46, 40, 0.55); backdrop-filter: blur(10px);
@@ -147,6 +152,27 @@
     .hero-nav.prev { left: 12px; }
     .hero-nav.next { right: 12px; }
     .hero-nav:disabled { opacity: 0; pointer-events: none; }
+
+    /* Media-type jump buttons — branded teal ovals, bottom-right of hero */
+    .hero-jumps {
+      position: absolute; right: 14px; bottom: 48px;
+      display: flex; gap: 6px;
+      z-index: 2;
+    }
+    .hero-jump {
+      display: flex; align-items: center; justify-content: center;
+      width: 52px; height: 32px;
+      border-radius: 999px;
+      background: var(--teal-dark);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(15, 46, 40, 0.25);
+      transition: transform 0.15s ease, background 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .hero-jump:hover { background: var(--teal); }
+    .hero-jump:active { transform: scale(0.94); }
+    .hero-jump.active { background: var(--teal-light); }
+    .hero-jump svg { width: 16px; height: 16px; display: block; }
 
     /* Fullscreen gallery */
     .lightbox {
@@ -434,6 +460,7 @@
         <img id="heroImg" class="hero-img" alt="">
         <button class="hero-nav prev" id="heroPrev" aria-label="Previous photo">‹</button>
         <button class="hero-nav next" id="heroNext" aria-label="Next photo">›</button>
+        <div class="hero-jumps hidden" id="heroJumps"></div>
         <div class="hero-controls">
           <span class="hero-type-badge hidden" id="heroTypeBadge">Photo</span>
           <span class="hero-counter" id="heroCounter">1 / 1</span>
@@ -688,6 +715,8 @@
       // -- Hero gallery --------------------------------------------------------
       if (media.length > 0) {
         setHero(0);
+        addHeroGestures();
+        renderJumps();
       } else {
         $('hero').style.aspectRatio = '16 / 9';
         $('heroImg').style.display = 'none';
@@ -828,6 +857,107 @@
 
       $('heroPrev').disabled = total <= 1;
       $('heroNext').disabled = total <= 1;
+
+      // Keep jump-button active state in sync with current media type
+      updateJumpActive(m.media_type);
+    }
+
+    // -------- Hero swipe gestures --------------------------------------------
+    function addHeroGestures() {
+      const hero = $('hero');
+      const SWIPE_MIN = 40;     // px of horizontal travel to count as a swipe
+      let startX = null, startY = null, startT = 0;
+
+      hero.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        startT = Date.now();
+      }, { passive: true });
+
+      hero.addEventListener('touchend', (e) => {
+        if (startX == null) return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - startX;
+        const dy = t.clientY - startY;
+        const dt = Date.now() - startT;
+        startX = null; startY = null;
+
+        // Reject taps, vertical drags, and long presses
+        if (Math.abs(dx) < SWIPE_MIN) return;
+        if (Math.abs(dy) > Math.abs(dx)) return;
+        if (dt > 600) return;
+
+        if (dx < 0) setHero(state.currentHeroIdx + 1);
+        else        setHero(state.currentHeroIdx - 1);
+      }, { passive: true });
+    }
+
+    // -------- Media-type jump buttons ----------------------------------------
+    // Branded teal ovals (bottom-right of hero) that appear only for the
+    // media types actually uploaded. Tap to jump to the first slide of
+    // that type. SVG icons inline so we don't depend on icon fonts.
+    const JUMP_TYPES = [
+      {
+        key: 'photo',
+        label: 'Photos',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'
+      },
+      {
+        key: 'video',
+        label: 'Video',
+        icon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13c0 .79.87 1.27 1.54.84l10-6.5a1 1 0 0 0 0-1.68l-10-6.5A1 1 0 0 0 8 5.5z"/></svg>'
+      },
+      {
+        key: 'photo_360',
+        label: '360°',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="10" ry="4"/><path d="M12 2v20"/></svg>'
+      },
+    ];
+
+    function renderJumps() {
+      const wrap = $('heroJumps');
+      wrap.innerHTML = '';
+
+      // Map each present type to the index of its first occurrence
+      const firstIndex = {};
+      state.media.forEach((m, i) => {
+        if (!(m.media_type in firstIndex)) firstIndex[m.media_type] = i;
+      });
+
+      // Only show the bar if at least 2 distinct types are present
+      const presentTypes = JUMP_TYPES.filter(t => t.key in firstIndex);
+      if (presentTypes.length < 2) {
+        wrap.classList.add('hidden');
+        return;
+      }
+
+      presentTypes.forEach(t => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'hero-jump';
+        btn.dataset.type = t.key;
+        btn.setAttribute('aria-label', `Jump to ${t.label}`);
+        btn.innerHTML = t.icon;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation(); // don't open lightbox
+          setHero(firstIndex[t.key]);
+        });
+        wrap.appendChild(btn);
+      });
+
+      wrap.classList.remove('hidden');
+      // Sync active state to the currently displayed type
+      const cur = state.media[state.currentHeroIdx];
+      if (cur) updateJumpActive(cur.media_type);
+    }
+
+    function updateJumpActive(currentType) {
+      const wrap = $('heroJumps');
+      if (!wrap) return;
+      Array.from(wrap.children).forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === currentType);
+      });
     }
 
     // -------- Lightbox --------------------------------------------------------
