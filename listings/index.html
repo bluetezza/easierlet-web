@@ -114,13 +114,55 @@
     @media (min-width: 720px) {
       .hero { aspect-ratio: 16 / 10; }
     }
-    .hero-img {
+    /* Sliding track holds all slides side by side. translateX moves it. */
+    .hero-track {
+      display: flex;
+      height: 100%;
+      width: 100%;
+      will-change: transform;
+      transition: transform 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+    .hero-track.no-transition { transition: none; }
+    .hero-slide {
+      flex: 0 0 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-slide img {
       width: 100%; height: 100%; object-fit: cover;
-      opacity: 0; transition: opacity 0.35s ease;
       user-select: none; -webkit-user-select: none;
       -webkit-user-drag: none;
+      pointer-events: none; /* taps go to the slide container */
     }
-    .hero-img.show { opacity: 1; }
+    .hero-slide-play {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .hero-slide-play .play-circle {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: rgba(15, 46, 40, 0.7);
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .hero-slide-play svg { width: 24px; height: 24px; color: #fff; }
+
+    /* Room tag — top-right, branded teal */
+    .hero-room-tag {
+      position: absolute;
+      top: 14px; right: 14px;
+      background: var(--teal-dark);
+      color: #fff;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.4px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      box-shadow: 0 2px 6px rgba(15, 46, 40, 0.25);
+      z-index: 2;
+      max-width: calc(100% - 28px);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
     .hero-controls {
       position: absolute; left: 0; right: 0; bottom: 14px;
       display: flex; align-items: center; justify-content: space-between;
@@ -457,9 +499,10 @@
 
       <!-- Hero gallery -->
       <div class="hero" id="hero">
-        <img id="heroImg" class="hero-img" alt="">
+        <div class="hero-track" id="heroTrack"></div>
         <button class="hero-nav prev" id="heroPrev" aria-label="Previous photo">‹</button>
         <button class="hero-nav next" id="heroNext" aria-label="Next photo">›</button>
+        <div class="hero-room-tag hidden" id="heroRoomTag"></div>
         <div class="hero-jumps hidden" id="heroJumps"></div>
         <div class="hero-controls">
           <span class="hero-type-badge hidden" id="heroTypeBadge">Photo</span>
@@ -675,7 +718,17 @@
         const data = await res.json();
         state.listing = data.listing;
         state.property = data.property;
-        state.media = data.media || [];
+
+        // Sort media: photos first, then videos, then 360s, then floorplans.
+        // Within each type, preserve the landlord's sort_order.
+        const TYPE_ORDER = { photo: 0, video: 1, photo_360: 2, floorplan: 3 };
+        state.media = (data.media || []).slice().sort((a, b) => {
+          const ao = TYPE_ORDER[a.media_type] ?? 99;
+          const bo = TYPE_ORDER[b.media_type] ?? 99;
+          if (ao !== bo) return ao - bo;
+          return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+        });
+
         state.landlord = data.landlord;
 
         render();
@@ -714,19 +767,19 @@
 
       // -- Hero gallery --------------------------------------------------------
       if (media.length > 0) {
+        renderHeroSlides();
         setHero(0);
         addHeroGestures();
         renderJumps();
       } else {
         $('hero').style.aspectRatio = '16 / 9';
-        $('heroImg').style.display = 'none';
+        $('heroTrack').style.display = 'none';
         $('heroCounter').textContent = 'No photos yet';
         $('heroPrev').disabled = true;
         $('heroNext').disabled = true;
       }
       $('heroPrev').onclick = () => setHero(state.currentHeroIdx - 1);
       $('heroNext').onclick = () => setHero(state.currentHeroIdx + 1);
-      $('heroImg').onclick = () => openLightbox(state.currentHeroIdx);
 
       // -- Key facts -----------------------------------------------------------
       const facts = [
@@ -826,22 +879,117 @@
     }
 
     // -------- Hero gallery ----------------------------------------------------
-    function setHero(idx) {
+    // Room label lookup for the top-right room tag. Keys match the
+    // listing_room_type enum from Supabase.
+    const ROOM_LABELS = {
+      exterior:      'Exterior',
+      living:        'Living room',
+      kitchen:       'Kitchen',
+      dining:        'Dining room',
+      kitchen_diner: 'Kitchen / diner',
+      bedroom_main:  'Main bedroom',
+      bedroom:       'Bedroom',
+      bathroom:      'Bathroom',
+      ensuite:       'En-suite',
+      wc:            'WC',
+      hallway:       'Hallway',
+      garden:        'Garden',
+      garage:        'Garage',
+      parking:       'Parking',
+      other:         '',
+    };
+
+    // Build the sliding track once. Images are stored on `data-src` and only
+    // promoted to `src` for the current slide and its immediate neighbours —
+    // so a listing with 15 photos only fetches 2–3 on page load.
+    function renderHeroSlides() {
+      const track = $('heroTrack');
+      track.innerHTML = '';
+      state.media.forEach((m, i) => {
+        const slide = document.createElement('div');
+        slide.className = 'hero-slide';
+        slide.dataset.idx = i;
+        slide.dataset.type = m.media_type;
+
+        const img = document.createElement('img');
+        img.dataset.src = m.public_url;
+        img.alt = m.caption || '';
+        img.draggable = false;
+        img.decoding = 'async';
+        img.loading = 'lazy';
+        slide.appendChild(img);
+
+        // Video slides get a play circle overlay; tapping the slide opens
+        // the lightbox where the video actually plays.
+        if (m.media_type === 'video') {
+          const overlay = document.createElement('div');
+          overlay.className = 'hero-slide-play';
+          overlay.innerHTML =
+            '<div class="play-circle">' +
+              '<svg viewBox="0 0 24 24" fill="currentColor">' +
+                '<path d="M8 5.5v13c0 .79.87 1.27 1.54.84l10-6.5a1 1 0 0 0 0-1.68l-10-6.5A1 1 0 0 0 8 5.5z"/>' +
+              '</svg>' +
+            '</div>';
+          slide.appendChild(overlay);
+        }
+
+        // Only the currently-visible slide should respond to taps.
+        slide.addEventListener('click', () => {
+          if (Number(slide.dataset.idx) === state.currentHeroIdx) {
+            openLightbox(state.currentHeroIdx);
+          }
+        });
+
+        track.appendChild(slide);
+      });
+    }
+
+    // Promote an image from data-src → src if it hasn't loaded yet. Safe to
+    // call repeatedly; once loaded, stays loaded (browser caches it).
+    function ensureSlideLoaded(idx) {
+      const total = state.media.length;
+      if (idx < 0 || idx >= total) return;
+      const track = $('heroTrack');
+      const slide = track.children[idx];
+      if (!slide) return;
+      const img = slide.querySelector('img');
+      if (!img) return;
+      if (!img.getAttribute('src') && img.dataset.src) {
+        // The first slide the user sees gets high fetch priority so it
+        // decodes before the neighbours.
+        if (idx === state.currentHeroIdx) {
+          img.setAttribute('fetchpriority', 'high');
+        }
+        img.src = img.dataset.src;
+      }
+    }
+
+    // Load the current slide and its two neighbours. Called from setHero on
+    // every navigation — so as the user swipes, the next slide they'll see
+    // is already fetched (or fetching) by the time they get there.
+    function loadSlideNeighbourhood(centerIdx) {
+      ensureSlideLoaded(centerIdx);
+      ensureSlideLoaded(centerIdx - 1);
+      ensureSlideLoaded(centerIdx + 1);
+    }
+
+    function setHero(idx, opts) {
+      opts = opts || {};
       if (state.media.length === 0) return;
       const total = state.media.length;
       const next = ((idx % total) + total) % total;
       state.currentHeroIdx = next;
 
+      const track = $('heroTrack');
+      if (opts.instant) track.classList.add('no-transition');
+      track.style.transform = `translateX(-${next * 100}%)`;
+      if (opts.instant) {
+        // Let the browser commit the transform before re-enabling the
+        // transition, otherwise the "restore" itself animates.
+        requestAnimationFrame(() => track.classList.remove('no-transition'));
+      }
+
       const m = state.media[next];
-      const img = $('heroImg');
-      img.classList.remove('show');
-
-      // For 360s we still use a flat image preview on the hero — opening the
-      // lightbox shows the immersive Pannellum view.
-      img.onload = () => img.classList.add('show');
-      img.src = m.public_url;
-      img.alt = m.caption || '';
-
       $('heroCounter').textContent = `${next + 1} / ${total}`;
 
       const badge = $('heroTypeBadge');
@@ -855,41 +1003,112 @@
         badge.classList.add('hidden');
       }
 
+      updateRoomTag(m);
+
       $('heroPrev').disabled = total <= 1;
       $('heroNext').disabled = total <= 1;
 
       // Keep jump-button active state in sync with current media type
       updateJumpActive(m.media_type);
+
+      // Lazy-load: make sure current + neighbours are fetched, so the user
+      // never waits for the next slide to decode during a swipe.
+      loadSlideNeighbourhood(next);
+    }
+
+    function updateRoomTag(m) {
+      const el = $('heroRoomTag');
+      const label = (m.room_caption && m.room_caption.trim())
+                    || (m.room_type ? ROOM_LABELS[m.room_type] : '')
+                    || '';
+      if (label) {
+        el.textContent = label;
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
     }
 
     // -------- Hero swipe gestures --------------------------------------------
+    // Continuous drag — the track follows the finger during touchmove and
+    // snaps to the nearest slide on release (with rubber-band resistance
+    // at the edges).
     function addHeroGestures() {
       const hero = $('hero');
-      const SWIPE_MIN = 40;     // px of horizontal travel to count as a swipe
+      const track = $('heroTrack');
+
       let startX = null, startY = null, startT = 0;
+      let active = false;      // touch is down
+      let locked = false;      // we've committed to horizontal drag (vs scroll)
+      let abandoned = false;   // user went vertical — pass touches to the page
 
       hero.addEventListener('touchstart', (e) => {
         if (e.touches.length !== 1) return;
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
         startT = Date.now();
+        active = true;
+        locked = false;
+        abandoned = false;
+      }, { passive: true });
+
+      hero.addEventListener('touchmove', (e) => {
+        if (!active || abandoned) return;
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+
+        // Decide intent once the user has moved a little bit
+        if (!locked) {
+          const adx = Math.abs(dx), ady = Math.abs(dy);
+          if (adx < 8 && ady < 8) return;
+          if (ady > adx) {
+            abandoned = true; // it's a vertical scroll — hands off
+            return;
+          }
+          locked = true;
+          track.classList.add('no-transition');
+        }
+
+        // Rubber-band at edges
+        const total = state.media.length;
+        const atStart = state.currentHeroIdx === 0 && dx > 0;
+        const atEnd   = state.currentHeroIdx === total - 1 && dx < 0;
+        const effDx = (atStart || atEnd) ? dx * 0.25 : dx;
+        const pct = (effDx / hero.offsetWidth) * 100;
+
+        track.style.transform =
+          `translateX(calc(-${state.currentHeroIdx * 100}% + ${pct}%))`;
       }, { passive: true });
 
       hero.addEventListener('touchend', (e) => {
-        if (startX == null) return;
+        if (!active) return;
+        active = false;
+        track.classList.remove('no-transition');
+        if (!locked) return; // a tap or vertical scroll — nothing to commit
+
         const t = e.changedTouches[0];
         const dx = t.clientX - startX;
-        const dy = t.clientY - startY;
         const dt = Date.now() - startT;
-        startX = null; startY = null;
+        const threshold = hero.offsetWidth * 0.18; // 18% of hero width
+        const flick = dt < 260 && Math.abs(dx) > 30;
 
-        // Reject taps, vertical drags, and long presses
-        if (Math.abs(dx) < SWIPE_MIN) return;
-        if (Math.abs(dy) > Math.abs(dx)) return;
-        if (dt > 600) return;
+        if (dx < 0 && (Math.abs(dx) > threshold || flick)) {
+          setHero(state.currentHeroIdx + 1);
+        } else if (dx > 0 && (Math.abs(dx) > threshold || flick)) {
+          setHero(state.currentHeroIdx - 1);
+        } else {
+          // snap back to current
+          track.style.transform = `translateX(-${state.currentHeroIdx * 100}%)`;
+        }
+      }, { passive: true });
 
-        if (dx < 0) setHero(state.currentHeroIdx + 1);
-        else        setHero(state.currentHeroIdx - 1);
+      // If a touch is cancelled (notification drawer etc.) make sure we
+      // don't leave the track mid-drag.
+      hero.addEventListener('touchcancel', () => {
+        if (!active) return;
+        active = false;
+        track.classList.remove('no-transition');
+        track.style.transform = `translateX(-${state.currentHeroIdx * 100}%)`;
       }, { passive: true });
     }
 
@@ -1007,7 +1226,8 @@
 
       $('lightboxCaption').textContent = m.caption || m.room_caption || '';
 
-      // Thumbs
+      // Thumbs — lazy so a listing with many photos doesn't pull every
+      // full-res URL just to show the strip.
       const thumbs = $('lightboxThumbs');
       thumbs.innerHTML = '';
       state.media.forEach((mm, i) => {
@@ -1016,6 +1236,8 @@
         const ti = document.createElement('img');
         ti.src = mm.public_url;
         ti.alt = '';
+        ti.loading = 'lazy';
+        ti.decoding = 'async';
         btn.appendChild(ti);
         if (mm.media_type !== 'photo') {
           const dot = document.createElement('span');
