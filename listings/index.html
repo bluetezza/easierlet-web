@@ -148,6 +148,44 @@
     }
     .hero-slide-play svg { width: 24px; height: 24px; color: #fff; }
 
+    /* 360 explore overlay — sits in the centre of hero 360 slides, nudging
+       the viewer to tap and open the interactive pano. A pulsing ring draws
+       the eye without being so big it blocks the photo preview. */
+    .hero-slide-360 {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .hero-slide-360 .pano-circle {
+      width: 68px; height: 68px; border-radius: 50%;
+      background: rgba(15, 46, 40, 0.75);
+      color: #fff;
+      font-size: 15px; font-weight: 800; letter-spacing: 0.3px;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.45);
+      animation: pano-pulse 2.2s ease-out infinite;
+    }
+    .hero-slide-360 .pano-label {
+      background: rgba(15, 46, 40, 0.85);
+      color: #fff;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      padding: 5px 10px; border-radius: 999px;
+      backdrop-filter: blur(4px);
+    }
+    @keyframes pano-pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.45); }
+      70%  { box-shadow: 0 0 0 14px rgba(255, 255, 255, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hero-slide-360 .pano-circle { animation: none; }
+    }
+
     /* Room tag — top-right, branded teal */
     .hero-room-tag {
       position: absolute;
@@ -398,15 +436,6 @@
       transition: background 0.15s ease;
     }
     .cta-primary:hover { background: var(--teal-dark); }
-    .cta-secondary {
-      flex: 1; min-height: 48px; border-radius: 12px;
-      background: #fff; color: var(--teal);
-      font-size: 15px; font-weight: 600;
-      border: 1.5px solid var(--teal);
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.15s ease;
-    }
-    .cta-secondary:hover { background: rgba(26, 107, 85, 0.05); }
     .cta-sub {
       font-size: 12px; color: var(--text-muted);
       white-space: nowrap;
@@ -606,7 +635,6 @@
   <!-- Sticky CTA -->
   <div class="cta-bar hidden" id="ctaBar">
     <div class="inner">
-      <button class="cta-secondary" id="openApplyBtn">Apply now</button>
       <button class="cta-primary" id="openViewingBtn">Book a viewing</button>
     </div>
   </div>
@@ -729,55 +757,14 @@
         state.listing = data.listing;
         state.property = data.property;
 
-        // Sort media into a natural house-tour order so the gallery reads
-        // like a walk through the home rather than upload order.
-        //
-        // Ordering rules (first tiebreaker wins):
-        //   1. Hero photo — always first. The landlord has explicitly chosen
-        //      this as the face of the listing; it leads regardless of type
-        //      or room.
-        //   2. Media type — photos, then videos, then 360°, then floorplans.
-        //   3. Narrative room order — exterior first (arriving), then
-        //      hallway (entering), main social rooms, bedrooms, bathrooms,
-        //      outdoor, utility, unclassified last.
-        //   4. Landlord's own sort_order within the same room, to respect
-        //      any manual ordering they did in the app.
+        // Sort media: photos first, then videos, then 360s, then floorplans.
+        // Within each type, preserve the landlord's sort_order.
         const TYPE_ORDER = { photo: 0, video: 1, photo_360: 2, floorplan: 3 };
-        const ROOM_ORDER = {
-          exterior:      0,   // arrive at the property
-          hallway:       1,   // step inside
-          living:        2,   // primary living space
-          kitchen:       3,
-          kitchen_diner: 4,
-          dining:        5,
-          bedroom_main:  6,   // main bedroom before others
-          bedroom:       7,
-          ensuite:       8,
-          bathroom:      9,
-          wc:            10,
-          garden:        11,  // outside again
-          garage:        12,
-          parking:       13,
-          other:         14,
-        };
-
-        function mediaSortKey(m) {
-          // Hero = pole position, everything else ranked normally
-          const heroBucket = m.is_hero === true ? 0 : 1;
-          const typeBucket = TYPE_ORDER[m.media_type] ?? 99;
-          const roomBucket = (m.room_type && m.room_type in ROOM_ORDER)
-                              ? ROOM_ORDER[m.room_type]
-                              : 999; // unclassified → end of its type bucket
-          const order = m.sort_order ?? 0;
-          return [heroBucket, typeBucket, roomBucket, order];
-        }
-
         state.media = (data.media || []).slice().sort((a, b) => {
-          const ka = mediaSortKey(a), kb = mediaSortKey(b);
-          for (let i = 0; i < ka.length; i++) {
-            if (ka[i] !== kb[i]) return ka[i] - kb[i];
-          }
-          return 0;
+          const ao = TYPE_ORDER[a.media_type] ?? 99;
+          const bo = TYPE_ORDER[b.media_type] ?? 99;
+          if (ao !== bo) return ao - bo;
+          return (a.sort_order ?? 0) - (b.sort_order ?? 0);
         });
 
         state.landlord = data.landlord;
@@ -909,16 +896,6 @@
 
       // -- Bind CTAs -----------------------------------------------------------
       $('openViewingBtn').onclick = openViewingModal;
-      $('openApplyBtn').onclick = () => {
-        // Public apply form lives at /apply-v2/ — it consumes `?slug=` and
-        // POSTs to the listing-apply Edge Function.
-        const slug = state.listing && state.listing.slug
-          ? encodeURIComponent(state.listing.slug)
-          : '';
-        window.location.href = slug
-          ? `/apply-v2/?slug=${slug}`
-          : '/apply-v2/';
-      };
       $('cancelViewingBtn').onclick = closeViewingModal;
       $('closeSuccessBtn').onclick = closeViewingModal;
       $('retryViewingBtn').onclick = () => {
@@ -991,6 +968,19 @@
                 '<path d="M8 5.5v13c0 .79.87 1.27 1.54.84l10-6.5a1 1 0 0 0 0-1.68l-10-6.5A1 1 0 0 0 8 5.5z"/>' +
               '</svg>' +
             '</div>';
+          slide.appendChild(overlay);
+        }
+
+        // 360 slides show a pulsing "360° — Tap to explore" overlay so tenants
+        // understand this is an interactive panorama rather than a warped flat
+        // photo. Pannellum itself only loads when the lightbox opens, so the
+        // slide is just a static 2:1 preview until then.
+        if (m.media_type === 'photo_360') {
+          const overlay = document.createElement('div');
+          overlay.className = 'hero-slide-360';
+          overlay.innerHTML =
+            '<div class="pano-circle">360°</div>' +
+            '<div class="pano-label">Tap to explore</div>';
           slide.appendChild(overlay);
         }
 
@@ -1191,7 +1181,10 @@
       {
         key: 'photo_360',
         label: '360°',
-        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="10" ry="4"/><path d="M12 2v20"/></svg>'
+        // Text-based icon rather than the glyph globe — far more obvious to a
+        // tenant who might not recognise the SVG as "panoramic photo". The
+        // stroked text sits on the same teal pill as the other jump buttons.
+        icon: '<span style="font-size:11px;font-weight:800;letter-spacing:0.4px;">360°</span>'
       },
     ];
 
@@ -1265,13 +1258,30 @@
         viewer.appendChild(container);
         // Lazy-load Pannellum JS
         loadScript('https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js', () => {
+          // Safari aggressively caches CORS preflight decisions AND WebGL
+          // texture outcomes at a layer below the user-clearable cache. If
+          // the image was ever fetched before CORS was configured on R2,
+          // subsequent attempts keep failing with "could not be accessed"
+          // even after Clear History. Appending a cachebuster forces Safari
+          // to treat it as a brand-new resource and re-run the CORS check
+          // against the current (working) R2 config.
+          //
+          // We key the buster on room_label_source + created_at (both change
+          // rarely) rather than Date.now() so that normal refreshes still
+          // benefit from Safari's cache; the buster only changes if the
+          // underlying media row is edited or replaced. Callers who have
+          // been burned by a previous failed fetch can always force a fresh
+          // load by re-uploading the photo.
+          const buster = encodeURIComponent((m.created_at || '') + '-' + (m.id || ''));
+          const panoUrl = m.public_url + (m.public_url.includes('?') ? '&' : '?') + 'v=' + buster;
           panoViewer = window.pannellum.viewer('pannellum-container', {
             type: 'equirectangular',
-            panorama: m.public_url,
+            panorama: panoUrl,
             autoLoad: true,
             autoRotate: -2,
             showControls: false,
             compass: false,
+            crossOrigin: 'anonymous',
           });
         });
       } else if (m.media_type === 'video') {
