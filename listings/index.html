@@ -791,10 +791,20 @@
         state.listing = data.listing;
         state.property = data.property;
 
-        // Sort media: photos first, then videos, then 360s, then floorplans.
-        // Within each type, preserve the landlord's sort_order.
+        // Sort media: the hero photo first (if one is flagged), then the rest
+        // by type (photos → videos → 360s → floorplans), preserving the
+        // landlord's sort_order within each type.
+        //
+        // Hero wins absolutely — even a 360 or video flagged as hero jumps to
+        // the front. Landlords flag the hero explicitly in the editor to
+        // control what tenants see first (and what appears in OG share cards),
+        // so we should respect that intent over the default type ordering.
         const TYPE_ORDER = { photo: 0, video: 1, photo_360: 2, floorplan: 3 };
         state.media = (data.media || []).slice().sort((a, b) => {
+          // Hero always wins — most-recent-wins ties (both flagged, which the
+          // DB's partial unique index prevents anyway).
+          if (a.is_hero && !b.is_hero) return -1;
+          if (b.is_hero && !a.is_hero) return 1;
           const ao = TYPE_ORDER[a.media_type] ?? 99;
           const bo = TYPE_ORDER[b.media_type] ?? 99;
           if (ao !== bo) return ao - bo;
