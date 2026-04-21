@@ -377,6 +377,14 @@
       height: 220px; border-radius: var(--radius); overflow: hidden;
       background: var(--bg-soft);
       box-shadow: var(--shadow-sm);
+      /* Create a lower stacking context than the sticky CTA (z-index:40).
+         Without this, Leaflet's internal panes sometimes paint above the
+         fixed CTA on iOS Safari because their map container doesn't have
+         an explicit z-index and mobile WebKit promotes them to a new
+         compositor layer. */
+      position: relative;
+      z-index: 1;
+      isolation: isolate;
     }
     #map { height: 100%; width: 100%; }
     .map-fallback {
@@ -415,7 +423,11 @@
        Sticky CTA bar
        ========================================================================= */
     .cta-bar {
-      position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+      position: fixed; left: 0; right: 0; bottom: 0;
+      /* High enough to stay above Leaflet's map panes (which use z-indexes
+         up to around 400 on their tile pane). Everything else on the page
+         sits at z-index ≤ 60. */
+      z-index: 500;
       background: rgba(255, 255, 255, 0.96);
       backdrop-filter: saturate(180%) blur(14px);
       -webkit-backdrop-filter: saturate(180%) blur(14px);
@@ -436,10 +448,27 @@
       transition: background 0.15s ease;
     }
     .cta-primary:hover { background: var(--teal-dark); }
+    /* Secondary CTA — "Apply now". Same size as primary so the two sit
+       balanced side by side, but outlined rather than filled to preserve
+       the primary's visual dominance. */
+    .cta-secondary {
+      flex: 1; min-height: 48px; border-radius: 12px;
+      background: #fff; color: var(--teal);
+      border: 1.5px solid var(--teal);
+      font-size: 15px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s ease;
+    }
+    .cta-secondary:hover { background: var(--bg-soft); }
     .cta-sub {
       font-size: 12px; color: var(--text-muted);
       white-space: nowrap;
     }
+
+    /* Reserve scroll room at the bottom so the last section of content can
+       scroll fully clear of the ~78px fixed CTA bar rather than being
+       permanently hidden behind it. */
+    body { padding-bottom: calc(82px + env(safe-area-inset-bottom)); }
 
     /* =========================================================================
        Modal (book viewing)
@@ -635,6 +664,11 @@
   <!-- Sticky CTA -->
   <div class="cta-bar hidden" id="ctaBar">
     <div class="inner">
+      <!-- Two CTAs side-by-side: viewing is the primary call (most tenants
+           want a look first), Apply is secondary for those ready to commit
+           without a viewing. Both appear on every listing; the apply link
+           is rebuilt with the listing slug at reveal time. -->
+      <button class="cta-secondary" id="openApplyBtn">Apply now</button>
       <button class="cta-primary" id="openViewingBtn">Book a viewing</button>
     </div>
   </div>
@@ -896,6 +930,12 @@
 
       // -- Bind CTAs -----------------------------------------------------------
       $('openViewingBtn').onclick = openViewingModal;
+      // Apply now — routes to the Turnstile-protected public application form
+      // (handled by the listing-apply Edge Function via /apply-v2/). The slug
+      // is always present here because we'd have bailed at line 771 otherwise.
+      $('openApplyBtn').onclick = () => {
+        window.location.href = `/apply-v2/?slug=${encodeURIComponent(state.slug)}`;
+      };
       $('cancelViewingBtn').onclick = closeViewingModal;
       $('closeSuccessBtn').onclick = closeViewingModal;
       $('retryViewingBtn').onclick = () => {
