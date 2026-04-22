@@ -185,6 +185,39 @@
       font-size: 14px; padding: 4px 8px;
     }
 
+    /* Role preference cards — large radio targets, full width on mobile.
+       Each card shows a bold title + supporting copy. Selected state uses
+       the same teal border + tinted background as other selected controls. */
+    .role-pref { display: flex; flex-direction: column; gap: 10px; }
+    .role-pref-card {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-transform: none; letter-spacing: 0; margin: 0; font-weight: normal;
+    }
+    .role-pref-card input[type="radio"] {
+      width: 18px; height: 18px; min-width: 18px;
+      margin-top: 2px; cursor: pointer;
+      accent-color: var(--teal);
+    }
+    .role-pref-card > div { flex: 1; }
+    .role-pref-card strong {
+      display: block; font-size: 15px; color: var(--text);
+      margin-bottom: 4px;
+    }
+    .role-pref-card span {
+      display: block; font-size: 13px; color: var(--muted);
+      line-height: 1.45;
+    }
+    .role-pref-card:has(input:checked) {
+      border-color: var(--teal);
+      background: var(--teal-light);
+    }
+
     .state { display: none; }
     .state.visible { display: block; }
     .loading { text-align: center; padding: 40px 20px; }
@@ -318,6 +351,40 @@
                 <input type="date" id="visaExpiry">
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Role preference (optional) — captures applicant's intent at
+             submission. Doesn't decide anything; the landlord assigns the
+             actual role at Mark Passed (post-referencing). Useful context
+             for the landlord during pre-application review. -->
+        <div class="card">
+          <h2>Your role on the tenancy</h2>
+          <div class="field-hint" style="margin-bottom:14px;">
+            If you're applying as part of a group, this helps the landlord understand who's likely to take the lead. Not binding — the landlord makes the final assignment after referencing.
+          </div>
+          <div class="role-pref">
+            <label class="role-pref-card">
+              <input type="radio" name="preferredRole" value="lead">
+              <div>
+                <strong>Lead tenant</strong>
+                <span>Primary point of contact for the landlord. First named on the agreement and registered with the deposit scheme. Receives all formal notices.</span>
+              </div>
+            </label>
+            <label class="role-pref-card">
+              <input type="radio" name="preferredRole" value="joint">
+              <div>
+                <strong>Joint tenant</strong>
+                <span>Equal responsibility for the rent and the property under joint and several liability. Same legal weight as the lead, but the lead is the primary contact.</span>
+              </div>
+            </label>
+            <label class="role-pref-card">
+              <input type="radio" name="preferredRole" value="unsure" checked>
+              <div>
+                <strong>Not sure yet</strong>
+                <span>Let the landlord decide based on the group dynamics.</span>
+              </div>
+            </label>
           </div>
         </div>
 
@@ -563,6 +630,10 @@
 
     const params = new URLSearchParams(window.location.search);
     const slug = params.get('slug');
+    const inviteToken = params.get('invite');
+    // Mode is determined at page load: cold-apply (slug) or invited (token).
+    // Both end up POSTing to listing-apply, which branches internally.
+    const isInviteMode = !!inviteToken && !slug;
 
     function $(id) { return document.getElementById(id); }
 
@@ -580,10 +651,35 @@
     // -- Load listing context ---------------------------------------------------
 
     async function init() {
-      if (!slug) {
-        showError('Missing listing', 'The application link is incomplete. Please use the Apply button from a property listing.');
+      // Either a slug (cold apply via public listing) or an invite token
+      // (landlord invited the applicant directly) is required.
+      if (!slug && !inviteToken) {
+        showError('Missing listing', 'The application link is incomplete. Please use the Apply button from a property listing, or the link in your invitation email.');
         return;
       }
+
+      // Hide Turnstile in invite mode — the token itself gates access.
+      if (isInviteMode) {
+        const tw = document.querySelector('.turnstile-wrap');
+        if (tw) tw.style.display = 'none';
+      }
+
+      // INVITE MODE — skip the listing-public-fetch and just render a
+      // generic header. The invited applicant already knows what property
+      // they're applying for (they got the email). A future iteration can
+      // add an `invite-fetch` Edge Function to pre-fill name/email and
+      // show the property card, but for now keeping it lean.
+      if (isInviteMode) {
+        $('propertyAddress').textContent = "The property your landlord shared with you";
+        $('propertyRent').textContent = '';
+        $('propertyDeposit').textContent = '';
+        const today = new Date();
+        $('preferredStart').min = today.toISOString().split('T')[0];
+        showState('formState');
+        return;
+      }
+
+      // SLUG MODE — existing cold-apply flow
       try {
         const res = await fetch(`${FETCH_FN}?slug=${encodeURIComponent(slug)}`);
         if (!res.ok) { showError('Listing not found', 'This listing is no longer available. Please contact the landlord directly.'); return; }
@@ -681,9 +777,11 @@
         return;
       }
 
-      // Turnstile token (may be empty if not yet solved)
+      // Turnstile token (may be empty if not yet solved). Only required
+      // in cold-apply (slug) mode — invited submissions are gated by the
+      // invite_token already, so the captcha is skipped.
       const turnstileToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
-      if (!turnstileToken) {
+      if (!isInviteMode && !turnstileToken) {
         showSubmitError('Please complete the captcha above.');
         return;
       }
@@ -703,8 +801,18 @@
         });
       }
 
+      // Role preference — applicant's stated intent. Optional; defaults to
+      // 'unsure' if not selected (matches the radio's checked default).
+      // Distinct from `role` which is the actual assignment, decided at
+      // Mark Passed by the landlord after referencing.
+      const preferredRoleSel = document.querySelector('input[name="preferredRole"]:checked');
+      const preferredRole = preferredRoleSel ? preferredRoleSel.value : 'unsure';
+
       const payload = {
-        slug,
+        // Identify which side of the flow this is. listing-apply branches
+        // on these — exactly one should be present.
+        slug:         slug || undefined,
+        invite_token: inviteToken || undefined,
         turnstile_token: turnstileToken,
 
         // Personal
@@ -713,6 +821,9 @@
         phone:     v('phone'),
         date_of_birth: v('dateOfBirth'),
         nationality:   v('nationality'),
+
+        // Role preference (advisory; landlord decides actual role at Mark Passed)
+        preferred_role: preferredRole,
 
         // Right to rent
         right_to_rent_status:        v('rightToRent'),
