@@ -471,6 +471,50 @@
     body { padding-bottom: calc(82px + env(safe-area-inset-bottom)); }
 
     /* =========================================================================
+       Let-agreed state — shown when listing.status === 'let_agreed'.
+       The hero gets a subtle dim overlay + a clear "Let agreed" pill at top,
+       the CTAs are visually disabled (no pointer events, faded), and a small
+       inline note in the CTA bar tells the visitor why.
+       ========================================================================= */
+    .let-agreed-banner {
+      position: absolute; top: 14px; left: 14px;
+      background: rgba(15, 46, 40, 0.92);
+      color: #fff;
+      font-size: 12px; font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      padding: 7px 12px;
+      border-radius: 999px;
+      z-index: 5;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    }
+    .let-agreed-dim::before {
+      /* Soft dim over the hero photos so they read as archival rather
+         than current — keeps photos visible (so the visitor can still see
+         what's let) but visually dims them. */
+      content: "";
+      position: absolute; inset: 0;
+      background: rgba(15, 46, 40, 0.18);
+      pointer-events: none;
+      z-index: 4;
+    }
+    .cta-bar.is-let-agreed .cta-primary,
+    .cta-bar.is-let-agreed .cta-secondary {
+      opacity: 0.45;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+    .cta-let-agreed-note {
+      flex: 1;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--teal-dark);
+      padding: 14px 0;
+    }
+
+    /* =========================================================================
        Modal (book viewing)
        ========================================================================= */
     .modal-overlay {
@@ -937,6 +981,42 @@
       $('loadingState').classList.add('hidden');
       $('content').classList.remove('hidden');
       $('ctaBar').classList.remove('hidden');
+
+      // -- Let-agreed state ---------------------------------------------------
+      // When a listing is `let_agreed`, the property has been let to a tenant
+      // (tenancy agreement finalised). We keep the page reachable for context
+      // and SEO continuity, but visually mark it as let and disable the CTAs.
+      // Visitors can still see the photos and details — useful for "see what
+      // similar properties looked like" — but they can't apply or book a
+      // viewing on this specific listing.
+      if (state.listing.status === 'let_agreed') {
+        const hero = $('hero');
+        hero.classList.add('let-agreed-dim');
+
+        // Banner pill at the top-left of the hero
+        const banner = document.createElement('div');
+        banner.className = 'let-agreed-banner';
+        banner.textContent = 'Let agreed';
+        hero.appendChild(banner);
+
+        // Replace the CTAs with an explanatory note (we leave the buttons
+        // in the DOM but disabled via the .is-let-agreed class on .cta-bar
+        // — keeps layout consistent and the buttons visible-but-faded so
+        // it's clear they exist but aren't active right now).
+        const ctaBar = $('ctaBar');
+        ctaBar.classList.add('is-let-agreed');
+        const inner = ctaBar.querySelector('.inner');
+        // Prepend the note before the buttons so it reads first
+        const note = document.createElement('div');
+        note.className = 'cta-let-agreed-note';
+        note.textContent = 'This property has been let.';
+        inner.insertBefore(note, inner.firstChild);
+
+        // Hide the buttons entirely on let-agreed so the note can take the
+        // full width — looks cleaner than fading buttons under a note.
+        $('openApplyBtn').style.display = 'none';
+        $('openViewingBtn').style.display = 'none';
+      }
 
       // -- Bind CTAs -----------------------------------------------------------
       $('openViewingBtn').onclick = openViewingModal;
