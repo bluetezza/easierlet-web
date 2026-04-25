@@ -54,7 +54,7 @@
     }
     .property-card { border-left: 4px solid var(--teal); }
     .address { font-size: 17px; font-weight: 600; color: var(--text); line-height: 1.4; }
-    .meta-row { display: flex; gap: 20px; margin-top: 8px; font-size: 13px; color: var(--muted); }
+    .meta-row { display: flex; gap: 20px; margin-top: 8px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
 
     .section-label {
       font-size: 11px;
@@ -129,6 +129,27 @@
       font-weight: 600;
     }
 
+    /* Role preference radio cards */
+    .role-cards { display: flex; flex-direction: column; gap: 10px; }
+    .role-cards input[type="radio"] { display: none; }
+    .role-cards label {
+      display: block; padding: 14px 16px;
+      border: 1px solid var(--border); border-radius: 12px;
+      background: #fff; cursor: pointer;
+      text-transform: none; letter-spacing: 0;
+      margin: 0;
+    }
+    .role-cards .role-title {
+      font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px;
+    }
+    .role-cards .role-desc {
+      font-size: 13px; font-weight: 400; color: var(--muted); line-height: 1.5;
+    }
+    .role-cards input:checked + label {
+      border-color: var(--teal); background: var(--teal-light);
+    }
+    .role-cards input:checked + label .role-title { color: var(--teal); }
+
     .conditional { display: none; margin-top: 10px; }
     .conditional.visible { display: block; }
 
@@ -143,6 +164,8 @@
     .warning-text { font-size: 13px; color: var(--warn-text); line-height: 1.5; }
 
     .turnstile-wrap { margin: 8px 0 16px 0; display: flex; justify-content: center; }
+    .turnstile-wrap.hidden { display: none; }
+    .property-card.hidden { display: none; }
 
     .btn {
       width: 100%;
@@ -159,64 +182,6 @@
     }
     .btn:hover:not(:disabled) { background: var(--teal-dark); }
     .btn:disabled { background: #B0C8C0; cursor: not-allowed; }
-
-    .add-joint-link {
-      display: inline-block;
-      color: var(--teal); font-weight: 500;
-      text-decoration: none; font-size: 14px;
-      padding: 8px 0;
-      cursor: pointer;
-    }
-    .add-joint-link:hover { text-decoration: underline; }
-
-    .joint-block {
-      display: none;
-      padding: 16px;
-      background: var(--bg);
-      border-radius: 10px;
-      margin-top: 12px;
-      position: relative;
-    }
-    .joint-block.visible { display: block; }
-    .remove-joint {
-      position: absolute; top: 10px; right: 10px;
-      background: none; border: none;
-      color: var(--muted); cursor: pointer;
-      font-size: 14px; padding: 4px 8px;
-    }
-
-    /* Role preference cards — large radio targets, full width on mobile.
-       Each card shows a bold title + supporting copy. Selected state uses
-       the same teal border + tinted background as other selected controls. */
-    .role-pref { display: flex; flex-direction: column; gap: 10px; }
-    .role-pref-card {
-      display: flex; align-items: flex-start; gap: 12px;
-      padding: 14px 16px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: #fff;
-      cursor: pointer;
-      transition: all 0.15s;
-      text-transform: none; letter-spacing: 0; margin: 0; font-weight: normal;
-    }
-    .role-pref-card input[type="radio"] {
-      width: 18px; height: 18px; min-width: 18px;
-      margin-top: 2px; cursor: pointer;
-      accent-color: var(--teal);
-    }
-    .role-pref-card > div { flex: 1; }
-    .role-pref-card strong {
-      display: block; font-size: 15px; color: var(--text);
-      margin-bottom: 4px;
-    }
-    .role-pref-card span {
-      display: block; font-size: 13px; color: var(--muted);
-      line-height: 1.45;
-    }
-    .role-pref-card:has(input:checked) {
-      border-color: var(--teal);
-      background: var(--teal-light);
-    }
 
     .state { display: none; }
     .state.visible { display: block; }
@@ -266,7 +231,7 @@
     <div class="state error-state" id="errorState">
       <div class="state-icon">⚠️</div>
       <h2 id="errorTitle">Listing not found</h2>
-      <p class="state-msg" id="errorMsg">This listing link is no longer valid or the property is no longer accepting applications.</p>
+      <p class="state-msg" id="errorMsg">This application link is no longer valid or the property is no longer accepting applications.</p>
     </div>
 
     <!-- Success -->
@@ -280,7 +245,7 @@
     <!-- Form -->
     <div class="state" id="formState">
 
-      <div class="card property-card">
+      <div class="card property-card" id="propertyCard">
         <div class="section-label">Applying for</div>
         <div class="address" id="propertyAddress">—</div>
         <div class="meta-row">
@@ -354,40 +319,6 @@
           </div>
         </div>
 
-        <!-- Role preference (optional) — captures applicant's intent at
-             submission. Doesn't decide anything; the landlord assigns the
-             actual role at Mark Passed (post-referencing). Useful context
-             for the landlord during pre-application review. -->
-        <div class="card">
-          <h2>Your role on the tenancy</h2>
-          <div class="field-hint" style="margin-bottom:14px;">
-            If you're applying as part of a group, this helps the landlord understand who's likely to take the lead. Not binding — the landlord makes the final assignment after referencing.
-          </div>
-          <div class="role-pref">
-            <label class="role-pref-card">
-              <input type="radio" name="preferredRole" value="lead">
-              <div>
-                <strong>Lead tenant</strong>
-                <span>Primary point of contact for the landlord. First named on the agreement and registered with the deposit scheme. Receives all formal notices.</span>
-              </div>
-            </label>
-            <label class="role-pref-card">
-              <input type="radio" name="preferredRole" value="joint">
-              <div>
-                <strong>Joint tenant</strong>
-                <span>Equal responsibility for the rent and the property under joint and several liability. Same legal weight as the lead, but the lead is the primary contact.</span>
-              </div>
-            </label>
-            <label class="role-pref-card">
-              <input type="radio" name="preferredRole" value="unsure" checked>
-              <div>
-                <strong>Not sure yet</strong>
-                <span>Let the landlord decide based on the group dynamics.</span>
-              </div>
-            </label>
-          </div>
-        </div>
-
         <!-- Household -->
         <div class="card">
           <h2>Your household</h2>
@@ -425,31 +356,31 @@
               <label for="smokerNo">No</label>
             </div>
           </div>
+        </div>
 
-          <div class="field" style="margin-top:6px;">
-            <a class="add-joint-link" id="addJointLink">+ Add a joint applicant</a>
-          </div>
-          <div class="joint-block" id="jointBlock">
-            <button type="button" class="remove-joint" id="removeJointBtn">Remove</button>
-            <div class="section-label" style="margin-bottom:12px;">Joint applicant</div>
-            <div class="field">
-              <label for="jointName">Full name</label>
-              <input type="text" id="jointName">
-            </div>
-            <div class="field-row">
-              <div class="field">
-                <label for="jointEmail">Email</label>
-                <input type="email" id="jointEmail">
-              </div>
-              <div class="field">
-                <label for="jointPhone">Phone</label>
-                <input type="tel" id="jointPhone">
-              </div>
-            </div>
-            <div class="field">
-              <label for="jointDob">Date of birth</label>
-              <input type="date" id="jointDob">
-            </div>
+        <!-- Role on the tenancy -->
+        <div class="card">
+          <h2>Your role on the tenancy</h2>
+          <div class="field-hint" style="margin-bottom:14px;">If you're applying with others, telling us your preference helps the landlord plan the group. Nothing's locked in — the landlord makes the final call after referencing.</div>
+
+          <div class="role-cards">
+            <input type="radio" name="preferredRole" id="roleLead" value="lead">
+            <label for="roleLead">
+              <div class="role-title">Lead tenant</div>
+              <div class="role-desc">You'll be the main point of contact for the landlord and the deposit scheme. One person per group takes this role.</div>
+            </label>
+
+            <input type="radio" name="preferredRole" id="roleJoint" value="joint">
+            <label for="roleJoint">
+              <div class="role-title">Joint tenant</div>
+              <div class="role-desc">You'll share the tenancy equally with the lead — same legal weight, just not the day-to-day point of contact.</div>
+            </label>
+
+            <input type="radio" name="preferredRole" id="roleUnsure" value="unsure" checked>
+            <label for="roleUnsure">
+              <div class="role-title">Not sure yet</div>
+              <div class="role-desc">Happy for the landlord to decide once everyone's applied.</div>
+            </label>
           </div>
         </div>
 
@@ -487,7 +418,7 @@
 
         <!-- Employment -->
         <div class="card">
-          <h2>Work & income</h2>
+          <h2>Work &amp; income</h2>
           <div class="field">
             <label for="employmentStatus">Employment status</label>
             <select id="employmentStatus">
@@ -528,7 +459,7 @@
               <input type="number" id="additionalIncome" min="0" placeholder="Optional">
             </div>
             <div class="field">
-              <label for="additionalSource">Source</label>
+              <label for="additionalSource">Source of additional income</label>
               <input type="text" id="additionalSource" placeholder="e.g. freelance">
             </div>
           </div>
@@ -610,7 +541,7 @@
             <label for="consentPrivacy">I consent to my information being shared with the landlord and, if shortlisted, with their chosen referencing provider. I've read the <a href="/privacy/" target="_blank">privacy notice</a>.</label>
           </div>
 
-          <div class="turnstile-wrap">
+          <div class="turnstile-wrap" id="turnstileWrap">
             <div class="cf-turnstile" data-sitekey="0x4AAAAAAC_qyS_vO4XbyHFw"></div>
           </div>
 
@@ -624,16 +555,16 @@
   </div>
 
   <script>
-    const SUPABASE_URL = 'https://ffzknvcptqjlkxmkdxuk.supabase.co';
-    const APPLY_FN    = `${SUPABASE_URL}/functions/v1/listing-apply`;
-    const FETCH_FN    = `${SUPABASE_URL}/functions/v1/listing-public-fetch`;
+    const SUPABASE_URL  = 'https://ffzknvcptqjlkxmkdxuk.supabase.co';
+    const APPLY_FN      = `${SUPABASE_URL}/functions/v1/listing-apply`;
+    const FETCH_FN      = `${SUPABASE_URL}/functions/v1/listing-public-fetch`;
+    const TENANT_WF_FN  = `${SUPABASE_URL}/functions/v1/tenant-workflow`;
 
     const params = new URLSearchParams(window.location.search);
-    const slug = params.get('slug');
-    const inviteToken = params.get('invite');
-    // Mode is determined at page load: cold-apply (slug) or invited (token).
-    // Both end up POSTing to listing-apply, which branches internally.
-    const isInviteMode = !!inviteToken && !slug;
+    // Mode: ?slug= (cold-apply, public listing) or ?invite= (landlord invitation)
+    const slug        = params.get('slug');
+    const inviteToken = params.get('invite') || params.get('token'); // legacy ?token= compat
+    const mode = inviteToken ? 'invite' : (slug ? 'slug' : null);
 
     function $(id) { return document.getElementById(id); }
 
@@ -648,62 +579,50 @@
       showState('errorState');
     }
 
-    // -- Load listing context ---------------------------------------------------
+    function buildAddress(p) {
+      if (!p) return null;
+      const parts = [p.address_line1, p.address_line2, p.city, p.postcode]
+        .filter(x => x && String(x).trim().length > 0);
+      if (parts.length > 0) return parts.join(', ');
+      if (p.address && String(p.address).trim().length > 0) return p.address;
+      return null;
+    }
 
-    async function init() {
-      // Either a slug (cold apply via public listing) or an invite token
-      // (landlord invited the applicant directly) is required.
-      if (!slug && !inviteToken) {
-        showError('Missing listing', 'The application link is incomplete. Please use the Apply button from a property listing, or the link in your invitation email.');
-        return;
-      }
+    const fmtMoney = n => '£' + Math.round(n).toLocaleString('en-GB');
 
-      // Hide Turnstile in invite mode — the token itself gates access.
-      if (isInviteMode) {
-        const tw = document.querySelector('.turnstile-wrap');
-        if (tw) tw.style.display = 'none';
-      }
+    // ── Mode-specific init ─────────────────────────────────────────────────────
 
-      // INVITE MODE — skip the listing-public-fetch and just render a
-      // generic header. The invited applicant already knows what property
-      // they're applying for (they got the email). A future iteration can
-      // add an `invite-fetch` Edge Function to pre-fill name/email and
-      // show the property card, but for now keeping it lean.
-      if (isInviteMode) {
-        $('propertyAddress').textContent = "The property your landlord shared with you";
-        $('propertyRent').textContent = '';
-        $('propertyDeposit').textContent = '';
-        const today = new Date();
-        $('preferredStart').min = today.toISOString().split('T')[0];
-        showState('formState');
-        return;
-      }
-
-      // SLUG MODE — existing cold-apply flow
+    async function initSlug() {
+      // Cold-apply mode: hydrate property card from listing-public-fetch
       try {
         const res = await fetch(`${FETCH_FN}?slug=${encodeURIComponent(slug)}`);
-        if (!res.ok) { showError('Listing not found', 'This listing is no longer available. Please contact the landlord directly.'); return; }
+        if (!res.ok) {
+          showError('Listing not found', 'This listing is no longer available. Please contact the landlord directly.');
+          return;
+        }
         const data = await res.json();
-        const listing = data.listing;
+        const listing  = data.listing;
         const property = data.property;
-        if (!listing || !property) { showError('Listing not found', 'This listing could not be loaded.'); return; }
+        if (!listing || !property) {
+          showError('Listing not found', 'This listing could not be loaded.');
+          return;
+        }
         if (listing.status !== 'live') {
           showError('No longer accepting applications', 'This property has been taken down or let. Please browse other listings.');
           return;
         }
 
-        // Address
-        const addrParts = [property.address_line1, property.address_line2, property.city, property.postcode]
-          .filter(x => x && String(x).trim().length > 0);
-        $('propertyAddress').textContent = addrParts.length > 0 ? addrParts.join(', ') : (property.address || 'the property');
+        // Address (robust — falls back through structured -> legacy -> placeholder)
+        $('propertyAddress').textContent = buildAddress(property) ?? 'the property';
 
         // Rent + deposit
-        const fmt = n => '£' + Math.round(n).toLocaleString('en-GB');
         if (listing.advertised_rent) {
-          $('propertyRent').textContent = `${fmt(listing.advertised_rent)} pcm`;
+          $('propertyRent').textContent = `${fmtMoney(listing.advertised_rent)} pcm`;
+        } else {
+          $('propertyRent').textContent = '';
         }
         if (listing.advertised_deposit) {
-          $('propertyDeposit').textContent = `${fmt(listing.advertised_deposit)} deposit`;
+          $('propertyDeposit').textContent = `${fmtMoney(listing.advertised_deposit)} deposit`;
         }
 
         // Sensible default preferred start
@@ -712,12 +631,61 @@
 
         showState('formState');
       } catch (e) {
-        console.error(e);
+        console.error('initSlug error', e);
         showError('Something went wrong', 'Please try again in a moment, or contact the landlord directly.');
       }
     }
 
-    // -- Conditional blocks -----------------------------------------------------
+    async function initInvite() {
+      // Invited mode: hide Turnstile (token is already the auth), pre-fill name/email/phone,
+      // and hydrate the property card from the invite info so the prospect sees what
+      // they're applying for.
+      $('turnstileWrap').classList.add('hidden');
+
+      try {
+        const res = await fetch(`${TENANT_WF_FN}?action=get_invite&token=${encodeURIComponent(inviteToken)}`);
+        if (!res.ok) {
+          showError('Invitation not found', 'This invitation link is no longer valid. Please contact the landlord.');
+          return;
+        }
+        const info = await res.json();
+        if (info.name)  $('fullName').value = info.name;
+        if (info.email) $('email').value    = info.email;
+        if (info.phone) $('phone').value    = info.phone;
+
+        // Property card — show address. If the invite is linked to a listing,
+        // also show advertised rent + deposit; otherwise just the address.
+        $('propertyAddress').textContent = buildAddress(info.property) ?? 'the property';
+        if (info.listing?.advertised_rent) {
+          $('propertyRent').textContent = `${fmtMoney(info.listing.advertised_rent)} pcm`;
+        } else {
+          $('propertyRent').textContent = '';
+        }
+        if (info.listing?.advertised_deposit) {
+          $('propertyDeposit').textContent = `${fmtMoney(info.listing.advertised_deposit)} deposit`;
+        }
+
+        // Sensible default preferred start
+        const today = new Date();
+        $('preferredStart').min = today.toISOString().split('T')[0];
+
+        showState('formState');
+      } catch (e) {
+        console.error('initInvite error', e);
+        showError('Something went wrong', 'Please try again in a moment, or contact the landlord directly.');
+      }
+    }
+
+    async function init() {
+      if (!mode) {
+        showError('Missing application link', 'The application link is incomplete. Please use the Apply button from a property listing or the link in your invitation email.');
+        return;
+      }
+      if (mode === 'invite') return initInvite();
+      return initSlug();
+    }
+
+    // ── Conditional blocks ─────────────────────────────────────────────────────
 
     $('rightToRent').addEventListener('change', e => {
       $('visaFields').classList.toggle('visible', e.target.value === 'visa');
@@ -731,19 +699,7 @@
     document.querySelectorAll('input[name="arrears"]').forEach(el =>
       el.addEventListener('change', e => $('arrearsFields').classList.toggle('visible', e.target.value === 'yes')));
 
-    // -- Joint applicant ---------------------------------------------------------
-
-    $('addJointLink').addEventListener('click', () => {
-      $('jointBlock').classList.add('visible');
-      $('addJointLink').style.display = 'none';
-    });
-    $('removeJointBtn').addEventListener('click', () => {
-      $('jointBlock').classList.remove('visible');
-      $('addJointLink').style.display = '';
-      ['jointName','jointEmail','jointPhone','jointDob'].forEach(id => $(id).value = '');
-    });
-
-    // -- Submit ------------------------------------------------------------------
+    // ── Submit ─────────────────────────────────────────────────────────────────
 
     function showSubmitError(msg) {
       const el = $('submitError');
@@ -761,6 +717,10 @@
       const sel = document.querySelector(`input[name="${name}"]:checked`);
       return sel ? sel.value === 'yes' : null;
     };
+    const vRadioRaw = name => {
+      const sel = document.querySelector(`input[name="${name}"]:checked`);
+      return sel ? sel.value : null;
+    };
 
     $('applyForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -777,43 +737,24 @@
         return;
       }
 
-      // Turnstile token (may be empty if not yet solved). Only required
-      // in cold-apply (slug) mode — invited submissions are gated by the
-      // invite_token already, so the captcha is skipped.
-      const turnstileToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
-      if (!isInviteMode && !turnstileToken) {
-        showSubmitError('Please complete the captcha above.');
-        return;
+      // Turnstile only required in slug (cold-apply) mode — invited path is already authenticated by token
+      let turnstileToken = '';
+      if (mode === 'slug') {
+        turnstileToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
+        if (!turnstileToken) {
+          showSubmitError('Please complete the captcha above.');
+          return;
+        }
       }
 
       const btn = $('submitBtn');
       btn.disabled = true;
       btn.textContent = 'Submitting…';
 
-      // Optional joint applicant
-      const jointApplicants = [];
-      if ($('jointBlock').classList.contains('visible') && v('jointName') && v('jointEmail')) {
-        jointApplicants.push({
-          name:          v('jointName'),
-          email:         v('jointEmail'),
-          phone:         v('jointPhone') || undefined,
-          date_of_birth: v('jointDob')  || undefined,
-        });
-      }
-
-      // Role preference — applicant's stated intent. Optional; defaults to
-      // 'unsure' if not selected (matches the radio's checked default).
-      // Distinct from `role` which is the actual assignment, decided at
-      // Mark Passed by the landlord after referencing.
-      const preferredRoleSel = document.querySelector('input[name="preferredRole"]:checked');
-      const preferredRole = preferredRoleSel ? preferredRoleSel.value : 'unsure';
-
       const payload = {
-        // Identify which side of the flow this is. listing-apply branches
-        // on these — exactly one should be present.
-        slug:         slug || undefined,
-        invite_token: inviteToken || undefined,
-        turnstile_token: turnstileToken,
+        // Mode discriminator
+        ...(mode === 'slug'   ? { slug,         turnstile_token: turnstileToken } : {}),
+        ...(mode === 'invite' ? { invite_token: inviteToken } : {}),
 
         // Personal
         full_name: v('fullName'),
@@ -821,9 +762,6 @@
         phone:     v('phone'),
         date_of_birth: v('dateOfBirth'),
         nationality:   v('nationality'),
-
-        // Role preference (advisory; landlord decides actual role at Mark Passed)
-        preferred_role: preferredRole,
 
         // Right to rent
         right_to_rent_status:        v('rightToRent'),
@@ -836,7 +774,9 @@
         has_pets:           vRadio('hasPets') ?? false,
         pet_details:        v('petDetails'),
         is_smoker:          vRadio('isSmoker') ?? false,
-        joint_applicants:   jointApplicants,
+
+        // Role preference (advisory — landlord still chooses at Mark Passed)
+        preferred_role: vRadioRaw('preferredRole'),
 
         // Tenancy
         preferred_tenancy_start:  v('preferredStart'),
@@ -881,14 +821,14 @@
             consents_required:                  'Please tick all three consent boxes.',
             listing_not_found:                  'This listing no longer exists. Please browse other properties.',
             listing_not_accepting_applications: 'This listing is no longer accepting applications.',
+            invalid_invite_token:               'Your invitation link is no longer valid. Please contact the landlord.',
             captcha_failed:                     'The captcha check failed. Please try again.',
             missing_listing_or_invite:          'The application link is incomplete.',
           };
           showSubmitError(errMap[data.error] || 'Something went wrong. Please try again.');
           btn.disabled = false;
           btn.textContent = 'Submit application';
-          // Reset turnstile so the user can try again
-          if (window.turnstile) window.turnstile.reset();
+          if (window.turnstile && mode === 'slug') window.turnstile.reset();
           return;
         }
         showState('successState');
@@ -897,7 +837,7 @@
         showSubmitError('Network error. Please check your connection and try again.');
         btn.disabled = false;
         btn.textContent = 'Submit application';
-        if (window.turnstile) window.turnstile.reset();
+        if (window.turnstile && mode === 'slug') window.turnstile.reset();
       }
     });
 
