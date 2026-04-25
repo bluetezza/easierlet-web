@@ -22,6 +22,7 @@
       --err-bg:     #FDF1F1;
       --err-br:     #D99B9B;
       --err-text:   #6B4242;
+      --err-strong: #B5462D;
     }
 
     body {
@@ -70,7 +71,7 @@
     .field { margin-bottom: 16px; }
     .field:last-child { margin-bottom: 0; }
     label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-    label.required::after { content: ' *'; color: #B5462D; }
+    label.required::after { content: ' *'; color: var(--err-strong); }
     input:not([type="checkbox"]):not([type="radio"]), select, textarea {
       width: 100%;
       padding: 13px 14px;
@@ -88,6 +89,21 @@
       border-color: var(--teal);
       box-shadow: 0 0 0 3px rgba(26,107,85,0.12);
     }
+    input.invalid, select.invalid, textarea.invalid {
+      border-color: var(--err-strong);
+      background: #FFF8F6;
+    }
+    input.invalid:focus, select.invalid:focus, textarea.invalid:focus {
+      box-shadow: 0 0 0 3px rgba(181,70,45,0.12);
+    }
+    .field-error {
+      display: none;
+      font-size: 12px;
+      color: var(--err-strong);
+      margin-top: 5px;
+      font-weight: 500;
+    }
+    .field-error.visible { display: block; }
     textarea { resize: vertical; min-height: 80px; }
     .field-hint { font-size: 12px; color: var(--muted); margin-top: 5px; }
     .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -101,6 +117,10 @@
       background: var(--teal-light);
       border-radius: 10px;
       margin-bottom: 12px;
+    }
+    .checkbox-row.invalid {
+      background: #FFF8F6;
+      border: 1px solid var(--err-br);
     }
     .checkbox-row input[type="checkbox"] {
       width: 20px; height: 20px; min-width: 20px;
@@ -208,6 +228,9 @@
       display: none;
     }
     .submit-error.visible { display: block; }
+    .submit-error .summary-title { font-weight: 600; margin-bottom: 6px; }
+    .submit-error ul { margin: 0; padding-left: 20px; }
+    .submit-error li { margin: 2px 0; }
 
     a { color: var(--teal); }
   </style>
@@ -259,7 +282,7 @@
         <div class="warning-text">This is the landlord's first look at your application. Answer honestly — if your application progresses, a formal reference check with an independent referencing provider will follow to verify the details.</div>
       </div>
 
-      <form id="applyForm">
+      <form id="applyForm" novalidate>
 
         <!-- Personal -->
         <div class="card">
@@ -267,26 +290,31 @@
 
           <div class="field">
             <label class="required" for="fullName">Full name</label>
-            <input type="text" id="fullName" required autocomplete="name" placeholder="e.g. Sarah Johnson">
+            <input type="text" id="fullName" autocomplete="name" placeholder="e.g. Sarah Johnson">
+            <div class="field-error" data-error-for="fullName"></div>
           </div>
           <div class="field-row">
             <div class="field">
               <label class="required" for="email">Email</label>
-              <input type="email" id="email" required autocomplete="email" placeholder="name@example.com">
+              <input type="email" id="email" autocomplete="email" placeholder="name@example.com" inputmode="email">
+              <div class="field-error" data-error-for="email"></div>
             </div>
             <div class="field">
               <label class="required" for="phone">Phone</label>
-              <input type="tel" id="phone" required autocomplete="tel" placeholder="07900 000 000">
+              <input type="tel" id="phone" autocomplete="tel" placeholder="07900 000 000" inputmode="tel">
+              <div class="field-error" data-error-for="phone"></div>
             </div>
           </div>
           <div class="field-row">
             <div class="field">
-              <label for="dateOfBirth">Date of birth</label>
+              <label class="required" for="dateOfBirth">Date of birth</label>
               <input type="date" id="dateOfBirth">
+              <div class="field-error" data-error-for="dateOfBirth"></div>
             </div>
             <div class="field">
-              <label for="nationality">Nationality</label>
+              <label class="required" for="nationality">Nationality</label>
               <input type="text" id="nationality" placeholder="e.g. British">
+              <div class="field-error" data-error-for="nationality"></div>
             </div>
           </div>
         </div>
@@ -295,7 +323,7 @@
         <div class="card">
           <h2>Right to rent</h2>
           <div class="field">
-            <label for="rightToRent">Your status</label>
+            <label class="required" for="rightToRent">Your status</label>
             <select id="rightToRent">
               <option value="">Select…</option>
               <option value="uk_citizen">UK / British / Irish citizen</option>
@@ -304,16 +332,19 @@
               <option value="visa">Visa</option>
               <option value="other">Other</option>
             </select>
+            <div class="field-error" data-error-for="rightToRent"></div>
           </div>
           <div class="conditional" id="visaFields">
             <div class="field-row">
               <div class="field">
-                <label for="visaType">Visa type</label>
+                <label class="required" for="visaType">Visa type</label>
                 <input type="text" id="visaType" placeholder="e.g. Skilled Worker">
+                <div class="field-error" data-error-for="visaType"></div>
               </div>
               <div class="field">
-                <label for="visaExpiry">Visa expiry</label>
+                <label class="required" for="visaExpiry">Visa expiry</label>
                 <input type="date" id="visaExpiry">
+                <div class="field-error" data-error-for="visaExpiry"></div>
               </div>
             </div>
           </div>
@@ -324,16 +355,18 @@
           <h2>Your household</h2>
           <div class="field-row">
             <div class="field">
-              <label for="adults">Adults (incl. you)</label>
-              <input type="number" id="adults" min="1" value="1">
+              <label class="required" for="adults">Adults (incl. you)</label>
+              <input type="number" id="adults" min="1" max="20" value="1" inputmode="numeric">
+              <div class="field-error" data-error-for="adults"></div>
             </div>
             <div class="field">
               <label for="children">Children</label>
-              <input type="number" id="children" min="0" value="0">
+              <input type="number" id="children" min="0" max="20" value="0" inputmode="numeric">
+              <div class="field-error" data-error-for="children"></div>
             </div>
           </div>
           <div class="field">
-            <label>Pets?</label>
+            <label class="required">Pets?</label>
             <div class="yn-toggle">
               <input type="radio" name="hasPets" id="petsYes" value="yes">
               <label for="petsYes">Yes</label>
@@ -342,13 +375,14 @@
             </div>
             <div class="conditional" id="petFields">
               <div class="field" style="margin-top:12px;">
-                <label for="petDetails">Pet details</label>
+                <label class="required" for="petDetails">Pet details</label>
                 <input type="text" id="petDetails" placeholder="e.g. 1 small dog, housetrained">
+                <div class="field-error" data-error-for="petDetails"></div>
               </div>
             </div>
           </div>
           <div class="field">
-            <label>Smoker?</label>
+            <label class="required">Smoker?</label>
             <div class="yn-toggle">
               <input type="radio" name="isSmoker" id="smokerYes" value="yes">
               <label for="smokerYes">Yes</label>
@@ -389,11 +423,12 @@
           <h2>Tenancy</h2>
           <div class="field-row">
             <div class="field">
-              <label for="preferredStart">Preferred start date</label>
+              <label class="required" for="preferredStart">Preferred start date</label>
               <input type="date" id="preferredStart">
+              <div class="field-error" data-error-for="preferredStart"></div>
             </div>
             <div class="field">
-              <label for="preferredLength">Preferred length</label>
+              <label class="required" for="preferredLength">Preferred length</label>
               <select id="preferredLength">
                 <option value="">Select…</option>
                 <option value="6_months">6 months</option>
@@ -402,10 +437,11 @@
                 <option value="24_months">24 months</option>
                 <option value="flexible">Flexible / longer</option>
               </select>
+              <div class="field-error" data-error-for="preferredLength"></div>
             </div>
           </div>
           <div class="field">
-            <label>Do you have a guarantor available if needed?</label>
+            <label class="required">Do you have a guarantor available if needed?</label>
             <div class="yn-toggle">
               <input type="radio" name="guarantor" id="guaYes" value="yes">
               <label for="guaYes">Yes</label>
@@ -420,7 +456,7 @@
         <div class="card">
           <h2>Work &amp; income</h2>
           <div class="field">
-            <label for="employmentStatus">Employment status</label>
+            <label class="required" for="employmentStatus">Employment status</label>
             <select id="employmentStatus">
               <option value="">Select…</option>
               <option value="employed_full_time">Employed — full time</option>
@@ -432,31 +468,37 @@
               <option value="unemployed">Unemployed</option>
               <option value="other">Other</option>
             </select>
+            <div class="field-error" data-error-for="employmentStatus"></div>
           </div>
           <div class="field-row">
             <div class="field">
-              <label for="employer">Employer</label>
+              <label class="required" for="employer">Employer</label>
               <input type="text" id="employer" placeholder="Company name">
+              <div class="field-error" data-error-for="employer"></div>
             </div>
             <div class="field">
-              <label for="jobTitle">Job title</label>
+              <label class="required" for="jobTitle">Job title</label>
               <input type="text" id="jobTitle" placeholder="e.g. Designer">
+              <div class="field-error" data-error-for="jobTitle"></div>
             </div>
           </div>
           <div class="field-row">
             <div class="field">
-              <label for="yearsInRole">Years in current role</label>
-              <input type="number" id="yearsInRole" min="0" step="0.1" placeholder="e.g. 2.5">
+              <label class="required" for="yearsInRole">Years in current role</label>
+              <input type="number" id="yearsInRole" min="0" max="60" step="0.1" placeholder="e.g. 2.5" inputmode="decimal">
+              <div class="field-error" data-error-for="yearsInRole"></div>
             </div>
             <div class="field">
-              <label for="annualIncome">Gross annual income (£)</label>
-              <input type="number" id="annualIncome" min="0" placeholder="35000">
+              <label class="required" for="annualIncome">Gross annual income (£)</label>
+              <input type="number" id="annualIncome" min="0" max="10000000" placeholder="35000" inputmode="numeric">
+              <div class="field-error" data-error-for="annualIncome"></div>
             </div>
           </div>
           <div class="field-row">
             <div class="field">
               <label for="additionalIncome">Additional income (£/year)</label>
-              <input type="number" id="additionalIncome" min="0" placeholder="Optional">
+              <input type="number" id="additionalIncome" min="0" max="10000000" placeholder="Optional" inputmode="numeric">
+              <div class="field-error" data-error-for="additionalIncome"></div>
             </div>
             <div class="field">
               <label for="additionalSource">Source of additional income</label>
@@ -471,7 +513,7 @@
           <div class="field-hint" style="margin-bottom:14px;">Referencing checks will catch these anyway — it's better to be upfront now. Landlords take context into account.</div>
 
           <div class="field">
-            <label>Any CCJs, defaults, IVAs or bankruptcy in the last 6 years?</label>
+            <label class="required">Any CCJs, defaults, IVAs or bankruptcy in the last 6 years?</label>
             <div class="yn-toggle">
               <input type="radio" name="adverseCredit" id="adverseYes" value="yes">
               <label for="adverseYes">Yes</label>
@@ -480,14 +522,15 @@
             </div>
             <div class="conditional" id="adverseFields">
               <div class="field" style="margin-top:12px;">
-                <label for="adverseDetails">Details (optional)</label>
+                <label class="required" for="adverseDetails">Details</label>
                 <textarea id="adverseDetails" placeholder="Briefly explain the circumstances"></textarea>
+                <div class="field-error" data-error-for="adverseDetails"></div>
               </div>
             </div>
           </div>
 
           <div class="field">
-            <label>Have you ever been evicted?</label>
+            <label class="required">Have you ever been evicted?</label>
             <div class="yn-toggle">
               <input type="radio" name="evicted" id="evYes" value="yes">
               <label for="evYes">Yes</label>
@@ -496,14 +539,15 @@
             </div>
             <div class="conditional" id="evictedFields">
               <div class="field" style="margin-top:12px;">
-                <label for="evictedDetails">Details (optional)</label>
+                <label class="required" for="evictedDetails">Details</label>
                 <textarea id="evictedDetails" placeholder="Briefly explain the circumstances"></textarea>
+                <div class="field-error" data-error-for="evictedDetails"></div>
               </div>
             </div>
           </div>
 
           <div class="field">
-            <label>Have you been in rent arrears in the last 2 years?</label>
+            <label class="required">Have you been in rent arrears in the last 2 years?</label>
             <div class="yn-toggle">
               <input type="radio" name="arrears" id="arYes" value="yes">
               <label for="arYes">Yes</label>
@@ -512,15 +556,17 @@
             </div>
             <div class="conditional" id="arrearsFields">
               <div class="field" style="margin-top:12px;">
-                <label for="arrearsDetails">Details (optional)</label>
+                <label class="required" for="arrearsDetails">Details</label>
                 <textarea id="arrearsDetails" placeholder="Briefly explain the circumstances"></textarea>
+                <div class="field-error" data-error-for="arrearsDetails"></div>
               </div>
             </div>
           </div>
 
           <div class="field">
-            <label for="reasonForMoving">Reason for moving</label>
-            <textarea id="reasonForMoving" placeholder="Optional — e.g. 'Relocating for work'"></textarea>
+            <label class="required" for="reasonForMoving">Reason for moving</label>
+            <textarea id="reasonForMoving" placeholder="e.g. Relocating for work"></textarea>
+            <div class="field-error" data-error-for="reasonForMoving"></div>
           </div>
         </div>
 
@@ -528,16 +574,16 @@
         <div class="card">
           <h2>Before you submit</h2>
 
-          <div class="checkbox-row">
-            <input type="checkbox" id="consentAccuracy" required>
+          <div class="checkbox-row" data-consent-row="consentAccuracy">
+            <input type="checkbox" id="consentAccuracy">
             <label for="consentAccuracy">I confirm the information I have provided is accurate and truthful to the best of my knowledge.</label>
           </div>
-          <div class="checkbox-row">
-            <input type="checkbox" id="consentReferencing" required>
+          <div class="checkbox-row" data-consent-row="consentReferencing">
+            <input type="checkbox" id="consentReferencing">
             <label for="consentReferencing">I understand that if my application is shortlisted, an independent referencing provider will be instructed to verify my details (employment, credit, previous landlord).</label>
           </div>
-          <div class="checkbox-row">
-            <input type="checkbox" id="consentPrivacy" required>
+          <div class="checkbox-row" data-consent-row="consentPrivacy">
+            <input type="checkbox" id="consentPrivacy">
             <label for="consentPrivacy">I consent to my information being shared with the landlord and, if shortlisted, with their chosen referencing provider. I've read the <a href="/privacy/" target="_blank">privacy notice</a>.</label>
           </div>
 
@@ -593,7 +639,6 @@
     // ── Mode-specific init ─────────────────────────────────────────────────────
 
     async function initSlug() {
-      // Cold-apply mode: hydrate property card from listing-public-fetch
       try {
         const res = await fetch(`${FETCH_FN}?slug=${encodeURIComponent(slug)}`);
         if (!res.ok) {
@@ -612,10 +657,8 @@
           return;
         }
 
-        // Address (robust — falls back through structured -> legacy -> placeholder)
         $('propertyAddress').textContent = buildAddress(property) ?? 'the property';
 
-        // Rent + deposit
         if (listing.advertised_rent) {
           $('propertyRent').textContent = `${fmtMoney(listing.advertised_rent)} pcm`;
         } else {
@@ -625,7 +668,6 @@
           $('propertyDeposit').textContent = `${fmtMoney(listing.advertised_deposit)} deposit`;
         }
 
-        // Sensible default preferred start
         const today = new Date();
         $('preferredStart').min = today.toISOString().split('T')[0];
 
@@ -637,9 +679,6 @@
     }
 
     async function initInvite() {
-      // Invited mode: hide Turnstile (token is already the auth), pre-fill name/email/phone,
-      // and hydrate the property card from the invite info so the prospect sees what
-      // they're applying for.
       $('turnstileWrap').classList.add('hidden');
 
       try {
@@ -653,8 +692,6 @@
         if (info.email) $('email').value    = info.email;
         if (info.phone) $('phone').value    = info.phone;
 
-        // Property card — show address. If the invite is linked to a listing,
-        // also show advertised rent + deposit; otherwise just the address.
         $('propertyAddress').textContent = buildAddress(info.property) ?? 'the property';
         if (info.listing?.advertised_rent) {
           $('propertyRent').textContent = `${fmtMoney(info.listing.advertised_rent)} pcm`;
@@ -665,7 +702,6 @@
           $('propertyDeposit').textContent = `${fmtMoney(info.listing.advertised_deposit)} deposit`;
         }
 
-        // Sensible default preferred start
         const today = new Date();
         $('preferredStart').min = today.toISOString().split('T')[0];
 
@@ -688,27 +724,273 @@
     // ── Conditional blocks ─────────────────────────────────────────────────────
 
     $('rightToRent').addEventListener('change', e => {
-      $('visaFields').classList.toggle('visible', e.target.value === 'visa');
+      const visible = e.target.value === 'visa';
+      $('visaFields').classList.toggle('visible', visible);
+      if (!visible) {
+        clearFieldError('visaType');
+        clearFieldError('visaExpiry');
+      }
     });
     document.querySelectorAll('input[name="hasPets"]').forEach(el =>
-      el.addEventListener('change', e => $('petFields').classList.toggle('visible', e.target.value === 'yes')));
+      el.addEventListener('change', e => {
+        const visible = e.target.value === 'yes';
+        $('petFields').classList.toggle('visible', visible);
+        if (!visible) clearFieldError('petDetails');
+      }));
     document.querySelectorAll('input[name="adverseCredit"]').forEach(el =>
-      el.addEventListener('change', e => $('adverseFields').classList.toggle('visible', e.target.value === 'yes')));
+      el.addEventListener('change', e => {
+        const visible = e.target.value === 'yes';
+        $('adverseFields').classList.toggle('visible', visible);
+        if (!visible) clearFieldError('adverseDetails');
+      }));
     document.querySelectorAll('input[name="evicted"]').forEach(el =>
-      el.addEventListener('change', e => $('evictedFields').classList.toggle('visible', e.target.value === 'yes')));
+      el.addEventListener('change', e => {
+        const visible = e.target.value === 'yes';
+        $('evictedFields').classList.toggle('visible', visible);
+        if (!visible) clearFieldError('evictedDetails');
+      }));
     document.querySelectorAll('input[name="arrears"]').forEach(el =>
-      el.addEventListener('change', e => $('arrearsFields').classList.toggle('visible', e.target.value === 'yes')));
+      el.addEventListener('change', e => {
+        const visible = e.target.value === 'yes';
+        $('arrearsFields').classList.toggle('visible', visible);
+        if (!visible) clearFieldError('arrearsDetails');
+      }));
+
+    // ── Validation ─────────────────────────────────────────────────────────────
+
+    function setFieldError(id, msg) {
+      const el = $(id);
+      const errEl = document.querySelector(`[data-error-for="${id}"]`);
+      if (el) el.classList.add('invalid');
+      if (errEl) {
+        errEl.textContent = msg;
+        errEl.classList.add('visible');
+      }
+    }
+    function clearFieldError(id) {
+      const el = $(id);
+      const errEl = document.querySelector(`[data-error-for="${id}"]`);
+      if (el) el.classList.remove('invalid');
+      if (errEl) {
+        errEl.textContent = '';
+        errEl.classList.remove('visible');
+      }
+    }
+    function clearAllErrors() {
+      document.querySelectorAll('.field-error').forEach(el => {
+        el.textContent = '';
+        el.classList.remove('visible');
+      });
+      document.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
+      document.querySelectorAll('.checkbox-row.invalid').forEach(el => el.classList.remove('invalid'));
+      $('submitError').classList.remove('visible');
+      $('submitError').innerHTML = '';
+    }
+
+    // Validators — each returns null on success, or an error message string.
+    const required    = msg => v => (v && String(v).trim().length > 0) ? null : (msg || 'This field is required.');
+    const email       = () => v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : 'Enter a valid email address.';
+    const ukPhone     = () => v => {
+      if (!v) return null;
+      const stripped = v.replace(/[\s\-()]/g, '');
+      // Accept +44 prefix or leading 0; total 10–11 digits after normalisation
+      if (!/^(\+?44|0)\d{9,10}$/.test(stripped)) return 'Enter a UK phone number.';
+      return null;
+    };
+    const dob18Plus   = () => v => {
+      if (!v) return null;
+      const dob = new Date(v);
+      if (isNaN(dob.getTime())) return 'Enter a valid date.';
+      const min = new Date();
+      min.setFullYear(min.getFullYear() - 18);
+      min.setHours(0, 0, 0, 0);
+      return dob <= min ? null : 'You must be 18 or older.';
+    };
+    const futureDate  = () => v => {
+      if (!v) return null;
+      const d = new Date(v);
+      if (isNaN(d.getTime())) return 'Enter a valid date.';
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return d >= today ? null : 'Must be today or later.';
+    };
+    const numRange    = (min, max, msg) => v => {
+      if (v === null || v === undefined || v === '') return null;
+      const n = Number(v);
+      if (isNaN(n)) return 'Enter a valid number.';
+      return (n >= min && n <= max) ? null : (msg || `Enter a number between ${min} and ${max}.`);
+    };
+
+    function runValidators(id, value, validators) {
+      for (const v of validators) {
+        const err = v(value);
+        if (err) return err;
+      }
+      return null;
+    }
+
+    function validateRadioGroup(name) {
+      // All radio groups have a default checked option, so they're never "empty".
+      // This function exists for explicitness; returns the selected value or null.
+      const sel = document.querySelector(`input[name="${name}"]:checked`);
+      return sel ? sel.value : null;
+    }
+
+    function validateForm() {
+      clearAllErrors();
+      const errors = []; // { id, label, msg }
+
+      const check = (id, label, validators) => {
+        const val = $(id).value.trim();
+        const err = runValidators(id, val, validators);
+        if (err) {
+          setFieldError(id, err);
+          errors.push({ id, label, msg: err });
+        }
+      };
+
+      // Personal — always required
+      check('fullName',    'Full name',       [required()]);
+      check('email',       'Email',           [required(), email()]);
+      check('phone',       'Phone',           [required(), ukPhone()]);
+      check('dateOfBirth', 'Date of birth',   [required(), dob18Plus()]);
+      check('nationality', 'Nationality',     [required()]);
+
+      // Right to rent
+      check('rightToRent', 'Right-to-rent status', [required('Select your right-to-rent status.')]);
+      if ($('rightToRent').value === 'visa') {
+        check('visaType',   'Visa type',   [required()]);
+        check('visaExpiry', 'Visa expiry', [required(), futureDate()]);
+      }
+
+      // Household
+      check('adults', 'Adults', [required(), numRange(1, 20, 'Enter a number between 1 and 20.')]);
+      // children optional; if provided, validate range
+      if ($('children').value !== '') {
+        check('children', 'Children', [numRange(0, 20, 'Enter a number between 0 and 20.')]);
+      }
+      // pets/smoker — radios with default; conditional pet details
+      if (validateRadioGroup('hasPets') === 'yes') {
+        check('petDetails', 'Pet details', [required('Tell us about your pets.')]);
+      }
+
+      // Tenancy
+      check('preferredStart',  'Preferred start date', [required(), futureDate()]);
+      check('preferredLength', 'Preferred length',     [required('Select a preferred length.')]);
+
+      // Employment
+      check('employmentStatus', 'Employment status', [required('Select your employment status.')]);
+      check('employer',         'Employer',          [required()]);
+      check('jobTitle',         'Job title',         [required()]);
+      check('yearsInRole',      'Years in role',     [required(), numRange(0, 60, 'Enter a number between 0 and 60.')]);
+      check('annualIncome',     'Annual income',     [required(), numRange(1, 10000000, 'Enter a positive number up to £10,000,000.')]);
+
+      // Additional income optional; if provided, validate range
+      if ($('additionalIncome').value !== '') {
+        check('additionalIncome', 'Additional income', [numRange(0, 10000000, 'Enter a number up to £10,000,000.')]);
+      }
+
+      // Credit / history — conditional details
+      if (validateRadioGroup('adverseCredit') === 'yes') {
+        check('adverseDetails', 'Adverse credit details', [required('Please add some context.')]);
+      }
+      if (validateRadioGroup('evicted') === 'yes') {
+        check('evictedDetails', 'Eviction details', [required('Please add some context.')]);
+      }
+      if (validateRadioGroup('arrears') === 'yes') {
+        check('arrearsDetails', 'Arrears details', [required('Please add some context.')]);
+      }
+
+      check('reasonForMoving', 'Reason for moving', [required()]);
+
+      // Consents — checkboxes (all three required)
+      const consents = [
+        { id: 'consentAccuracy',    label: 'Accuracy consent' },
+        { id: 'consentReferencing', label: 'Referencing consent' },
+        { id: 'consentPrivacy',     label: 'Privacy consent' },
+      ];
+      let anyConsentMissing = false;
+      consents.forEach(c => {
+        const row = document.querySelector(`[data-consent-row="${c.id}"]`);
+        if (!$(c.id).checked) {
+          if (row) row.classList.add('invalid');
+          errors.push({ id: c.id, label: c.label, msg: 'Tick to confirm.' });
+          anyConsentMissing = true;
+        } else {
+          if (row) row.classList.remove('invalid');
+        }
+      });
+      if (anyConsentMissing) {
+        // No inline-per-field error for checkboxes; the row gets a red outline.
+        // Summary at top will list them.
+      }
+
+      return errors;
+    }
+
+    function showSummary(errors) {
+      const wrap = $('submitError');
+      if (errors.length === 0) {
+        wrap.classList.remove('visible');
+        wrap.innerHTML = '';
+        return;
+      }
+      const items = errors.map(e =>
+        `<li>${escapeHtml(e.label)}: ${escapeHtml(e.msg)}</li>`
+      ).join('');
+      wrap.innerHTML = `
+        <div class="summary-title">Please fix ${errors.length === 1 ? 'this' : 'these'} before submitting:</div>
+        <ul>${items}</ul>
+      `;
+      wrap.classList.add('visible');
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // Re-validate individual fields on blur (live feedback after first submit attempt)
+    let hasAttemptedSubmit = false;
+    function attachLiveValidation() {
+      const ids = [
+        'fullName','email','phone','dateOfBirth','nationality',
+        'rightToRent','visaType','visaExpiry',
+        'adults','children','petDetails',
+        'preferredStart','preferredLength',
+        'employmentStatus','employer','jobTitle','yearsInRole','annualIncome','additionalIncome',
+        'adverseDetails','evictedDetails','arrearsDetails','reasonForMoving',
+      ];
+      ids.forEach(id => {
+        const el = $(id);
+        if (!el) return;
+        const handler = () => {
+          if (hasAttemptedSubmit) {
+            // Re-run full validation so the summary stays in sync with field state
+            const errs = validateForm();
+            showSummary(errs);
+          }
+        };
+        el.addEventListener('blur',  handler);
+        el.addEventListener('change', handler);
+      });
+      // Consent checkboxes
+      ['consentAccuracy','consentReferencing','consentPrivacy'].forEach(id => {
+        $(id).addEventListener('change', () => {
+          if (hasAttemptedSubmit) {
+            const errs = validateForm();
+            showSummary(errs);
+          }
+        });
+      });
+    }
+    attachLiveValidation();
 
     // ── Submit ─────────────────────────────────────────────────────────────────
-
-    function showSubmitError(msg) {
-      const el = $('submitError');
-      el.textContent = msg;
-      el.classList.add('visible');
-    }
-    function clearSubmitError() {
-      $('submitError').classList.remove('visible');
-    }
 
     // Helpers
     const v    = id => $(id).value.trim() || null;
@@ -724,16 +1006,18 @@
 
     $('applyForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      clearSubmitError();
+      hasAttemptedSubmit = true;
 
-      // Required contact fields
-      if (!v('fullName') || !v('email') || !v('phone')) {
-        showSubmitError('Please fill in name, email and phone.');
-        return;
-      }
-      // Consents
-      if (!$('consentAccuracy').checked || !$('consentReferencing').checked || !$('consentPrivacy').checked) {
-        showSubmitError('Please tick all three consent boxes to submit.');
+      const errors = validateForm();
+      if (errors.length > 0) {
+        showSummary(errors);
+        // Scroll the summary or first invalid field into view
+        const firstId = errors[0].id;
+        const target = $(firstId) || $('submitError');
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (target.focus) {
+          try { target.focus({ preventScroll: true }); } catch (_) {}
+        }
         return;
       }
 
@@ -742,7 +1026,8 @@
       if (mode === 'slug') {
         turnstileToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
         if (!turnstileToken) {
-          showSubmitError('Please complete the captcha above.');
+          showSummary([{ id: 'turnstileWrap', label: 'Captcha', msg: 'Please complete the captcha above.' }]);
+          $('turnstileWrap').scrollIntoView({ behavior: 'smooth', block: 'center' });
           return;
         }
       }
@@ -825,7 +1110,9 @@
             captcha_failed:                     'The captcha check failed. Please try again.',
             missing_listing_or_invite:          'The application link is incomplete.',
           };
-          showSubmitError(errMap[data.error] || 'Something went wrong. Please try again.');
+          const msg = errMap[data.error] || 'Something went wrong. Please try again.';
+          showSummary([{ id: 'submitError', label: 'Submission', msg }]);
+          $('submitError').scrollIntoView({ behavior: 'smooth', block: 'center' });
           btn.disabled = false;
           btn.textContent = 'Submit application';
           if (window.turnstile && mode === 'slug') window.turnstile.reset();
@@ -834,15 +1121,13 @@
         showState('successState');
       } catch (err) {
         console.error(err);
-        showSubmitError('Network error. Please check your connection and try again.');
+        showSummary([{ id: 'submitError', label: 'Network', msg: 'Network error. Check your connection and try again.' }]);
         btn.disabled = false;
         btn.textContent = 'Submit application';
-        if (window.turnstile && mode === 'slug') window.turnstile.reset();
       }
     });
 
     init();
   </script>
-
 </body>
 </html>
