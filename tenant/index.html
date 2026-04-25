@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
+  <title>Tenant portal — easierLet</title>
+  <meta name="robots" content="noindex">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/assets/easierlet.css">
+  <link rel="stylesheet" href="/assets/portal.css">
+</head>
+<body class="elp-body">
+
+<div id="portal-shell" data-role="tenant" data-active="home" data-title="Tenant portal"></div>
+
+<main class="elp-main">
+  <div class="elp-main-inner">
+
+    <!-- Overview / Home -->
+    <section data-tab-panel="home">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title" id="welcome">Welcome back</h1>
+        <p class="elp-page-sub">Here's what's happening with your renting.</p>
+      </div>
+
+      <div class="elp-stats" id="overviewStats">
+        <div class="elp-stat">
+          <div class="elp-stat-label">Applications</div>
+          <div class="elp-stat-value" id="statApplications">—</div>
+          <div class="elp-stat-sub">Active or in review</div>
+        </div>
+        <div class="elp-stat">
+          <div class="elp-stat-label">Upcoming viewings</div>
+          <div class="elp-stat-value" id="statViewings">—</div>
+          <div class="elp-stat-sub">Confirmed in the next 14 days</div>
+        </div>
+        <div class="elp-stat">
+          <div class="elp-stat-label">Tenancy</div>
+          <div class="elp-stat-value" id="statTenancy">—</div>
+          <div class="elp-stat-sub" id="statTenancySub">Status</div>
+        </div>
+      </div>
+
+      <div class="elp-card">
+        <div class="elp-card-head">
+          <div>
+            <div class="elp-card-title">Recent activity</div>
+            <div class="elp-card-sub">Your latest applications and viewings</div>
+          </div>
+          <a href="/properties/" class="el-btn el-btn-secondary">Browse homes</a>
+        </div>
+        <div id="activityList" class="elp-list">
+          <div class="elp-loading"><div class="elp-spinner"></div>Loading…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Applications -->
+    <section data-tab-panel="applications" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">My applications</h1>
+        <p class="elp-page-sub">Properties you've applied for and the current status of each.</p>
+      </div>
+      <div id="applicationsList" class="elp-list">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading applications…</div>
+      </div>
+    </section>
+
+    <!-- Viewings -->
+    <section data-tab-panel="viewings" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Viewings</h1>
+        <p class="elp-page-sub">Viewings you've requested or had confirmed.</p>
+      </div>
+      <div id="viewingsList" class="elp-list">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading viewings…</div>
+      </div>
+    </section>
+
+    <!-- Tenancy -->
+    <section data-tab-panel="tenancy" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">My tenancy</h1>
+        <p class="elp-page-sub">Your current and past tenancies.</p>
+      </div>
+      <div id="tenancyList" class="elp-list">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading tenancy…</div>
+      </div>
+    </section>
+
+    <!-- Documents -->
+    <section data-tab-panel="documents" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Documents</h1>
+        <p class="elp-page-sub">Tenancy agreements, inventories and other paperwork shared with you.</p>
+      </div>
+      <div id="documentsList" class="elp-list">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading documents…</div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section data-tab-panel="settings" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Account settings</h1>
+        <p class="elp-page-sub">Update your profile and contact details.</p>
+      </div>
+      <div class="elp-card">
+        <form id="settingsForm">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div>
+              <label class="el-label" for="setFullName">Full name</label>
+              <input class="el-input" id="setFullName" type="text">
+            </div>
+            <div>
+              <label class="el-label" for="setPhone">Phone</label>
+              <input class="el-input" id="setPhone" type="tel">
+            </div>
+          </div>
+          <div style="margin-bottom:14px">
+            <label class="el-label" for="setEmail">Email</label>
+            <input class="el-input" id="setEmail" type="email" disabled>
+            <div class="el-hint">Email is your sign-in identity. Contact us to change it.</div>
+          </div>
+          <button type="submit" class="el-btn el-btn-primary">Save changes</button>
+        </form>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<script type="module" src="/assets/portal.js"></script>
+<script type="module">
+  // Wait for ELP to be set on window
+  while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
+  const ELP = window.ELP;
+
+  const session = await ELP.requireSession("/tenant/login/");
+  if (!session) throw new Error("redirecting");
+
+  const user = session.user;
+  ELP.mountShell({ user });
+  ELP.initTabs("home");
+
+  // --- Lazy-load data per tab on first activation -------------------------
+  const loaded = new Set();
+  async function ensureLoaded(tab) {
+    if (loaded.has(tab)) return;
+    loaded.add(tab);
+    try {
+      if (tab === "home")          await loadOverview();
+      if (tab === "applications")  await loadApplications();
+      if (tab === "viewings")      await loadViewings();
+      if (tab === "tenancy")       await loadTenancy();
+      if (tab === "documents")     await loadDocuments();
+      if (tab === "settings")      await loadSettings();
+    } catch (e) {
+      console.error(`Failed loading ${tab}`, e);
+    }
+  }
+  window.addEventListener("elp:tab", (e) => ensureLoaded(e.detail.tab));
+
+  const initialTab = new URL(window.location.href).searchParams.get("tab") || "home";
+  ensureLoaded(initialTab);
+
+  const $ = (id) => document.getElementById(id);
+
+  // ---- Overview ---------------------------------------------------------
+  async function loadOverview() {
+    const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "there";
+    $("welcome").textContent = `Welcome back, ${ELP.esc(name)}`;
+
+    // Pull a single tenants row for this auth user. The tenants table holds
+    // most of the application/lifecycle data; tenant_auth_id links to auth.
+    const tenants = await ELP.rest(
+      `tenants?tenant_auth_id=eq.${user.id}&select=id,name,status,property_id,created_at,updated_at,prequal_status&order=updated_at.desc`
+    ).catch(() => []);
+
+    const activeApps = tenants.filter((t) =>
+      ["awaiting_review", "referencing", "approved", "submitted"].includes(t.status)
+    );
+    $("statApplications").textContent = activeApps.length;
+
+    const tenancies = await ELP.rest(
+      `tenancy_agreements?tenant_id=in.(${tenants.map((t) => `"${t.id}"`).join(",") || '""'})&select=id,status,start_date,end_date,monthly_rent,property_id&order=start_date.desc.nullslast`
+    ).catch(() => []);
+    const active = tenancies.find((t) => ["active", "signed", "sent"].includes(t.status));
+    $("statTenancy").textContent = active ? "Active" : (tenancies[0] ? "—" : "None");
+    $("statTenancySub").textContent = active
+      ? `Since ${ELP.fmtDate(active.start_date)}`
+      : "No active tenancy";
+
+    const upcoming = await loadUpcomingViewingsCount();
+    $("statViewings").textContent = upcoming;
+
+    // Recent activity = mix of latest application and latest viewing.
+    const items = [];
+    tenants.slice(0, 3).forEach((t) =>
+      items.push({
+        kind: "application",
+        title: `Application — ${labelStatus(t.status)}`,
+        sub: `Updated ${ELP.fmtDate(t.updated_at)}`,
+        href: `/tenant/?tab=applications`,
+      })
+    );
+    const recentViewings = await ELP.rest(
+      `viewing_requests?prospect_email=eq.${encodeURIComponent(user.email)}&order=created_at.desc&limit=3&select=id,status,confirmed_datetime,proposed_datetime,created_at`
+    ).catch(() => []);
+    recentViewings.forEach((v) =>
+      items.push({
+        kind: "viewing",
+        title: `Viewing ${labelStatus(v.status)}`,
+        sub: ELP.fmtDateTime(v.confirmed_datetime || v.proposed_datetime || v.created_at),
+        href: `/tenant/?tab=viewings`,
+      })
+    );
+
+    if (items.length === 0) {
+      $("activityList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No activity yet</h3>
+          <p>Once you apply for a home or book a viewing, it'll show up here.</p>
+          <a href="/properties/" class="el-btn el-btn-primary">Browse homes</a>
+        </div>`;
+      return;
+    }
+    $("activityList").innerHTML = items
+      .slice(0, 5)
+      .map(
+        (it) => `
+        <a href="${ELP.esc(it.href)}" class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(it.title)}</div>
+            <div class="elp-list-item-sub">${ELP.esc(it.sub)}</div>
+          </div>
+          <div class="elp-list-item-end">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--el-muted)"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </a>`
+      )
+      .join("");
+  }
+
+  async function loadUpcomingViewingsCount() {
+    const now = new Date();
+    const horizon = new Date(now.getTime() + 14 * 86400000).toISOString();
+    const rows = await ELP.rest(
+      `viewing_requests?prospect_email=eq.${encodeURIComponent(user.email)}&status=eq.confirmed&confirmed_datetime=gte.${now.toISOString()}&confirmed_datetime=lte.${horizon}&select=id`
+    ).catch(() => []);
+    return rows.length;
+  }
+
+  // ---- Applications -----------------------------------------------------
+  async function loadApplications() {
+    const rows = await ELP.rest(
+      `tenants?tenant_auth_id=eq.${user.id}&select=id,name,status,prequal_status,created_at,updated_at,property_id,properties(address_line1,city,postcode)&order=updated_at.desc`
+    ).catch((e) => { throw e; });
+
+    if (!rows.length) {
+      $("applicationsList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No applications yet</h3>
+          <p>When you apply for a home, you'll be able to track it here.</p>
+          <a href="/properties/" class="el-btn el-btn-primary">Browse homes</a>
+        </div>`;
+      return;
+    }
+    $("applicationsList").innerHTML = rows
+      .map((r) => {
+        const addr = r.properties
+          ? [r.properties.address_line1, r.properties.city, r.properties.postcode].filter(Boolean).join(", ")
+          : "Property";
+        return `
+        <div class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(addr)}</div>
+            <div class="elp-list-item-sub">Submitted ${ELP.fmtDate(r.created_at)} · ${ELP.esc(labelStatus(r.status))}</div>
+          </div>
+          <div class="elp-list-item-end">${badge(r.status)}</div>
+        </div>`;
+      })
+      .join("");
+  }
+
+  // ---- Viewings ---------------------------------------------------------
+  async function loadViewings() {
+    const rows = await ELP.rest(
+      `viewing_requests?prospect_email=eq.${encodeURIComponent(user.email)}&select=id,status,confirmed_datetime,proposed_datetime,preferred_times,created_at,property_listings(slug,headline)&order=created_at.desc`
+    ).catch(() => []);
+
+    if (!rows.length) {
+      $("viewingsList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No viewings yet</h3>
+          <p>You'll see any viewings you've requested or had confirmed here.</p>
+          <a href="/properties/" class="el-btn el-btn-primary">Browse homes</a>
+        </div>`;
+      return;
+    }
+    $("viewingsList").innerHTML = rows
+      .map((r) => {
+        const when = r.confirmed_datetime || r.proposed_datetime;
+        const headline = r.property_listings?.headline || "Property viewing";
+        const link = r.property_listings?.slug ? `/listings/?slug=${encodeURIComponent(r.property_listings.slug)}` : "#";
+        return `
+        <a href="${ELP.esc(link)}" class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(headline)}</div>
+            <div class="elp-list-item-sub">${when ? ELP.fmtDateTime(when) : "Awaiting confirmation"}</div>
+          </div>
+          <div class="elp-list-item-end">${badge(r.status)}</div>
+        </a>`;
+      })
+      .join("");
+  }
+
+  // ---- Tenancy ----------------------------------------------------------
+  async function loadTenancy() {
+    const tenants = await ELP.rest(
+      `tenants?tenant_auth_id=eq.${user.id}&select=id`
+    ).catch(() => []);
+    if (!tenants.length) {
+      $("tenancyList").innerHTML = noTenancyEmpty();
+      return;
+    }
+    const ids = tenants.map((t) => `"${t.id}"`).join(",");
+    const rows = await ELP.rest(
+      `tenancy_agreements?tenant_id=in.(${ids})&select=id,status,start_date,end_date,monthly_rent,deposit,property_id,properties(address_line1,city,postcode)&order=start_date.desc.nullslast`
+    ).catch(() => []);
+
+    if (!rows.length) {
+      $("tenancyList").innerHTML = noTenancyEmpty();
+      return;
+    }
+    $("tenancyList").innerHTML = rows
+      .map((r) => {
+        const addr = r.properties
+          ? [r.properties.address_line1, r.properties.city, r.properties.postcode].filter(Boolean).join(", ")
+          : "Property";
+        return `
+        <div class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(addr)}</div>
+            <div class="elp-list-item-sub">${ELP.fmtDate(r.start_date)}${r.end_date ? ` – ${ELP.fmtDate(r.end_date)}` : ""} · ${ELP.gbp(r.monthly_rent)}/mo</div>
+          </div>
+          <div class="elp-list-item-end">${badge(r.status)}</div>
+        </div>`;
+      })
+      .join("");
+  }
+
+  function noTenancyEmpty() {
+    return `
+      <div class="elp-empty">
+        <h3>No tenancy yet</h3>
+        <p>Once a landlord starts a tenancy with you, the agreement and key dates will appear here.</p>
+      </div>`;
+  }
+
+  // ---- Documents --------------------------------------------------------
+  async function loadDocuments() {
+    // Tenants typically receive documents via the tenancy. We pull documents
+    // shared explicitly with this tenant — falling back to an empty state if
+    // RLS doesn't expose any.
+    const rows = await ELP.rest(
+      `documents?or=(tenant_auth_id.eq.${user.id},user_id.eq.${user.id})&select=id,filename,doc_type,created_at,storage_path&order=created_at.desc&limit=50`
+    ).catch(() => []);
+    if (!rows.length) {
+      $("documentsList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No documents yet</h3>
+          <p>Tenancy agreements, inventories and other documents your landlord shares with you will live here.</p>
+        </div>`;
+      return;
+    }
+    $("documentsList").innerHTML = rows
+      .map(
+        (d) => `
+        <div class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(d.filename || "Document")}</div>
+            <div class="elp-list-item-sub">${ELP.esc(d.doc_type || "Document")} · ${ELP.fmtDate(d.created_at)}</div>
+          </div>
+        </div>`
+      )
+      .join("");
+  }
+
+  // ---- Settings ---------------------------------------------------------
+  async function loadSettings() {
+    $("setEmail").value = user.email || "";
+    $("setFullName").value = user.user_metadata?.full_name || "";
+    $("setPhone").value = user.user_metadata?.phone || "";
+  }
+  document.getElementById("settingsForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      const { error } = await ELP.client.auth.updateUser({
+        data: {
+          full_name: $("setFullName").value.trim() || undefined,
+          phone: $("setPhone").value.trim() || undefined,
+        },
+      });
+      if (error) throw error;
+      ELP.toast("Profile saved", "success");
+    } catch (err) {
+      ELP.toast(err.message || "Couldn't save", "error");
+    }
+  });
+
+  // ---- Helpers ----------------------------------------------------------
+  function labelStatus(s) {
+    if (!s) return "—";
+    return String(s).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  function badge(s) {
+    const cls =
+      ["active", "signed", "approved", "live", "confirmed"].includes(s) ? "live" :
+      ["pending", "awaiting_review", "submitted", "referencing", "sent"].includes(s) ? "pending" :
+      ["rejected", "archived", "no_show", "delisted"].includes(s) ? "warn" : "muted";
+    return `<span class="elp-badge elp-badge-${cls}">${ELP.esc(labelStatus(s))}</span>`;
+  }
+</script>
+</body>
+</html>

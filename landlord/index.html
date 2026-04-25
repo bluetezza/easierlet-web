@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
+  <title>Landlord portal — easierLet</title>
+  <meta name="robots" content="noindex">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/assets/easierlet.css">
+  <link rel="stylesheet" href="/assets/portal.css">
+
+  <style>
+    /* Listing row table-style */
+    .listing-row {
+      display: grid;
+      grid-template-columns: 64px 1fr auto auto auto auto;
+      gap: 16px; align-items: center;
+      padding: 14px 16px;
+      background: #fff;
+      border: 1px solid var(--el-line-soft);
+      border-radius: 12px;
+    }
+    @media (max-width: 720px) {
+      .listing-row { grid-template-columns: 1fr; }
+      .listing-row .listing-stats { display: none; }
+    }
+    .listing-thumb {
+      width: 64px; height: 64px;
+      border-radius: 8px;
+      background: var(--el-green-pale);
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--el-green-light);
+    }
+    .listing-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .listing-thumb svg { width: 24px; height: 24px; opacity: 0.6; }
+
+    .listing-main { min-width: 0; }
+    .listing-title {
+      font-size: 15px; font-weight: 500; color: var(--el-ink);
+      margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .listing-sub { font-size: 13px; color: var(--el-muted); }
+    .listing-stats {
+      display: flex; gap: 18px; font-size: 13px; color: var(--el-ink-soft);
+    }
+    .listing-stat strong { display: block; font-size: 16px; font-weight: 500; color: var(--el-ink); }
+    .listing-stat span { font-size: 11px; color: var(--el-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .listing-actions { display: flex; gap: 6px; }
+    .listing-actions select,
+    .listing-actions a {
+      font-size: 12px; padding: 7px 10px;
+      border-radius: 7px; border: 1px solid var(--el-line);
+      background: #fff; color: var(--el-ink-soft);
+      cursor: pointer;
+    }
+    .listing-actions a:hover { background: var(--el-green-pale); color: var(--el-green); }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(15, 46, 40, 0.45);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center; justify-content: center;
+      padding: 24px;
+      z-index: 100;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: 100%; max-width: 560px;
+      max-height: 90vh; overflow-y: auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 20px 60px rgba(15, 46, 40, 0.25);
+    }
+    .modal h2 {
+      font-family: 'Fraunces', serif; font-weight: 400;
+      font-size: 24px; margin-bottom: 6px; letter-spacing: -0.4px;
+    }
+    .modal-sub { color: var(--el-muted); font-size: 13px; margin-bottom: 22px; }
+    .modal .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+    .modal-lg { max-width: 880px; }
+
+    /* ---- Media manager ---- */
+    .mm-tabs {
+      display: flex; gap: 4px;
+      background: var(--el-bg);
+      border: 1px solid var(--el-line);
+      border-radius: 10px; padding: 4px;
+      margin-bottom: 18px;
+    }
+    .mm-tab {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 7px;
+      font-size: 13px; font-weight: 500;
+      color: var(--el-muted);
+      text-align: center;
+    }
+    .mm-tab.active {
+      background: #fff; color: var(--el-ink);
+      box-shadow: 0 1px 3px rgba(15, 46, 40, 0.06);
+    }
+
+    .mm-drop {
+      border: 2px dashed var(--el-line);
+      border-radius: 14px;
+      padding: 28px 20px;
+      text-align: center;
+      transition: border-color 120ms ease, background 120ms ease;
+      cursor: pointer;
+      margin-bottom: 18px;
+    }
+    .mm-drop:hover, .mm-drop.dragging {
+      border-color: var(--el-green);
+      background: var(--el-green-pale);
+    }
+    .mm-drop-icon {
+      width: 40px; height: 40px;
+      margin: 0 auto 10px;
+      border-radius: 12px;
+      background: var(--el-green-pale);
+      color: var(--el-green);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .mm-drop-icon svg { width: 22px; height: 22px; }
+    .mm-drop-title { font-size: 14px; font-weight: 500; color: var(--el-ink); margin-bottom: 4px; }
+    .mm-drop-sub { font-size: 12px; color: var(--el-muted); }
+
+    .mm-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+    .mm-tile {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--el-bg);
+      border: 1px solid var(--el-line-soft);
+    }
+    .mm-tile img,
+    .mm-tile video {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .mm-tile-fallback {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--el-muted); font-size: 11px; text-align: center; padding: 12px;
+    }
+    .mm-tile-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(15,46,40,0.55) 100%);
+      opacity: 0;
+      transition: opacity 120ms ease;
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 8px;
+    }
+    .mm-tile:hover .mm-tile-overlay { opacity: 1; }
+    .mm-tile-badges { display: flex; gap: 4px; flex-wrap: wrap; }
+    .mm-tile-badge {
+      background: rgba(15,46,40,0.85); color: #fff;
+      font-size: 10px; font-weight: 500;
+      padding: 3px 7px; border-radius: 999px;
+      letter-spacing: 0.3px;
+    }
+    .mm-tile-badge.hero { background: var(--el-green); }
+    .mm-tile-actions {
+      display: flex; gap: 4px; justify-content: flex-end;
+    }
+    .mm-tile-btn {
+      background: rgba(255,255,255,0.95);
+      color: var(--el-ink);
+      font-size: 11px; font-weight: 500;
+      padding: 4px 8px; border-radius: 6px;
+    }
+    .mm-tile-btn:hover { background: #fff; }
+    .mm-tile-btn.danger { color: var(--el-danger); }
+
+    .mm-uploads {
+      margin-top: 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .mm-upload {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px;
+      background: #fff;
+      border: 1px solid var(--el-line-soft);
+      border-radius: 10px;
+      font-size: 13px;
+    }
+    .mm-upload-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--el-ink); }
+    .mm-upload-bar {
+      flex: 0 0 100px;
+      height: 4px; background: var(--el-line); border-radius: 2px; overflow: hidden;
+    }
+    .mm-upload-fill { height: 100%; background: var(--el-green); width: 0%; transition: width 120ms ease; }
+    .mm-upload-status { font-size: 11px; color: var(--el-muted); flex: 0 0 70px; text-align: right; }
+    .mm-upload.error .mm-upload-status { color: var(--el-danger); }
+    .mm-upload.done .mm-upload-status { color: var(--el-green); }
+  </style>
+</head>
+<body class="elp-body">
+
+<div id="portal-shell" data-role="landlord" data-active="home" data-title="Landlord portal"></div>
+
+<main class="elp-main">
+  <div class="elp-main-inner">
+
+    <!-- Dashboard -->
+    <section data-tab-panel="home">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title" id="welcome">Welcome back</h1>
+        <p class="elp-page-sub">A snapshot of your portfolio activity.</p>
+      </div>
+
+      <div class="elp-stats">
+        <div class="elp-stat">
+          <div class="elp-stat-label">Live listings</div>
+          <div class="elp-stat-value" id="statLive">—</div>
+          <div class="elp-stat-sub">Currently advertised</div>
+        </div>
+        <div class="elp-stat">
+          <div class="elp-stat-label">New leads</div>
+          <div class="elp-stat-value" id="statLeads">—</div>
+          <div class="elp-stat-sub">Awaiting review</div>
+        </div>
+        <div class="elp-stat">
+          <div class="elp-stat-label">Pending viewings</div>
+          <div class="elp-stat-value" id="statViewings">—</div>
+          <div class="elp-stat-sub">Need a response</div>
+        </div>
+        <div class="elp-stat">
+          <div class="elp-stat-label">Active tenancies</div>
+          <div class="elp-stat-value" id="statTenancies">—</div>
+          <div class="elp-stat-sub">In progress</div>
+        </div>
+      </div>
+
+      <div class="elp-card">
+        <div class="elp-card-head">
+          <div>
+            <div class="elp-card-title">Quick actions</div>
+            <div class="elp-card-sub">What needs your attention now</div>
+          </div>
+        </div>
+        <div id="quickActions" class="elp-list">
+          <div class="elp-loading"><div class="elp-spinner"></div>Loading…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Listings -->
+    <section data-tab-panel="listings" style="display:none">
+      <div class="elp-page-head" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+        <div>
+          <h1 class="elp-page-title">Listings</h1>
+          <p class="elp-page-sub">Properties you're currently marketing.</p>
+        </div>
+        <button class="el-btn el-btn-primary" id="newListingBtn">+ New listing</button>
+      </div>
+
+      <div class="elp-tabs">
+        <a href="#" class="elp-tab-link active" data-listing-filter="all">All</a>
+        <a href="#" class="elp-tab-link" data-listing-filter="live">Live</a>
+        <a href="#" class="elp-tab-link" data-listing-filter="draft">Draft</a>
+        <a href="#" class="elp-tab-link" data-listing-filter="let_agreed">Let agreed</a>
+        <a href="#" class="elp-tab-link" data-listing-filter="delisted">Delisted</a>
+      </div>
+
+      <div id="listingsList" style="display:flex;flex-direction:column;gap:10px">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading listings…</div>
+      </div>
+    </section>
+
+    <!-- Viewings -->
+    <section data-tab-panel="viewings" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Viewing requests</h1>
+        <p class="elp-page-sub">Confirm, propose new times or decline viewing requests from prospects.</p>
+      </div>
+      <div id="viewingsList" class="elp-list">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading viewing requests…</div>
+      </div>
+    </section>
+
+    <!-- Tenants -->
+    <section data-tab-panel="tenants" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Tenants</h1>
+        <p class="elp-page-sub">Applicants and tenants linked to your properties.</p>
+      </div>
+      <div id="tenantsList" class="elp-list">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading tenants…</div>
+      </div>
+    </section>
+
+    <!-- Tenancies -->
+    <section data-tab-panel="tenancies" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Tenancies</h1>
+        <p class="elp-page-sub">Tenancy agreements you've issued.</p>
+      </div>
+      <div id="tenanciesList" class="elp-list">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading tenancies…</div>
+      </div>
+    </section>
+
+    <!-- Transactions -->
+    <section data-tab-panel="transactions" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Transactions</h1>
+        <p class="elp-page-sub">Rent received, expenses and other movements logged against your properties.</p>
+      </div>
+      <div id="transactionsList" class="elp-list">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading transactions…</div>
+      </div>
+    </section>
+
+    <!-- Documents -->
+    <section data-tab-panel="documents" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Documents</h1>
+        <p class="elp-page-sub">Tenancy agreements, EPCs, gas safety certificates and other paperwork.</p>
+      </div>
+      <div id="documentsList" class="elp-list">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading documents…</div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section data-tab-panel="settings" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Account settings</h1>
+        <p class="elp-page-sub">Your landlord profile — used in tenancy agreements and viewing emails.</p>
+      </div>
+      <div class="elp-card">
+        <form id="settingsForm">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div>
+              <label class="el-label">Director / contact name</label>
+              <input class="el-input" id="setDirector" type="text">
+            </div>
+            <div>
+              <label class="el-label">Company name</label>
+              <input class="el-input" id="setCompany" type="text">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div>
+              <label class="el-label">Company number</label>
+              <input class="el-input" id="setCompanyNumber" type="text">
+            </div>
+            <div>
+              <label class="el-label">Phone</label>
+              <input class="el-input" id="setPhone" type="tel">
+            </div>
+          </div>
+          <button type="submit" class="el-btn el-btn-primary">Save profile</button>
+        </form>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<!-- Media manager modal -->
+<div class="modal-backdrop" id="mediaModal">
+  <div class="modal modal-lg">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:6px">
+      <div>
+        <h2 id="mmTitle">Manage media</h2>
+        <p class="modal-sub" id="mmSub">Upload photos, 360° tours, floorplans and videos. The first photo (or one you mark as hero) is shown in search results.</p>
+      </div>
+      <button class="el-btn el-btn-ghost" id="mmClose" type="button" style="padding:4px 10px;font-size:13px">Close</button>
+    </div>
+
+    <div class="mm-tabs" role="tablist">
+      <button class="mm-tab active" data-mm-type="photo" type="button">Photos</button>
+      <button class="mm-tab" data-mm-type="photo_360" type="button">360°</button>
+      <button class="mm-tab" data-mm-type="floorplan" type="button">Floorplans</button>
+      <button class="mm-tab" data-mm-type="video" type="button">Videos</button>
+    </div>
+
+    <label class="mm-drop" id="mmDrop">
+      <input type="file" id="mmFileInput" multiple style="display:none">
+      <div class="mm-drop-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <div class="mm-drop-title" id="mmDropTitle">Drop photos here, or click to browse</div>
+      <div class="mm-drop-sub" id="mmDropSub">JPEG, PNG, WebP, HEIC · up to 15MB each</div>
+    </label>
+
+    <div class="mm-uploads" id="mmUploads"></div>
+
+    <div id="mmGrid" class="mm-grid" style="margin-top:8px"></div>
+    <div id="mmEmpty" class="elp-empty" style="display:none;margin-top:8px">
+      <h3>No <span id="mmEmptyType">photos</span> yet</h3>
+      <p>Upload your first one above. Photos are shown in search results, on the listing page and in OG share cards.</p>
+    </div>
+  </div>
+</div>
+
+<!-- New listing modal -->
+<div class="modal-backdrop" id="newListingModal">
+  <div class="modal">
+    <h2>New listing</h2>
+    <p class="modal-sub">Enter the basics here — you can add photos, 360° tours, floorplans and richer details from the iOS app once it's saved.</p>
+    <form id="newListingForm">
+      <div class="el-field">
+        <label class="el-label" for="nlProperty">Property</label>
+        <select class="el-select" id="nlProperty" required></select>
+        <div class="el-hint">Don't see your property? Add it first in the iOS app.</div>
+      </div>
+      <div class="el-field">
+        <label class="el-label" for="nlHeadline">Headline</label>
+        <input class="el-input" id="nlHeadline" type="text" placeholder="e.g. Bright two-bed flat near the canal" maxlength="120" required>
+      </div>
+      <div class="el-field">
+        <label class="el-label" for="nlDescription">Description</label>
+        <textarea class="el-textarea" id="nlDescription" rows="4" placeholder="What makes this home stand out?"></textarea>
+      </div>
+      <div class="el-field-row">
+        <div class="el-field">
+          <label class="el-label" for="nlRent">Advertised rent (£/mo)</label>
+          <input class="el-input" id="nlRent" type="number" min="0" step="50" required>
+        </div>
+        <div class="el-field">
+          <label class="el-label" for="nlDeposit">Deposit (£)</label>
+          <input class="el-input" id="nlDeposit" type="number" min="0" step="50">
+        </div>
+      </div>
+      <div class="el-field">
+        <label class="el-label" for="nlAvailable">Available from</label>
+        <input class="el-input" id="nlAvailable" type="date" required>
+      </div>
+      <div class="actions">
+        <button type="button" class="el-btn el-btn-ghost" id="nlCancel">Cancel</button>
+        <button type="submit" class="el-btn el-btn-primary" id="nlSubmit">Save as draft</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="/assets/portal.js"></script>
+<script type="module">
+  while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
+  const ELP = window.ELP;
+
+  const session = await ELP.requireSession("/landlord/login/");
+  if (!session) throw new Error("redirecting");
+  const user = session.user;
+  ELP.mountShell({ user });
+  ELP.initTabs("home");
+
+  const $ = (id) => document.getElementById(id);
+
+  // ---- Lazy load per tab ------------------------------------------------
+  const loaded = new Set();
+  async function ensureLoaded(tab) {
+    if (loaded.has(tab)) return;
+    loaded.add(tab);
+    try {
+      if (tab === "home")         await loadDashboard();
+      if (tab === "listings")     await loadListings();
+      if (tab === "viewings")     await loadViewings();
+      if (tab === "tenants")      await loadTenants();
+      if (tab === "tenancies")    await loadTenancies();
+      if (tab === "transactions") await loadTransactions();
+      if (tab === "documents")    await loadDocuments();
+      if (tab === "settings")     await loadSettings();
+    } catch (e) {
+      console.error(`Failed loading ${tab}`, e);
+    }
+  }
+  window.addEventListener("elp:tab", (e) => ensureLoaded(e.detail.tab));
+  const initialTab = new URL(window.location.href).searchParams.get("tab") || "home";
+  ensureLoaded(initialTab);
+
+  // ---- Dashboard --------------------------------------------------------
+  async function loadDashboard() {
+    const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "there";
+    $("welcome").textContent = `Welcome back, ${ELP.esc(name)}`;
+
+    const [listings, viewings, tenancies] = await Promise.all([
+      ELP.rest(`property_listings?user_id=eq.${user.id}&select=id,status,lead_count,viewing_count`).catch(() => []),
+      ELP.rest(`viewing_requests?user_id=eq.${user.id}&status=eq.pending&select=id`).catch(() => []),
+      ELP.rest(`tenancy_agreements?landlord_id=eq.${user.id}&status=eq.active&select=id`).catch(async () => {
+        // landlord_id may not exist; fall back via property ownership
+        const props = await ELP.rest(`properties?user_id=eq.${user.id}&select=id`).catch(() => []);
+        if (!props.length) return [];
+        const ids = props.map((p) => `"${p.id}"`).join(",");
+        return ELP.rest(`tenancy_agreements?property_id=in.(${ids})&status=eq.active&select=id`).catch(() => []);
+      }),
+    ]);
+
+    const live = listings.filter((l) => l.status === "live").length;
+    const leads = listings.reduce((s, l) => s + (l.lead_count || 0), 0);
+    $("statLive").textContent = live;
+    $("statLeads").textContent = leads;
+    $("statViewings").textContent = viewings.length;
+    $("statTenancies").textContent = tenancies.length;
+
+    // Quick actions: pending viewings, applications awaiting review
+    const apps = await ELP.rest(
+      `tenants?status=eq.awaiting_review&user_id=eq.${user.id}&select=id,name,property_id,created_at&order=created_at.desc&limit=5`
+    ).catch(() => []);
+
+    const items = [];
+    viewings.slice(0, 4).forEach(() => {});
+    if (viewings.length) {
+      items.push({
+        title: `${viewings.length} viewing request${viewings.length === 1 ? "" : "s"} awaiting your response`,
+        sub: "Review and confirm a time, or propose another.",
+        href: "/landlord/?tab=viewings",
+      });
+    }
+    if (apps.length) {
+      items.push({
+        title: `${apps.length} application${apps.length === 1 ? "" : "s"} to review`,
+        sub: "Pre-applications are sitting in Awaiting review.",
+        href: "/landlord/?tab=tenants",
+      });
+    }
+    if (live === 0) {
+      items.push({
+        title: "No live listings yet",
+        sub: "Publish your first listing to start attracting applicants.",
+        href: "/landlord/?tab=listings",
+      });
+    }
+    if (!items.length) {
+      $("quickActions").innerHTML = `
+        <div class="elp-empty">
+          <h3>You're all caught up</h3>
+          <p>No outstanding actions right now.</p>
+        </div>`;
+      return;
+    }
+    $("quickActions").innerHTML = items
+      .map(
+        (it) => `
+        <a href="${ELP.esc(it.href)}" class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(it.title)}</div>
+            <div class="elp-list-item-sub">${ELP.esc(it.sub)}</div>
+          </div>
+          <div class="elp-list-item-end">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--el-muted)"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </a>`
+      )
+      .join("");
+  }
+
+  // ---- Listings ---------------------------------------------------------
+  let allListings = [];
+  let listingFilter = "all";
+
+  async function loadListings() {
+    allListings = await ELP.rest(
+      `property_listings?user_id=eq.${user.id}&select=id,slug,headline,status,advertised_rent,available_from,view_count,lead_count,viewing_count,published_at,property_id,properties(address_line1,city,postcode,bedrooms,bathrooms)&order=updated_at.desc.nullslast,created_at.desc`
+    ).catch(() => []);
+
+    // Heroes for thumbnails
+    if (allListings.length) {
+      const ids = allListings.map((l) => `"${l.id}"`).join(",");
+      const media = await ELP.rest(
+        `listing_media?listing_id=in.(${ids})&media_type=eq.photo&select=listing_id,public_url,is_hero,sort_order&order=is_hero.desc.nullslast,sort_order.asc`
+      ).catch(() => []);
+      const byListing = {};
+      for (const m of media) if (!byListing[m.listing_id]) byListing[m.listing_id] = m.public_url;
+      allListings.forEach((l) => (l._hero = byListing[l.id] || null));
+    }
+
+    document.querySelectorAll("[data-listing-filter]").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        document.querySelectorAll("[data-listing-filter]").forEach((x) => x.classList.remove("active"));
+        el.classList.add("active");
+        listingFilter = el.dataset.listingFilter;
+        renderListings();
+      });
+    });
+    renderListings();
+  }
+
+  function renderListings() {
+    const rows = listingFilter === "all"
+      ? allListings
+      : allListings.filter((l) => l.status === listingFilter);
+
+    if (!rows.length) {
+      $("listingsList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No listings ${listingFilter === "all" ? "" : `marked "${ELP.esc(listingFilter)}"`}</h3>
+          <p>Create your first listing to start getting viewings and applications.</p>
+          <button class="el-btn el-btn-primary" onclick="document.getElementById('newListingBtn').click()">+ New listing</button>
+        </div>`;
+      return;
+    }
+
+    $("listingsList").innerHTML = rows
+      .map((l) => {
+        const addr = l.properties
+          ? [l.properties.address_line1, l.properties.city, l.properties.postcode].filter(Boolean).join(", ")
+          : "Property";
+        const thumb = l._hero
+          ? `<img src="${ELP.esc(l._hero)}" alt="">`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12L12 3l9 9"/><path d="M5 10v10h14V10"/></svg>`;
+        return `
+        <div class="listing-row">
+          <div class="listing-thumb">${thumb}</div>
+          <div class="listing-main">
+            <div class="listing-title">${ELP.esc(l.headline || addr)}</div>
+            <div class="listing-sub">${ELP.esc(addr)} · ${ELP.gbp(l.advertised_rent)}/mo · Available ${ELP.fmtDate(l.available_from)}</div>
+          </div>
+          <div class="listing-stats">
+            <div class="listing-stat"><strong>${l.view_count ?? 0}</strong><span>Views</span></div>
+            <div class="listing-stat"><strong>${l.lead_count ?? 0}</strong><span>Leads</span></div>
+            <div class="listing-stat"><strong>${l.viewing_count ?? 0}</strong><span>Viewings</span></div>
+          </div>
+          <div>${badge(l.status)}</div>
+          <div class="listing-actions">
+            <select data-listing-id="${l.id}" data-action="status">
+              ${["draft","live","let_agreed","delisted"].map((s) => `<option value="${s}" ${s === l.status ? "selected" : ""}>${labelStatus(s)}</option>`).join("")}
+            </select>
+            <a href="#" data-listing-id="${l.id}" data-action="media">Media</a>
+            ${l.slug && l.status === "live" ? `<a href="/listings/?slug=${encodeURIComponent(l.slug)}" target="_blank">View</a>` : ""}
+          </div>
+        </div>`;
+      })
+      .join("");
+
+    document.querySelectorAll('[data-action="status"]').forEach((el) =>
+      el.addEventListener("change", async (e) => {
+        const id = el.dataset.listingId;
+        const newStatus = el.value;
+        try {
+          await ELP.rest(`property_listings?id=eq.${id}`, {
+            method: "PATCH",
+            headers: { Prefer: "return=minimal" },
+            body: JSON.stringify({ status: newStatus }),
+          });
+          ELP.toast(`Listing ${labelStatus(newStatus).toLowerCase()}`, "success");
+          const target = allListings.find((x) => x.id === id);
+          if (target) target.status = newStatus;
+        } catch (err) {
+          ELP.toast(err.message || "Could not update status", "error");
+        }
+      })
+    );
+
+    document.querySelectorAll('[data-action="media"]').forEach((el) =>
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        openMediaManager(el.dataset.listingId);
+      })
+    );
+  }
+
+  // ---- Media manager ----------------------------------------------------
+  //
+  // Upload flow uses the existing listing-media-upload edge function:
+  //   1. POST ?action=presign with { listing_id, media_type, mime_type, file_size }
+  //      → returns a 15-minute R2 PUT URL + the public_url it'll resolve to
+  //   2. PUT the file directly to R2 with the right Content-Type
+  //   3. POST ?action=confirm with the metadata so the server creates the
+  //      listing_media row.
+  // Delete and set-as-hero use ?action=delete and ?action=update_meta.
+  //
+  const mmModal = $("mediaModal");
+  const mmDrop = $("mmDrop");
+  const mmFileInput = $("mmFileInput");
+  const mmTabs = document.querySelectorAll("[data-mm-type]");
+  const mmGrid = $("mmGrid");
+  const mmUploads = $("mmUploads");
+  const mmEmpty = $("mmEmpty");
+
+  let mmListingId = null;
+  let mmType = "photo";
+  let mmMedia = [];
+
+  const TYPE_LABELS = {
+    photo:     { plural: "photos",      accept: "image/jpeg,image/png,image/webp,image/heic,image/heif", hint: "JPEG, PNG, WebP, HEIC · up to 15MB each" },
+    photo_360: { plural: "360° photos", accept: "image/jpeg,image/png",                                  hint: "Equirectangular JPEG/PNG · up to 30MB each" },
+    floorplan: { plural: "floorplans",  accept: "image/jpeg,image/png,image/webp,application/pdf",       hint: "JPEG, PNG, WebP or PDF · up to 10MB each" },
+    video:     { plural: "videos",      accept: "video/mp4,video/quicktime",                             hint: "MP4 or MOV · up to 150MB each" },
+  };
+
+  $("mmClose").addEventListener("click", () => mmModal.classList.remove("open"));
+  mmModal.addEventListener("click", (e) => { if (e.target === mmModal) mmModal.classList.remove("open"); });
+
+  mmTabs.forEach((tab) =>
+    tab.addEventListener("click", () => {
+      mmTabs.forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      mmType = tab.dataset.mmType;
+      mmFileInput.accept = TYPE_LABELS[mmType].accept;
+      $("mmDropTitle").textContent = `Drop ${TYPE_LABELS[mmType].plural} here, or click to browse`;
+      $("mmDropSub").textContent = TYPE_LABELS[mmType].hint;
+      renderMediaGrid();
+    })
+  );
+
+  // Drag-drop on the drop zone
+  ["dragover", "dragenter"].forEach((evt) =>
+    mmDrop.addEventListener(evt, (e) => { e.preventDefault(); mmDrop.classList.add("dragging"); })
+  );
+  ["dragleave", "drop"].forEach((evt) =>
+    mmDrop.addEventListener(evt, (e) => { e.preventDefault(); mmDrop.classList.remove("dragging"); })
+  );
+  mmDrop.addEventListener("drop", (e) => {
+    if (e.dataTransfer?.files?.length) handleFiles(e.dataTransfer.files);
+  });
+  mmFileInput.addEventListener("change", (e) => {
+    if (e.target.files?.length) handleFiles(e.target.files);
+    e.target.value = ""; // allow same file to be picked again later
+  });
+
+  async function openMediaManager(listingId) {
+    mmListingId = listingId;
+    const listing = allListings.find((l) => l.id === listingId);
+    $("mmTitle").textContent = listing?.headline ? `Media — ${listing.headline}` : "Manage media";
+    mmMedia = [];
+    mmUploads.innerHTML = "";
+    mmGrid.innerHTML = `<div class="elp-loading" style="grid-column:1/-1"><div class="elp-spinner"></div>Loading media…</div>`;
+    mmEmpty.style.display = "none";
+    mmModal.classList.add("open");
+    await loadMedia();
+  }
+
+  async function loadMedia() {
+    try {
+      mmMedia = await ELP.rest(
+        `listing_media?listing_id=eq.${mmListingId}&select=id,media_type,public_url,mime_type,is_hero,sort_order,room_type,room_caption,caption,width,height,duration_seconds&order=is_hero.desc.nullslast,sort_order.asc`
+      );
+    } catch (err) {
+      mmGrid.innerHTML = "";
+      mmEmpty.style.display = "block";
+      $("mmEmpty").querySelector("h3").textContent = "Couldn't load media";
+      $("mmEmpty").querySelector("p").textContent = err.message || "Try again.";
+      return;
+    }
+    renderMediaGrid();
+  }
+
+  function renderMediaGrid() {
+    const items = mmMedia.filter((m) => m.media_type === mmType);
+    $("mmEmptyType").textContent = TYPE_LABELS[mmType].plural;
+
+    if (!items.length) {
+      mmGrid.innerHTML = "";
+      mmEmpty.style.display = "block";
+      return;
+    }
+    mmEmpty.style.display = "none";
+
+    mmGrid.innerHTML = items
+      .map((m) => {
+        let preview;
+        if (m.media_type === "video") {
+          preview = `<video src="${ELP.esc(m.public_url)}" muted></video>`;
+        } else if (m.mime_type === "application/pdf") {
+          preview = `<div class="mm-tile-fallback">PDF · ${ELP.esc(m.caption || "Floorplan")}</div>`;
+        } else {
+          preview = `<img src="${ELP.esc(m.public_url)}" alt="${ELP.esc(m.caption || "")}" loading="lazy">`;
+        }
+
+        const heroToggleLabel = m.is_hero ? "Hero" : "Set hero";
+        const showHero = m.media_type === "photo" || m.media_type === "photo_360";
+
+        return `
+        <div class="mm-tile" data-id="${m.id}">
+          ${preview}
+          <div class="mm-tile-overlay">
+            <div class="mm-tile-badges">
+              ${m.is_hero ? '<span class="mm-tile-badge hero">Hero</span>' : ""}
+              ${m.room_type ? `<span class="mm-tile-badge">${ELP.esc(labelStatus(m.room_type))}</span>` : ""}
+            </div>
+            <div class="mm-tile-actions">
+              ${showHero ? `<button type="button" class="mm-tile-btn" data-mm-action="hero" data-id="${m.id}">${heroToggleLabel}</button>` : ""}
+              <button type="button" class="mm-tile-btn danger" data-mm-action="delete" data-id="${m.id}">Delete</button>
+            </div>
+          </div>
+        </div>`;
+      })
+      .join("");
+
+    mmGrid.querySelectorAll('[data-mm-action="hero"]').forEach((b) =>
+      b.addEventListener("click", () => setHero(b.dataset.id))
+    );
+    mmGrid.querySelectorAll('[data-mm-action="delete"]').forEach((b) =>
+      b.addEventListener("click", () => deleteMedia(b.dataset.id))
+    );
+  }
+
+  // ---- Upload pipeline --------------------------------------------------
+  async function handleFiles(fileList) {
+    const limits = {
+      photo:     15 * 1024 * 1024,
+      photo_360: 30 * 1024 * 1024,
+      floorplan: 10 * 1024 * 1024,
+      video:    150 * 1024 * 1024,
+    };
+    const allowed = TYPE_LABELS[mmType].accept.split(",");
+
+    for (const file of fileList) {
+      if (!allowed.includes(file.type)) {
+        ELP.toast(`${file.name}: ${file.type || "unknown type"} not allowed for ${TYPE_LABELS[mmType].plural}`, "error");
+        continue;
+      }
+      if (file.size > limits[mmType]) {
+        ELP.toast(`${file.name}: too large (max ${(limits[mmType] / 1024 / 1024).toFixed(0)}MB)`, "error");
+        continue;
+      }
+      uploadFile(file);
+    }
+  }
+
+  function makeUploadRow(name) {
+    const row = document.createElement("div");
+    row.className = "mm-upload";
+    row.innerHTML = `
+      <div class="mm-upload-name">${ELP.esc(name)}</div>
+      <div class="mm-upload-bar"><div class="mm-upload-fill"></div></div>
+      <div class="mm-upload-status">0%</div>
+    `;
+    mmUploads.appendChild(row);
+    return {
+      row,
+      setProgress: (pct) => {
+        row.querySelector(".mm-upload-fill").style.width = `${Math.round(pct)}%`;
+        if (!row.classList.contains("done") && !row.classList.contains("error")) {
+          row.querySelector(".mm-upload-status").textContent = `${Math.round(pct)}%`;
+        }
+      },
+      done: () => {
+        row.classList.add("done");
+        row.querySelector(".mm-upload-status").textContent = "Done";
+        setTimeout(() => row.remove(), 2000);
+      },
+      error: (msg) => {
+        row.classList.add("error");
+        row.querySelector(".mm-upload-status").textContent = msg || "Failed";
+      },
+    };
+  }
+
+  async function uploadFile(file) {
+    const ui = makeUploadRow(file.name);
+    try {
+      // 1. Presign
+      ui.setProgress(2);
+      const presign = await ELP.callFn("listing-media-upload?action=presign", {
+        listing_id: mmListingId,
+        media_type: mmType,
+        mime_type: file.type,
+        file_size: file.size,
+      });
+      if (!presign.ok) throw new Error(presign.data?.error || `presign_failed (${presign.status})`);
+      const { upload_url, r2_key, public_url } = presign.data;
+
+      // 2. PUT to R2 with progress via XHR
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", upload_url);
+        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) ui.setProgress(2 + (e.loaded / e.total) * 93);
+        };
+        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error(`upload_failed (${xhr.status})`));
+        xhr.onerror = () => reject(new Error("upload_network_error"));
+        xhr.send(file);
+      });
+      ui.setProgress(96);
+
+      // 3. Read dimensions / duration where applicable, then confirm
+      const dims = mmType === "video" ? await readVideoDimensions(file).catch(() => null)
+                                      : await readImageDimensions(file).catch(() => null);
+      const confirmRes = await ELP.callFn("listing-media-upload?action=confirm", {
+        listing_id: mmListingId,
+        media_type: mmType,
+        r2_key,
+        public_url,
+        mime_type: file.type,
+        file_size: file.size,
+        width: dims?.width ?? null,
+        height: dims?.height ?? null,
+        duration_seconds: dims?.duration ?? null,
+        // First photo on a fresh listing automatically becomes hero so the
+        // search card and OG share image have something to show.
+        is_hero: mmType === "photo" && !mmMedia.some((m) => m.media_type === "photo" && m.is_hero),
+      });
+      if (!confirmRes.ok) throw new Error(confirmRes.data?.error || `confirm_failed (${confirmRes.status})`);
+
+      ui.setProgress(100);
+      ui.done();
+      await loadMedia();
+      // refresh listings grid in the background so the thumbnail updates
+      loaded.delete("listings");
+    } catch (err) {
+      ui.error(err.message || "Failed");
+    }
+  }
+
+  function readImageDimensions(file) {
+    return new Promise((resolve, reject) => {
+      if (!file.type.startsWith("image/")) return resolve(null);
+      // HEIC and some PDFs won't decode in <img>; that's fine — we just skip.
+      if (file.type === "application/pdf" || file.type === "image/heic" || file.type === "image/heif") {
+        return resolve(null);
+      }
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve({ width: img.naturalWidth, height: img.naturalHeight }); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("image_decode_failed")); };
+      img.src = url;
+    });
+  }
+
+  function readVideoDimensions(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const v = document.createElement("video");
+      v.preload = "metadata";
+      v.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        resolve({ width: v.videoWidth, height: v.videoHeight, duration: Math.round(v.duration) });
+      };
+      v.onerror = () => { URL.revokeObjectURL(url); reject(new Error("video_decode_failed")); };
+      v.src = url;
+    });
+  }
+
+  // ---- Media actions ----------------------------------------------------
+  async function setHero(mediaId) {
+    try {
+      const res = await ELP.callFn("listing-media-upload?action=update_meta", {
+        media_id: mediaId,
+        is_hero: true,
+      });
+      if (!res.ok) throw new Error(res.data?.error || `update_failed (${res.status})`);
+      ELP.toast("Hero photo updated", "success");
+      await loadMedia();
+      loaded.delete("listings");
+    } catch (err) {
+      ELP.toast(err.message || "Could not set hero", "error");
+    }
+  }
+
+  async function deleteMedia(mediaId) {
+    if (!confirm("Delete this media? This can't be undone.")) return;
+    try {
+      const res = await ELP.callFn("listing-media-upload?action=delete", {
+        media_id: mediaId,
+      });
+      if (!res.ok) throw new Error(res.data?.error || `delete_failed (${res.status})`);
+      ELP.toast("Deleted", "success");
+      await loadMedia();
+      loaded.delete("listings");
+    } catch (err) {
+      ELP.toast(err.message || "Could not delete", "error");
+    }
+  }
+
+  // ---- New listing modal ------------------------------------------------
+  const modal = $("newListingModal");
+  $("newListingBtn").addEventListener("click", openNewListing);
+  $("nlCancel").addEventListener("click", () => modal.classList.remove("open"));
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("open"); });
+
+  async function openNewListing() {
+    const props = await ELP.rest(
+      `properties?user_id=eq.${user.id}&archived=eq.false&select=id,address_line1,city,postcode&order=created_at.desc`
+    ).catch(() => []);
+    const sel = $("nlProperty");
+    if (!props.length) {
+      sel.innerHTML = `<option value="">No properties yet — add one in the iOS app first</option>`;
+      sel.disabled = true;
+      $("nlSubmit").disabled = true;
+    } else {
+      sel.disabled = false;
+      $("nlSubmit").disabled = false;
+      sel.innerHTML = props.map(
+        (p) => `<option value="${p.id}">${ELP.esc([p.address_line1, p.city, p.postcode].filter(Boolean).join(", "))}</option>`
+      ).join("");
+    }
+    modal.classList.add("open");
+  }
+
+  $("newListingForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const propertyId = $("nlProperty").value;
+    if (!propertyId) return;
+    const slug = `${$("nlHeadline").value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60)}-${Date.now().toString(36).slice(-5)}`;
+
+    const body = {
+      property_id: propertyId,
+      user_id: user.id,
+      slug,
+      headline: $("nlHeadline").value.trim(),
+      description: $("nlDescription").value.trim() || null,
+      advertised_rent: Number($("nlRent").value) || null,
+      advertised_deposit: Number($("nlDeposit").value) || null,
+      available_from: $("nlAvailable").value || null,
+      status: "draft",
+    };
+    try {
+      await ELP.rest("property_listings", {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(body),
+      });
+      ELP.toast("Listing saved as draft", "success");
+      modal.classList.remove("open");
+      loaded.delete("listings");
+      ensureLoaded("listings");
+    } catch (err) {
+      ELP.toast(err.message || "Could not create listing", "error");
+    }
+  });
+
+  // ---- Viewing requests -------------------------------------------------
+  async function loadViewings() {
+    const rows = await ELP.rest(
+      `viewing_requests?user_id=eq.${user.id}&select=id,prospect_name,prospect_email,prospect_phone,status,proposed_datetime,confirmed_datetime,preferred_times,created_at,landlord_notes,property_listings(slug,headline)&order=created_at.desc`
+    ).catch(() => []);
+    if (!rows.length) {
+      $("viewingsList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No viewing requests yet</h3>
+          <p>When someone requests a viewing on one of your live listings, it'll show up here.</p>
+        </div>`;
+      return;
+    }
+    $("viewingsList").innerHTML = rows
+      .map((r) => {
+        const headline = r.property_listings?.headline || "Property";
+        const when = r.confirmed_datetime || r.proposed_datetime;
+        const showActions = r.status === "pending";
+        return `
+        <div class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(r.prospect_name || r.prospect_email)} · ${ELP.esc(headline)}</div>
+            <div class="elp-list-item-sub">${when ? ELP.fmtDateTime(when) : (r.preferred_times ? `Suggested: ${ELP.esc(r.preferred_times)}` : "Awaiting time")}${r.prospect_email ? ` · ${ELP.esc(r.prospect_email)}` : ""}</div>
+          </div>
+          <div class="elp-list-item-end">
+            ${badge(r.status)}
+            ${showActions ? `
+              <button class="el-btn el-btn-secondary" data-vr-confirm="${r.id}" style="padding:6px 12px;font-size:13px">Confirm</button>
+              <button class="el-btn el-btn-ghost" data-vr-decline="${r.id}" style="padding:6px 12px;font-size:13px">Decline</button>
+            ` : ""}
+          </div>
+        </div>`;
+      })
+      .join("");
+
+    document.querySelectorAll("[data-vr-confirm]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        const when = prompt("Enter confirmed date and time (e.g. 2026-05-12 14:30)");
+        if (!when) return;
+        const iso = new Date(when).toISOString();
+        if (isNaN(new Date(iso).getTime())) { ELP.toast("Couldn't parse that date", "error"); return; }
+        await updateViewing(b.dataset.vrConfirm, { status: "confirmed", confirmed_datetime: iso });
+      })
+    );
+    document.querySelectorAll("[data-vr-decline]").forEach((b) =>
+      b.addEventListener("click", () => updateViewing(b.dataset.vrDecline, { status: "declined" }))
+    );
+  }
+
+  async function updateViewing(id, patch) {
+    try {
+      await ELP.rest(`viewing_requests?id=eq.${id}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(patch),
+      });
+      ELP.toast("Viewing updated", "success");
+      loaded.delete("viewings");
+      ensureLoaded("viewings");
+    } catch (err) {
+      ELP.toast(err.message || "Could not update", "error");
+    }
+  }
+
+  // ---- Tenants ----------------------------------------------------------
+  async function loadTenants() {
+    const rows = await ELP.rest(
+      `tenants?user_id=eq.${user.id}&select=id,name,email,phone,status,prequal_status,created_at,updated_at,property_id,properties(address_line1,city,postcode)&order=updated_at.desc.nullslast,created_at.desc`
+    ).catch(() => []);
+    if (!rows.length) {
+      $("tenantsList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No tenants yet</h3>
+          <p>Applicants and current tenants linked to your properties will appear here.</p>
+        </div>`;
+      return;
+    }
+    $("tenantsList").innerHTML = rows
+      .map((t) => {
+        const addr = t.properties
+          ? [t.properties.address_line1, t.properties.city, t.properties.postcode].filter(Boolean).join(", ")
+          : "—";
+        return `
+        <div class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(t.name || t.email || "Applicant")}</div>
+            <div class="elp-list-item-sub">${ELP.esc(addr)} · ${ELP.esc(t.email || "")}${t.phone ? ` · ${ELP.esc(t.phone)}` : ""}</div>
+          </div>
+          <div class="elp-list-item-end">${badge(t.status)}</div>
+        </div>`;
+      })
+      .join("");
+  }
+
+  // ---- Tenancies --------------------------------------------------------
+  async function loadTenancies() {
+    // Try landlord_id first; fall back to property ownership.
+    let rows = await ELP.rest(
+      `tenancy_agreements?landlord_id=eq.${user.id}&select=id,status,start_date,end_date,monthly_rent,deposit,property_id,tenant_id,properties(address_line1,city,postcode),tenants(name,email)&order=start_date.desc.nullslast`
+    ).catch(() => null);
+
+    if (!rows) {
+      const props = await ELP.rest(`properties?user_id=eq.${user.id}&select=id`).catch(() => []);
+      if (!props.length) { rows = []; }
+      else {
+        const ids = props.map((p) => `"${p.id}"`).join(",");
+        rows = await ELP.rest(
+          `tenancy_agreements?property_id=in.(${ids})&select=id,status,start_date,end_date,monthly_rent,deposit,property_id,tenant_id,properties(address_line1,city,postcode),tenants(name,email)&order=start_date.desc.nullslast`
+        ).catch(() => []);
+      }
+    }
+
+    if (!rows.length) {
+      $("tenanciesList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No tenancies yet</h3>
+          <p>Once you start a tenancy with an approved applicant, the agreement will appear here.</p>
+        </div>`;
+      return;
+    }
+    $("tenanciesList").innerHTML = rows
+      .map((r) => {
+        const addr = r.properties
+          ? [r.properties.address_line1, r.properties.city, r.properties.postcode].filter(Boolean).join(", ")
+          : "Property";
+        const tenantLabel = r.tenants?.name || r.tenants?.email || "Tenant";
+        return `
+        <div class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(addr)}</div>
+            <div class="elp-list-item-sub">${ELP.esc(tenantLabel)} · ${ELP.fmtDate(r.start_date)}${r.end_date ? ` – ${ELP.fmtDate(r.end_date)}` : ""} · ${ELP.gbp(r.monthly_rent)}/mo</div>
+          </div>
+          <div class="elp-list-item-end">${badge(r.status)}</div>
+        </div>`;
+      })
+      .join("");
+  }
+
+  // ---- Transactions -----------------------------------------------------
+  async function loadTransactions() {
+    const rows = await ELP.rest(
+      `transactions?user_id=eq.${user.id}&select=id,date,amount,kind,category,note,property_id,properties(address_line1,city)&order=date.desc&limit=200`
+    ).catch(() => []);
+    if (!rows.length) {
+      $("transactionsList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No transactions yet</h3>
+          <p>Rent received, expenses and other movements will appear here. Add transactions from the iOS app for now — web entry is coming soon.</p>
+        </div>`;
+      return;
+    }
+    $("transactionsList").innerHTML = rows
+      .map((t) => {
+        const addr = t.properties
+          ? [t.properties.address_line1, t.properties.city].filter(Boolean).join(", ")
+          : "—";
+        const sign = t.kind === "expense" ? "-" : "+";
+        const colour = t.kind === "expense" ? "var(--el-danger)" : "var(--el-green)";
+        return `
+        <div class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(t.note || labelStatus(t.category) || labelStatus(t.kind) || "Transaction")}</div>
+            <div class="elp-list-item-sub">${ELP.fmtDate(t.date)} · ${ELP.esc(addr)}</div>
+          </div>
+          <div class="elp-list-item-end" style="font-weight:500;color:${colour}">${sign}${ELP.gbp(Math.abs(t.amount))}</div>
+        </div>`;
+      })
+      .join("");
+  }
+
+  // ---- Documents --------------------------------------------------------
+  async function loadDocuments() {
+    const rows = await ELP.rest(
+      `documents?user_id=eq.${user.id}&select=id,filename,doc_type,created_at,storage_path,property_id&order=created_at.desc&limit=200`
+    ).catch(() => []);
+    if (!rows.length) {
+      $("documentsList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No documents yet</h3>
+          <p>Tenancy agreements, EPCs and inventories you upload will live here.</p>
+        </div>`;
+      return;
+    }
+    $("documentsList").innerHTML = rows
+      .map(
+        (d) => `
+        <div class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(d.filename || "Document")}</div>
+            <div class="elp-list-item-sub">${ELP.esc(d.doc_type || "Document")} · ${ELP.fmtDate(d.created_at)}</div>
+          </div>
+        </div>`
+      )
+      .join("");
+  }
+
+  // ---- Settings ---------------------------------------------------------
+  async function loadSettings() {
+    const profile = await ELP.rest(
+      `landlord_profiles?user_id=eq.${user.id}&select=director_name,company_name,company_number,phone&limit=1`
+    ).catch(() => []);
+    const p = profile[0] || {};
+    $("setDirector").value = p.director_name || user.user_metadata?.full_name || "";
+    $("setCompany").value = p.company_name || "";
+    $("setCompanyNumber").value = p.company_number || "";
+    $("setPhone").value = p.phone || user.user_metadata?.phone || "";
+  }
+  $("settingsForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const body = {
+      user_id: user.id,
+      director_name: $("setDirector").value.trim() || null,
+      company_name: $("setCompany").value.trim() || null,
+      company_number: $("setCompanyNumber").value.trim() || null,
+      phone: $("setPhone").value.trim() || null,
+    };
+    try {
+      await ELP.rest("landlord_profiles?on_conflict=user_id", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify(body),
+      });
+      ELP.toast("Profile saved", "success");
+    } catch (err) {
+      ELP.toast(err.message || "Couldn't save", "error");
+    }
+  });
+
+  // ---- Helpers ----------------------------------------------------------
+  function labelStatus(s) {
+    if (!s) return "—";
+    return String(s).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  function badge(s) {
+    const cls =
+      ["active", "signed", "approved", "live", "confirmed"].includes(s) ? "live" :
+      ["pending", "awaiting_review", "submitted", "referencing", "sent", "draft"].includes(s) ? "pending" :
+      ["rejected", "archived", "no_show", "delisted", "declined"].includes(s) ? "warn" : "muted";
+    return `<span class="elp-badge elp-badge-${cls}">${ELP.esc(labelStatus(s))}</span>`;
+  }
+</script>
+</body>
+</html>
