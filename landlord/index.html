@@ -87,6 +87,126 @@
     }
     .modal-sub { color: var(--el-muted); font-size: 13px; margin-bottom: 22px; }
     .modal .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+    .modal-lg { max-width: 880px; }
+
+    /* ---- Media manager ---- */
+    .mm-tabs {
+      display: flex; gap: 4px;
+      background: var(--el-bg);
+      border: 1px solid var(--el-line);
+      border-radius: 10px; padding: 4px;
+      margin-bottom: 18px;
+    }
+    .mm-tab {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 7px;
+      font-size: 13px; font-weight: 500;
+      color: var(--el-muted);
+      text-align: center;
+    }
+    .mm-tab.active {
+      background: #fff; color: var(--el-ink);
+      box-shadow: 0 1px 3px rgba(15, 46, 40, 0.06);
+    }
+
+    .mm-drop {
+      border: 2px dashed var(--el-line);
+      border-radius: 14px;
+      padding: 28px 20px;
+      text-align: center;
+      transition: border-color 120ms ease, background 120ms ease;
+      cursor: pointer;
+      margin-bottom: 18px;
+    }
+    .mm-drop:hover, .mm-drop.dragging {
+      border-color: var(--el-green);
+      background: var(--el-green-pale);
+    }
+    .mm-drop-icon {
+      width: 40px; height: 40px;
+      margin: 0 auto 10px;
+      border-radius: 12px;
+      background: var(--el-green-pale);
+      color: var(--el-green);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .mm-drop-icon svg { width: 22px; height: 22px; }
+    .mm-drop-title { font-size: 14px; font-weight: 500; color: var(--el-ink); margin-bottom: 4px; }
+    .mm-drop-sub { font-size: 12px; color: var(--el-muted); }
+
+    .mm-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+    .mm-tile {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--el-bg);
+      border: 1px solid var(--el-line-soft);
+    }
+    .mm-tile img,
+    .mm-tile video {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .mm-tile-fallback {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--el-muted); font-size: 11px; text-align: center; padding: 12px;
+    }
+    .mm-tile-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(15,46,40,0.55) 100%);
+      opacity: 0;
+      transition: opacity 120ms ease;
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 8px;
+    }
+    .mm-tile:hover .mm-tile-overlay { opacity: 1; }
+    .mm-tile-badges { display: flex; gap: 4px; flex-wrap: wrap; }
+    .mm-tile-badge {
+      background: rgba(15,46,40,0.85); color: #fff;
+      font-size: 10px; font-weight: 500;
+      padding: 3px 7px; border-radius: 999px;
+      letter-spacing: 0.3px;
+    }
+    .mm-tile-badge.hero { background: var(--el-green); }
+    .mm-tile-actions {
+      display: flex; gap: 4px; justify-content: flex-end;
+    }
+    .mm-tile-btn {
+      background: rgba(255,255,255,0.95);
+      color: var(--el-ink);
+      font-size: 11px; font-weight: 500;
+      padding: 4px 8px; border-radius: 6px;
+    }
+    .mm-tile-btn:hover { background: #fff; }
+    .mm-tile-btn.danger { color: var(--el-danger); }
+
+    .mm-uploads {
+      margin-top: 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .mm-upload {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px;
+      background: #fff;
+      border: 1px solid var(--el-line-soft);
+      border-radius: 10px;
+      font-size: 13px;
+    }
+    .mm-upload-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--el-ink); }
+    .mm-upload-bar {
+      flex: 0 0 100px;
+      height: 4px; background: var(--el-line); border-radius: 2px; overflow: hidden;
+    }
+    .mm-upload-fill { height: 100%; background: var(--el-green); width: 0%; transition: width 120ms ease; }
+    .mm-upload-status { font-size: 11px; color: var(--el-muted); flex: 0 0 70px; text-align: right; }
+    .mm-upload.error .mm-upload-status { color: var(--el-danger); }
+    .mm-upload.done .mm-upload-status { color: var(--el-green); }
   </style>
 </head>
 <body class="elp-body">
@@ -252,6 +372,43 @@
 
   </div>
 </main>
+
+<!-- Media manager modal -->
+<div class="modal-backdrop" id="mediaModal">
+  <div class="modal modal-lg">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:6px">
+      <div>
+        <h2 id="mmTitle">Manage media</h2>
+        <p class="modal-sub" id="mmSub">Upload photos, 360° tours, floorplans and videos. The first photo (or one you mark as hero) is shown in search results.</p>
+      </div>
+      <button class="el-btn el-btn-ghost" id="mmClose" type="button" style="padding:4px 10px;font-size:13px">Close</button>
+    </div>
+
+    <div class="mm-tabs" role="tablist">
+      <button class="mm-tab active" data-mm-type="photo" type="button">Photos</button>
+      <button class="mm-tab" data-mm-type="photo_360" type="button">360°</button>
+      <button class="mm-tab" data-mm-type="floorplan" type="button">Floorplans</button>
+      <button class="mm-tab" data-mm-type="video" type="button">Videos</button>
+    </div>
+
+    <label class="mm-drop" id="mmDrop">
+      <input type="file" id="mmFileInput" multiple style="display:none">
+      <div class="mm-drop-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <div class="mm-drop-title" id="mmDropTitle">Drop photos here, or click to browse</div>
+      <div class="mm-drop-sub" id="mmDropSub">JPEG, PNG, WebP, HEIC · up to 15MB each</div>
+    </label>
+
+    <div class="mm-uploads" id="mmUploads"></div>
+
+    <div id="mmGrid" class="mm-grid" style="margin-top:8px"></div>
+    <div id="mmEmpty" class="elp-empty" style="display:none;margin-top:8px">
+      <h3>No <span id="mmEmptyType">photos</span> yet</h3>
+      <p>Upload your first one above. Photos are shown in search results, on the listing page and in OG share cards.</p>
+    </div>
+  </div>
+</div>
 
 <!-- New listing modal -->
 <div class="modal-backdrop" id="newListingModal">
@@ -477,6 +634,7 @@
             <select data-listing-id="${l.id}" data-action="status">
               ${["draft","live","let_agreed","delisted"].map((s) => `<option value="${s}" ${s === l.status ? "selected" : ""}>${labelStatus(s)}</option>`).join("")}
             </select>
+            <a href="#" data-listing-id="${l.id}" data-action="media">Media</a>
             ${l.slug && l.status === "live" ? `<a href="/listings/?slug=${encodeURIComponent(l.slug)}" target="_blank">View</a>` : ""}
           </div>
         </div>`;
@@ -501,6 +659,318 @@
         }
       })
     );
+
+    document.querySelectorAll('[data-action="media"]').forEach((el) =>
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        openMediaManager(el.dataset.listingId);
+      })
+    );
+  }
+
+  // ---- Media manager ----------------------------------------------------
+  //
+  // Upload flow uses the existing listing-media-upload edge function:
+  //   1. POST ?action=presign with { listing_id, media_type, mime_type, file_size }
+  //      → returns a 15-minute R2 PUT URL + the public_url it'll resolve to
+  //   2. PUT the file directly to R2 with the right Content-Type
+  //   3. POST ?action=confirm with the metadata so the server creates the
+  //      listing_media row.
+  // Delete and set-as-hero use ?action=delete and ?action=update_meta.
+  //
+  const mmModal = $("mediaModal");
+  const mmDrop = $("mmDrop");
+  const mmFileInput = $("mmFileInput");
+  const mmTabs = document.querySelectorAll("[data-mm-type]");
+  const mmGrid = $("mmGrid");
+  const mmUploads = $("mmUploads");
+  const mmEmpty = $("mmEmpty");
+
+  let mmListingId = null;
+  let mmType = "photo";
+  let mmMedia = [];
+
+  const TYPE_LABELS = {
+    photo:     { plural: "photos",      accept: "image/jpeg,image/png,image/webp,image/heic,image/heif", hint: "JPEG, PNG, WebP, HEIC · up to 15MB each" },
+    photo_360: { plural: "360° photos", accept: "image/jpeg,image/png",                                  hint: "Equirectangular JPEG/PNG · up to 30MB each" },
+    floorplan: { plural: "floorplans",  accept: "image/jpeg,image/png,image/webp,application/pdf",       hint: "JPEG, PNG, WebP or PDF · up to 10MB each" },
+    video:     { plural: "videos",      accept: "video/mp4,video/quicktime",                             hint: "MP4 or MOV · up to 150MB each" },
+  };
+
+  $("mmClose").addEventListener("click", () => mmModal.classList.remove("open"));
+  mmModal.addEventListener("click", (e) => { if (e.target === mmModal) mmModal.classList.remove("open"); });
+
+  mmTabs.forEach((tab) =>
+    tab.addEventListener("click", () => {
+      mmTabs.forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      mmType = tab.dataset.mmType;
+      mmFileInput.accept = TYPE_LABELS[mmType].accept;
+      $("mmDropTitle").textContent = `Drop ${TYPE_LABELS[mmType].plural} here, or click to browse`;
+      $("mmDropSub").textContent = TYPE_LABELS[mmType].hint;
+      renderMediaGrid();
+    })
+  );
+
+  // Drag-drop on the drop zone
+  ["dragover", "dragenter"].forEach((evt) =>
+    mmDrop.addEventListener(evt, (e) => { e.preventDefault(); mmDrop.classList.add("dragging"); })
+  );
+  ["dragleave", "drop"].forEach((evt) =>
+    mmDrop.addEventListener(evt, (e) => { e.preventDefault(); mmDrop.classList.remove("dragging"); })
+  );
+  mmDrop.addEventListener("drop", (e) => {
+    if (e.dataTransfer?.files?.length) handleFiles(e.dataTransfer.files);
+  });
+  mmFileInput.addEventListener("change", (e) => {
+    if (e.target.files?.length) handleFiles(e.target.files);
+    e.target.value = ""; // allow same file to be picked again later
+  });
+
+  async function openMediaManager(listingId) {
+    mmListingId = listingId;
+    const listing = allListings.find((l) => l.id === listingId);
+    $("mmTitle").textContent = listing?.headline ? `Media — ${listing.headline}` : "Manage media";
+    mmMedia = [];
+    mmUploads.innerHTML = "";
+    mmGrid.innerHTML = `<div class="elp-loading" style="grid-column:1/-1"><div class="elp-spinner"></div>Loading media…</div>`;
+    mmEmpty.style.display = "none";
+    mmModal.classList.add("open");
+    await loadMedia();
+  }
+
+  async function loadMedia() {
+    try {
+      mmMedia = await ELP.rest(
+        `listing_media?listing_id=eq.${mmListingId}&select=id,media_type,public_url,mime_type,is_hero,sort_order,room_type,room_caption,caption,width,height,duration_seconds&order=is_hero.desc.nullslast,sort_order.asc`
+      );
+    } catch (err) {
+      mmGrid.innerHTML = "";
+      mmEmpty.style.display = "block";
+      $("mmEmpty").querySelector("h3").textContent = "Couldn't load media";
+      $("mmEmpty").querySelector("p").textContent = err.message || "Try again.";
+      return;
+    }
+    renderMediaGrid();
+  }
+
+  function renderMediaGrid() {
+    const items = mmMedia.filter((m) => m.media_type === mmType);
+    $("mmEmptyType").textContent = TYPE_LABELS[mmType].plural;
+
+    if (!items.length) {
+      mmGrid.innerHTML = "";
+      mmEmpty.style.display = "block";
+      return;
+    }
+    mmEmpty.style.display = "none";
+
+    mmGrid.innerHTML = items
+      .map((m) => {
+        let preview;
+        if (m.media_type === "video") {
+          preview = `<video src="${ELP.esc(m.public_url)}" muted></video>`;
+        } else if (m.mime_type === "application/pdf") {
+          preview = `<div class="mm-tile-fallback">PDF · ${ELP.esc(m.caption || "Floorplan")}</div>`;
+        } else {
+          preview = `<img src="${ELP.esc(m.public_url)}" alt="${ELP.esc(m.caption || "")}" loading="lazy">`;
+        }
+
+        const heroToggleLabel = m.is_hero ? "Hero" : "Set hero";
+        const showHero = m.media_type === "photo" || m.media_type === "photo_360";
+
+        return `
+        <div class="mm-tile" data-id="${m.id}">
+          ${preview}
+          <div class="mm-tile-overlay">
+            <div class="mm-tile-badges">
+              ${m.is_hero ? '<span class="mm-tile-badge hero">Hero</span>' : ""}
+              ${m.room_type ? `<span class="mm-tile-badge">${ELP.esc(labelStatus(m.room_type))}</span>` : ""}
+            </div>
+            <div class="mm-tile-actions">
+              ${showHero ? `<button type="button" class="mm-tile-btn" data-mm-action="hero" data-id="${m.id}">${heroToggleLabel}</button>` : ""}
+              <button type="button" class="mm-tile-btn danger" data-mm-action="delete" data-id="${m.id}">Delete</button>
+            </div>
+          </div>
+        </div>`;
+      })
+      .join("");
+
+    mmGrid.querySelectorAll('[data-mm-action="hero"]').forEach((b) =>
+      b.addEventListener("click", () => setHero(b.dataset.id))
+    );
+    mmGrid.querySelectorAll('[data-mm-action="delete"]').forEach((b) =>
+      b.addEventListener("click", () => deleteMedia(b.dataset.id))
+    );
+  }
+
+  // ---- Upload pipeline --------------------------------------------------
+  async function handleFiles(fileList) {
+    const limits = {
+      photo:     15 * 1024 * 1024,
+      photo_360: 30 * 1024 * 1024,
+      floorplan: 10 * 1024 * 1024,
+      video:    150 * 1024 * 1024,
+    };
+    const allowed = TYPE_LABELS[mmType].accept.split(",");
+
+    for (const file of fileList) {
+      if (!allowed.includes(file.type)) {
+        ELP.toast(`${file.name}: ${file.type || "unknown type"} not allowed for ${TYPE_LABELS[mmType].plural}`, "error");
+        continue;
+      }
+      if (file.size > limits[mmType]) {
+        ELP.toast(`${file.name}: too large (max ${(limits[mmType] / 1024 / 1024).toFixed(0)}MB)`, "error");
+        continue;
+      }
+      uploadFile(file);
+    }
+  }
+
+  function makeUploadRow(name) {
+    const row = document.createElement("div");
+    row.className = "mm-upload";
+    row.innerHTML = `
+      <div class="mm-upload-name">${ELP.esc(name)}</div>
+      <div class="mm-upload-bar"><div class="mm-upload-fill"></div></div>
+      <div class="mm-upload-status">0%</div>
+    `;
+    mmUploads.appendChild(row);
+    return {
+      row,
+      setProgress: (pct) => {
+        row.querySelector(".mm-upload-fill").style.width = `${Math.round(pct)}%`;
+        if (!row.classList.contains("done") && !row.classList.contains("error")) {
+          row.querySelector(".mm-upload-status").textContent = `${Math.round(pct)}%`;
+        }
+      },
+      done: () => {
+        row.classList.add("done");
+        row.querySelector(".mm-upload-status").textContent = "Done";
+        setTimeout(() => row.remove(), 2000);
+      },
+      error: (msg) => {
+        row.classList.add("error");
+        row.querySelector(".mm-upload-status").textContent = msg || "Failed";
+      },
+    };
+  }
+
+  async function uploadFile(file) {
+    const ui = makeUploadRow(file.name);
+    try {
+      // 1. Presign
+      ui.setProgress(2);
+      const presign = await ELP.callFn("listing-media-upload?action=presign", {
+        listing_id: mmListingId,
+        media_type: mmType,
+        mime_type: file.type,
+        file_size: file.size,
+      });
+      if (!presign.ok) throw new Error(presign.data?.error || `presign_failed (${presign.status})`);
+      const { upload_url, r2_key, public_url } = presign.data;
+
+      // 2. PUT to R2 with progress via XHR
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", upload_url);
+        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) ui.setProgress(2 + (e.loaded / e.total) * 93);
+        };
+        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error(`upload_failed (${xhr.status})`));
+        xhr.onerror = () => reject(new Error("upload_network_error"));
+        xhr.send(file);
+      });
+      ui.setProgress(96);
+
+      // 3. Read dimensions / duration where applicable, then confirm
+      const dims = mmType === "video" ? await readVideoDimensions(file).catch(() => null)
+                                      : await readImageDimensions(file).catch(() => null);
+      const confirmRes = await ELP.callFn("listing-media-upload?action=confirm", {
+        listing_id: mmListingId,
+        media_type: mmType,
+        r2_key,
+        public_url,
+        mime_type: file.type,
+        file_size: file.size,
+        width: dims?.width ?? null,
+        height: dims?.height ?? null,
+        duration_seconds: dims?.duration ?? null,
+        // First photo on a fresh listing automatically becomes hero so the
+        // search card and OG share image have something to show.
+        is_hero: mmType === "photo" && !mmMedia.some((m) => m.media_type === "photo" && m.is_hero),
+      });
+      if (!confirmRes.ok) throw new Error(confirmRes.data?.error || `confirm_failed (${confirmRes.status})`);
+
+      ui.setProgress(100);
+      ui.done();
+      await loadMedia();
+      // refresh listings grid in the background so the thumbnail updates
+      loaded.delete("listings");
+    } catch (err) {
+      ui.error(err.message || "Failed");
+    }
+  }
+
+  function readImageDimensions(file) {
+    return new Promise((resolve, reject) => {
+      if (!file.type.startsWith("image/")) return resolve(null);
+      // HEIC and some PDFs won't decode in <img>; that's fine — we just skip.
+      if (file.type === "application/pdf" || file.type === "image/heic" || file.type === "image/heif") {
+        return resolve(null);
+      }
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve({ width: img.naturalWidth, height: img.naturalHeight }); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("image_decode_failed")); };
+      img.src = url;
+    });
+  }
+
+  function readVideoDimensions(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const v = document.createElement("video");
+      v.preload = "metadata";
+      v.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        resolve({ width: v.videoWidth, height: v.videoHeight, duration: Math.round(v.duration) });
+      };
+      v.onerror = () => { URL.revokeObjectURL(url); reject(new Error("video_decode_failed")); };
+      v.src = url;
+    });
+  }
+
+  // ---- Media actions ----------------------------------------------------
+  async function setHero(mediaId) {
+    try {
+      const res = await ELP.callFn("listing-media-upload?action=update_meta", {
+        media_id: mediaId,
+        is_hero: true,
+      });
+      if (!res.ok) throw new Error(res.data?.error || `update_failed (${res.status})`);
+      ELP.toast("Hero photo updated", "success");
+      await loadMedia();
+      loaded.delete("listings");
+    } catch (err) {
+      ELP.toast(err.message || "Could not set hero", "error");
+    }
+  }
+
+  async function deleteMedia(mediaId) {
+    if (!confirm("Delete this media? This can't be undone.")) return;
+    try {
+      const res = await ELP.callFn("listing-media-upload?action=delete", {
+        media_id: mediaId,
+      });
+      if (!res.ok) throw new Error(res.data?.error || `delete_failed (${res.status})`);
+      ELP.toast("Deleted", "success");
+      await loadMedia();
+      loaded.delete("listings");
+    } catch (err) {
+      ELP.toast(err.message || "Could not delete", "error");
+    }
   }
 
   // ---- New listing modal ------------------------------------------------
