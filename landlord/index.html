@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
+  <title>Landlord portal — easierLet</title>
+  <meta name="robots" content="noindex">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/assets/easierlet.css">
+  <link rel="stylesheet" href="/assets/portal.css">
+
+  <style>
+    /* Listing row table-style */
+    .listing-row {
+      display: grid;
+      grid-template-columns: 64px 1fr auto auto auto auto;
+      gap: 16px; align-items: center;
+      padding: 14px 16px;
+      background: #fff;
+      border: 1px solid var(--el-line-soft);
+      border-radius: 12px;
+    }
+    @media (max-width: 720px) {
+      .listing-row { grid-template-columns: 1fr; }
+      .listing-row .listing-stats { display: none; }
+    }
+    .listing-thumb {
+      width: 64px; height: 64px;
+      border-radius: 8px;
+      background: var(--el-green-pale);
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--el-green-light);
+    }
+    .listing-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .listing-thumb svg { width: 24px; height: 24px; opacity: 0.6; }
+
+    .listing-main { min-width: 0; }
+    .listing-title {
+      font-size: 15px; font-weight: 500; color: var(--el-ink);
+      margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .listing-sub { font-size: 13px; color: var(--el-muted); }
+    .listing-stats {
+      display: flex; gap: 18px; font-size: 13px; color: var(--el-ink-soft);
+    }
+    .listing-stat strong { display: block; font-size: 16px; font-weight: 500; color: var(--el-ink); }
+    .listing-stat span { font-size: 11px; color: var(--el-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .listing-actions { display: flex; gap: 6px; }
+    .listing-actions select,
+    .listing-actions a {
+      font-size: 12px; padding: 7px 10px;
+      border-radius: 7px; border: 1px solid var(--el-line);
+      background: #fff; color: var(--el-ink-soft);
+      cursor: pointer;
+    }
+    .listing-actions a:hover { background: var(--el-green-pale); color: var(--el-green); }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(15, 46, 40, 0.45);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center; justify-content: center;
+      padding: 24px;
+      z-index: 100;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: 100%; max-width: 560px;
+      max-height: 90vh; overflow-y: auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 20px 60px rgba(15, 46, 40, 0.25);
+    }
+    .modal h2 {
+      font-family: 'Fraunces', serif; font-weight: 400;
+      font-size: 24px; margin-bottom: 6px; letter-spacing: -0.4px;
+    }
+    .modal-sub { color: var(--el-muted); font-size: 13px; margin-bottom: 22px; }
+    .modal .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+  </style>
+</head>
+<body class="elp-body">
+
+<div id="portal-shell" data-role="landlord" data-active="home" data-title="Landlord portal"></div>
+
+<main class="elp-main">
+  <div class="elp-main-inner">
+
+    <!-- Dashboard -->
+    <section data-tab-panel="home">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title" id="welcome">Welcome back</h1>
+        <p class="elp-page-sub">A snapshot of your portfolio activity.</p>
+      </div>
+
+      <div class="elp-stats">
+        <div class="elp-stat">
+          <div class="elp-stat-label">Live listings</div>
+          <div class="elp-stat-value" id="statLive">—</div>
+          <div class="elp-stat-sub">Currently advertised</div>
+        </div>
+        <div class="elp-stat">
+          <div class="elp-stat-label">New leads</div>
+          <div class="elp-stat-value" id="statLeads">—</div>
+          <div class="elp-stat-sub">Awaiting review</div>
+        </div>
+        <div class="elp-stat">
+          <div class="elp-stat-label">Pending viewings</div>
+          <div class="elp-stat-value" id="statViewings">—</div>
+          <div class="elp-stat-sub">Need a response</div>
+        </div>
+        <div class="elp-stat">
+          <div class="elp-stat-label">Active tenancies</div>
+          <div class="elp-stat-value" id="statTenancies">—</div>
+          <div class="elp-stat-sub">In progress</div>
+        </div>
+      </div>
+
+      <div class="elp-card">
+        <div class="elp-card-head">
+          <div>
+            <div class="elp-card-title">Quick actions</div>
+            <div class="elp-card-sub">What needs your attention now</div>
+          </div>
+        </div>
+        <div id="quickActions" class="elp-list">
+          <div class="elp-loading"><div class="elp-spinner"></div>Loading…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Listings -->
+    <section data-tab-panel="listings" style="display:none">
+      <div class="elp-page-head" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+        <div>
+          <h1 class="elp-page-title">Listings</h1>
+          <p class="elp-page-sub">Properties you're currently marketing.</p>
+        </div>
+        <button class="el-btn el-btn-primary" id="newListingBtn">+ New listing</button>
+      </div>
+
+      <div class="elp-tabs">
+        <a href="#" class="elp-tab-link active" data-listing-filter="all">All</a>
+        <a href="#" class="elp-tab-link" data-listing-filter="live">Live</a>
+        <a href="#" class="elp-tab-link" data-listing-filter="draft">Draft</a>
+        <a href="#" class="elp-tab-link" data-listing-filter="let_agreed">Let agreed</a>
+        <a href="#" class="elp-tab-link" data-listing-filter="delisted">Delisted</a>
+      </div>
+
+      <div id="listingsList" style="display:flex;flex-direction:column;gap:10px">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading listings…</div>
+      </div>
+    </section>
+
+    <!-- Viewings -->
+    <section data-tab-panel="viewings" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Viewing requests</h1>
+        <p class="elp-page-sub">Confirm, propose new times or decline viewing requests from prospects.</p>
+      </div>
+      <div id="viewingsList" class="elp-list">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading viewing requests…</div>
+      </div>
+    </section>
+
+    <!-- Tenants -->
+    <section data-tab-panel="tenants" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Tenants</h1>
+        <p class="elp-page-sub">Applicants and tenants linked to your properties.</p>
+      </div>
+      <div id="tenantsList" class="elp-list">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading tenants…</div>
+      </div>
+    </section>
+
+    <!-- Tenancies -->
+    <section data-tab-panel="tenancies" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Tenancies</h1>
+        <p class="elp-page-sub">Tenancy agreements you've issued.</p>
+      </div>
+      <div id="tenanciesList" class="elp-list">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading tenancies…</div>
+      </div>
+    </section>
+
+    <!-- Transactions -->
+    <section data-tab-panel="transactions" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Transactions</h1>
+        <p class="elp-page-sub">Rent received, expenses and other movements logged against your properties.</p>
+      </div>
+      <div id="transactionsList" class="elp-list">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading transactions…</div>
+      </div>
+    </section>
+
+    <!-- Documents -->
+    <section data-tab-panel="documents" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Documents</h1>
+        <p class="elp-page-sub">Tenancy agreements, EPCs, gas safety certificates and other paperwork.</p>
+      </div>
+      <div id="documentsList" class="elp-list">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading documents…</div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section data-tab-panel="settings" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Account settings</h1>
+        <p class="elp-page-sub">Your landlord profile — used in tenancy agreements and viewing emails.</p>
+      </div>
+      <div class="elp-card">
+        <form id="settingsForm">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div>
+              <label class="el-label">Director / contact name</label>
+              <input class="el-input" id="setDirector" type="text">
+            </div>
+            <div>
+              <label class="el-label">Company name</label>
+              <input class="el-input" id="setCompany" type="text">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div>
+              <label class="el-label">Company number</label>
+              <input class="el-input" id="setCompanyNumber" type="text">
+            </div>
+            <div>
+              <label class="el-label">Phone</label>
+              <input class="el-input" id="setPhone" type="tel">
+            </div>
+          </div>
+          <button type="submit" class="el-btn el-btn-primary">Save profile</button>
+        </form>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<!-- New listing modal -->
+<div class="modal-backdrop" id="newListingModal">
+  <div class="modal">
+    <h2>New listing</h2>
+    <p class="modal-sub">Enter the basics here — you can add photos, 360° tours, floorplans and richer details from the iOS app once it's saved.</p>
+    <form id="newListingForm">
+      <div class="el-field">
+        <label class="el-label" for="nlProperty">Property</label>
+        <select class="el-select" id="nlProperty" required></select>
+        <div class="el-hint">Don't see your property? Add it first in the iOS app.</div>
+      </div>
+      <div class="el-field">
+        <label class="el-label" for="nlHeadline">Headline</label>
+        <input class="el-input" id="nlHeadline" type="text" placeholder="e.g. Bright two-bed flat near the canal" maxlength="120" required>
+      </div>
+      <div class="el-field">
+        <label class="el-label" for="nlDescription">Description</label>
+        <textarea class="el-textarea" id="nlDescription" rows="4" placeholder="What makes this home stand out?"></textarea>
+      </div>
+      <div class="el-field-row">
+        <div class="el-field">
+          <label class="el-label" for="nlRent">Advertised rent (£/mo)</label>
+          <input class="el-input" id="nlRent" type="number" min="0" step="50" required>
+        </div>
+        <div class="el-field">
+          <label class="el-label" for="nlDeposit">Deposit (£)</label>
+          <input class="el-input" id="nlDeposit" type="number" min="0" step="50">
+        </div>
+      </div>
+      <div class="el-field">
+        <label class="el-label" for="nlAvailable">Available from</label>
+        <input class="el-input" id="nlAvailable" type="date" required>
+      </div>
+      <div class="actions">
+        <button type="button" class="el-btn el-btn-ghost" id="nlCancel">Cancel</button>
+        <button type="submit" class="el-btn el-btn-primary" id="nlSubmit">Save as draft</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="/assets/portal.js"></script>
+<script type="module">
+  while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
+  const ELP = window.ELP;
+
+  const session = await ELP.requireSession("/landlord/login/");
+  if (!session) throw new Error("redirecting");
+  const user = session.user;
+  ELP.mountShell({ user });
+  ELP.initTabs("home");
+
+  const $ = (id) => document.getElementById(id);
+
+  // ---- Lazy load per tab ------------------------------------------------
+  const loaded = new Set();
+  async function ensureLoaded(tab) {
+    if (loaded.has(tab)) return;
+    loaded.add(tab);
+    try {
+      if (tab === "home")         await loadDashboard();
+      if (tab === "listings")     await loadListings();
+      if (tab === "viewings")     await loadViewings();
+      if (tab === "tenants")      await loadTenants();
+      if (tab === "tenancies")    await loadTenancies();
+      if (tab === "transactions") await loadTransactions();
+      if (tab === "documents")    await loadDocuments();
+      if (tab === "settings")     await loadSettings();
+    } catch (e) {
+      console.error(`Failed loading ${tab}`, e);
+    }
+  }
+  window.addEventListener("elp:tab", (e) => ensureLoaded(e.detail.tab));
+  const initialTab = new URL(window.location.href).searchParams.get("tab") || "home";
+  ensureLoaded(initialTab);
+
+  // ---- Dashboard --------------------------------------------------------
+  async function loadDashboard() {
+    const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "there";
+    $("welcome").textContent = `Welcome back, ${ELP.esc(name)}`;
+
+    const [listings, viewings, tenancies] = await Promise.all([
+      ELP.rest(`property_listings?user_id=eq.${user.id}&select=id,status,lead_count,viewing_count`).catch(() => []),
+      ELP.rest(`viewing_requests?user_id=eq.${user.id}&status=eq.pending&select=id`).catch(() => []),
+      ELP.rest(`tenancy_agreements?landlord_id=eq.${user.id}&status=eq.active&select=id`).catch(async () => {
+        // landlord_id may not exist; fall back via property ownership
+        const props = await ELP.rest(`properties?user_id=eq.${user.id}&select=id`).catch(() => []);
+        if (!props.length) return [];
+        const ids = props.map((p) => `"${p.id}"`).join(",");
+        return ELP.rest(`tenancy_agreements?property_id=in.(${ids})&status=eq.active&select=id`).catch(() => []);
+      }),
+    ]);
+
+    const live = listings.filter((l) => l.status === "live").length;
+    const leads = listings.reduce((s, l) => s + (l.lead_count || 0), 0);
+    $("statLive").textContent = live;
+    $("statLeads").textContent = leads;
+    $("statViewings").textContent = viewings.length;
+    $("statTenancies").textContent = tenancies.length;
+
+    // Quick actions: pending viewings, applications awaiting review
+    const apps = await ELP.rest(
+      `tenants?status=eq.awaiting_review&user_id=eq.${user.id}&select=id,name,property_id,created_at&order=created_at.desc&limit=5`
+    ).catch(() => []);
+
+    const items = [];
+    viewings.slice(0, 4).forEach(() => {});
+    if (viewings.length) {
+      items.push({
+        title: `${viewings.length} viewing request${viewings.length === 1 ? "" : "s"} awaiting your response`,
+        sub: "Review and confirm a time, or propose another.",
+        href: "/landlord/?tab=viewings",
+      });
+    }
+    if (apps.length) {
+      items.push({
+        title: `${apps.length} application${apps.length === 1 ? "" : "s"} to review`,
+        sub: "Pre-applications are sitting in Awaiting review.",
+        href: "/landlord/?tab=tenants",
+      });
+    }
+    if (live === 0) {
+      items.push({
+        title: "No live listings yet",
+        sub: "Publish your first listing to start attracting applicants.",
+        href: "/landlord/?tab=listings",
+      });
+    }
+    if (!items.length) {
+      $("quickActions").innerHTML = `
+        <div class="elp-empty">
+          <h3>You're all caught up</h3>
+          <p>No outstanding actions right now.</p>
+        </div>`;
+      return;
+    }
+    $("quickActions").innerHTML = items
+      .map(
+        (it) => `
+        <a href="${ELP.esc(it.href)}" class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(it.title)}</div>
+            <div class="elp-list-item-sub">${ELP.esc(it.sub)}</div>
+          </div>
+          <div class="elp-list-item-end">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--el-muted)"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </a>`
+      )
+      .join("");
+  }
+
+  // ---- Listings ---------------------------------------------------------
+  let allListings = [];
+  let listingFilter = "all";
+
+  async function loadListings() {
+    allListings = await ELP.rest(
+      `property_listings?user_id=eq.${user.id}&select=id,slug,headline,status,advertised_rent,available_from,view_count,lead_count,viewing_count,published_at,property_id,properties(address_line1,city,postcode,bedrooms,bathrooms)&order=updated_at.desc.nullslast,created_at.desc`
+    ).catch(() => []);
+
+    // Heroes for thumbnails
+    if (allListings.length) {
+      const ids = allListings.map((l) => `"${l.id}"`).join(",");
+      const media = await ELP.rest(
+        `listing_media?listing_id=in.(${ids})&media_type=eq.photo&select=listing_id,public_url,is_hero,sort_order&order=is_hero.desc.nullslast,sort_order.asc`
+      ).catch(() => []);
+      const byListing = {};
+      for (const m of media) if (!byListing[m.listing_id]) byListing[m.listing_id] = m.public_url;
+      allListings.forEach((l) => (l._hero = byListing[l.id] || null));
+    }
+
+    document.querySelectorAll("[data-listing-filter]").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        document.querySelectorAll("[data-listing-filter]").forEach((x) => x.classList.remove("active"));
+        el.classList.add("active");
+        listingFilter = el.dataset.listingFilter;
+        renderListings();
+      });
+    });
+    renderListings();
+  }
+
+  function renderListings() {
+    const rows = listingFilter === "all"
+      ? allListings
+      : allListings.filter((l) => l.status === listingFilter);
+
+    if (!rows.length) {
+      $("listingsList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No listings ${listingFilter === "all" ? "" : `marked "${ELP.esc(listingFilter)}"`}</h3>
+          <p>Create your first listing to start getting viewings and applications.</p>
+          <button class="el-btn el-btn-primary" onclick="document.getElementById('newListingBtn').click()">+ New listing</button>
+        </div>`;
+      return;
+    }
+
+    $("listingsList").innerHTML = rows
+      .map((l) => {
+        const addr = l.properties
+          ? [l.properties.address_line1, l.properties.city, l.properties.postcode].filter(Boolean).join(", ")
+          : "Property";
+        const thumb = l._hero
+          ? `<img src="${ELP.esc(l._hero)}" alt="">`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12L12 3l9 9"/><path d="M5 10v10h14V10"/></svg>`;
+        return `
+        <div class="listing-row">
+          <div class="listing-thumb">${thumb}</div>
+          <div class="listing-main">
+            <div class="listing-title">${ELP.esc(l.headline || addr)}</div>
+            <div class="listing-sub">${ELP.esc(addr)} · ${ELP.gbp(l.advertised_rent)}/mo · Available ${ELP.fmtDate(l.available_from)}</div>
+          </div>
+          <div class="listing-stats">
+            <div class="listing-stat"><strong>${l.view_count ?? 0}</strong><span>Views</span></div>
+            <div class="listing-stat"><strong>${l.lead_count ?? 0}</strong><span>Leads</span></div>
+            <div class="listing-stat"><strong>${l.viewing_count ?? 0}</strong><span>Viewings</span></div>
+          </div>
+          <div>${badge(l.status)}</div>
+          <div class="listing-actions">
+            <select data-listing-id="${l.id}" data-action="status">
+              ${["draft","live","let_agreed","delisted"].map((s) => `<option value="${s}" ${s === l.status ? "selected" : ""}>${labelStatus(s)}</option>`).join("")}
+            </select>
+            ${l.slug && l.status === "live" ? `<a href="/listings/?slug=${encodeURIComponent(l.slug)}" target="_blank">View</a>` : ""}
+          </div>
+        </div>`;
+      })
+      .join("");
+
+    document.querySelectorAll('[data-action="status"]').forEach((el) =>
+      el.addEventListener("change", async (e) => {
+        const id = el.dataset.listingId;
+        const newStatus = el.value;
+        try {
+          await ELP.rest(`property_listings?id=eq.${id}`, {
+            method: "PATCH",
+            headers: { Prefer: "return=minimal" },
+            body: JSON.stringify({ status: newStatus }),
+          });
+          ELP.toast(`Listing ${labelStatus(newStatus).toLowerCase()}`, "success");
+          const target = allListings.find((x) => x.id === id);
+          if (target) target.status = newStatus;
+        } catch (err) {
+          ELP.toast(err.message || "Could not update status", "error");
+        }
+      })
+    );
+  }
+
+  // ---- New listing modal ------------------------------------------------
+  const modal = $("newListingModal");
+  $("newListingBtn").addEventListener("click", openNewListing);
+  $("nlCancel").addEventListener("click", () => modal.classList.remove("open"));
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("open"); });
+
+  async function openNewListing() {
+    const props = await ELP.rest(
+      `properties?user_id=eq.${user.id}&archived=eq.false&select=id,address_line1,city,postcode&order=created_at.desc`
+    ).catch(() => []);
+    const sel = $("nlProperty");
+    if (!props.length) {
+      sel.innerHTML = `<option value="">No properties yet — add one in the iOS app first</option>`;
+      sel.disabled = true;
+      $("nlSubmit").disabled = true;
+    } else {
+      sel.disabled = false;
+      $("nlSubmit").disabled = false;
+      sel.innerHTML = props.map(
+        (p) => `<option value="${p.id}">${ELP.esc([p.address_line1, p.city, p.postcode].filter(Boolean).join(", "))}</option>`
+      ).join("");
+    }
+    modal.classList.add("open");
+  }
+
+  $("newListingForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const propertyId = $("nlProperty").value;
+    if (!propertyId) return;
+    const slug = `${$("nlHeadline").value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60)}-${Date.now().toString(36).slice(-5)}`;
+
+    const body = {
+      property_id: propertyId,
+      user_id: user.id,
+      slug,
+      headline: $("nlHeadline").value.trim(),
+      description: $("nlDescription").value.trim() || null,
+      advertised_rent: Number($("nlRent").value) || null,
+      advertised_deposit: Number($("nlDeposit").value) || null,
+      available_from: $("nlAvailable").value || null,
+      status: "draft",
+    };
+    try {
+      await ELP.rest("property_listings", {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(body),
+      });
+      ELP.toast("Listing saved as draft", "success");
+      modal.classList.remove("open");
+      loaded.delete("listings");
+      ensureLoaded("listings");
+    } catch (err) {
+      ELP.toast(err.message || "Could not create listing", "error");
+    }
+  });
+
+  // ---- Viewing requests -------------------------------------------------
+  async function loadViewings() {
+    const rows = await ELP.rest(
+      `viewing_requests?user_id=eq.${user.id}&select=id,prospect_name,prospect_email,prospect_phone,status,proposed_datetime,confirmed_datetime,preferred_times,created_at,landlord_notes,property_listings(slug,headline)&order=created_at.desc`
+    ).catch(() => []);
+    if (!rows.length) {
+      $("viewingsList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No viewing requests yet</h3>
+          <p>When someone requests a viewing on one of your live listings, it'll show up here.</p>
+        </div>`;
+      return;
+    }
+    $("viewingsList").innerHTML = rows
+      .map((r) => {
+        const headline = r.property_listings?.headline || "Property";
+        const when = r.confirmed_datetime || r.proposed_datetime;
+        const showActions = r.status === "pending";
+        return `
+        <div class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(r.prospect_name || r.prospect_email)} · ${ELP.esc(headline)}</div>
+            <div class="elp-list-item-sub">${when ? ELP.fmtDateTime(when) : (r.preferred_times ? `Suggested: ${ELP.esc(r.preferred_times)}` : "Awaiting time")}${r.prospect_email ? ` · ${ELP.esc(r.prospect_email)}` : ""}</div>
+          </div>
+          <div class="elp-list-item-end">
+            ${badge(r.status)}
+            ${showActions ? `
+              <button class="el-btn el-btn-secondary" data-vr-confirm="${r.id}" style="padding:6px 12px;font-size:13px">Confirm</button>
+              <button class="el-btn el-btn-ghost" data-vr-decline="${r.id}" style="padding:6px 12px;font-size:13px">Decline</button>
+            ` : ""}
+          </div>
+        </div>`;
+      })
+      .join("");
+
+    document.querySelectorAll("[data-vr-confirm]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        const when = prompt("Enter confirmed date and time (e.g. 2026-05-12 14:30)");
+        if (!when) return;
+        const iso = new Date(when).toISOString();
+        if (isNaN(new Date(iso).getTime())) { ELP.toast("Couldn't parse that date", "error"); return; }
+        await updateViewing(b.dataset.vrConfirm, { status: "confirmed", confirmed_datetime: iso });
+      })
+    );
+    document.querySelectorAll("[data-vr-decline]").forEach((b) =>
+      b.addEventListener("click", () => updateViewing(b.dataset.vrDecline, { status: "declined" }))
+    );
+  }
+
+  async function updateViewing(id, patch) {
+    try {
+      await ELP.rest(`viewing_requests?id=eq.${id}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(patch),
+      });
+      ELP.toast("Viewing updated", "success");
+      loaded.delete("viewings");
+      ensureLoaded("viewings");
+    } catch (err) {
+      ELP.toast(err.message || "Could not update", "error");
+    }
+  }
+
+  // ---- Tenants ----------------------------------------------------------
+  async function loadTenants() {
+    const rows = await ELP.rest(
+      `tenants?user_id=eq.${user.id}&select=id,name,email,phone,status,prequal_status,created_at,updated_at,property_id,properties(address_line1,city,postcode)&order=updated_at.desc.nullslast,created_at.desc`
+    ).catch(() => []);
+    if (!rows.length) {
+      $("tenantsList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No tenants yet</h3>
+          <p>Applicants and current tenants linked to your properties will appear here.</p>
+        </div>`;
+      return;
+    }
+    $("tenantsList").innerHTML = rows
+      .map((t) => {
+        const addr = t.properties
+          ? [t.properties.address_line1, t.properties.city, t.properties.postcode].filter(Boolean).join(", ")
+          : "—";
+        return `
+        <div class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(t.name || t.email || "Applicant")}</div>
+            <div class="elp-list-item-sub">${ELP.esc(addr)} · ${ELP.esc(t.email || "")}${t.phone ? ` · ${ELP.esc(t.phone)}` : ""}</div>
+          </div>
+          <div class="elp-list-item-end">${badge(t.status)}</div>
+        </div>`;
+      })
+      .join("");
+  }
+
+  // ---- Tenancies --------------------------------------------------------
+  async function loadTenancies() {
+    // Try landlord_id first; fall back to property ownership.
+    let rows = await ELP.rest(
+      `tenancy_agreements?landlord_id=eq.${user.id}&select=id,status,start_date,end_date,monthly_rent,deposit,property_id,tenant_id,properties(address_line1,city,postcode),tenants(name,email)&order=start_date.desc.nullslast`
+    ).catch(() => null);
+
+    if (!rows) {
+      const props = await ELP.rest(`properties?user_id=eq.${user.id}&select=id`).catch(() => []);
+      if (!props.length) { rows = []; }
+      else {
+        const ids = props.map((p) => `"${p.id}"`).join(",");
+        rows = await ELP.rest(
+          `tenancy_agreements?property_id=in.(${ids})&select=id,status,start_date,end_date,monthly_rent,deposit,property_id,tenant_id,properties(address_line1,city,postcode),tenants(name,email)&order=start_date.desc.nullslast`
+        ).catch(() => []);
+      }
+    }
+
+    if (!rows.length) {
+      $("tenanciesList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No tenancies yet</h3>
+          <p>Once you start a tenancy with an approved applicant, the agreement will appear here.</p>
+        </div>`;
+      return;
+    }
+    $("tenanciesList").innerHTML = rows
+      .map((r) => {
+        const addr = r.properties
+          ? [r.properties.address_line1, r.properties.city, r.properties.postcode].filter(Boolean).join(", ")
+          : "Property";
+        const tenantLabel = r.tenants?.name || r.tenants?.email || "Tenant";
+        return `
+        <div class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(addr)}</div>
+            <div class="elp-list-item-sub">${ELP.esc(tenantLabel)} · ${ELP.fmtDate(r.start_date)}${r.end_date ? ` – ${ELP.fmtDate(r.end_date)}` : ""} · ${ELP.gbp(r.monthly_rent)}/mo</div>
+          </div>
+          <div class="elp-list-item-end">${badge(r.status)}</div>
+        </div>`;
+      })
+      .join("");
+  }
+
+  // ---- Transactions -----------------------------------------------------
+  async function loadTransactions() {
+    const rows = await ELP.rest(
+      `transactions?user_id=eq.${user.id}&select=id,date,amount,kind,category,note,property_id,properties(address_line1,city)&order=date.desc&limit=200`
+    ).catch(() => []);
+    if (!rows.length) {
+      $("transactionsList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No transactions yet</h3>
+          <p>Rent received, expenses and other movements will appear here. Add transactions from the iOS app for now — web entry is coming soon.</p>
+        </div>`;
+      return;
+    }
+    $("transactionsList").innerHTML = rows
+      .map((t) => {
+        const addr = t.properties
+          ? [t.properties.address_line1, t.properties.city].filter(Boolean).join(", ")
+          : "—";
+        const sign = t.kind === "expense" ? "-" : "+";
+        const colour = t.kind === "expense" ? "var(--el-danger)" : "var(--el-green)";
+        return `
+        <div class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(t.note || labelStatus(t.category) || labelStatus(t.kind) || "Transaction")}</div>
+            <div class="elp-list-item-sub">${ELP.fmtDate(t.date)} · ${ELP.esc(addr)}</div>
+          </div>
+          <div class="elp-list-item-end" style="font-weight:500;color:${colour}">${sign}${ELP.gbp(Math.abs(t.amount))}</div>
+        </div>`;
+      })
+      .join("");
+  }
+
+  // ---- Documents --------------------------------------------------------
+  async function loadDocuments() {
+    const rows = await ELP.rest(
+      `documents?user_id=eq.${user.id}&select=id,filename,doc_type,created_at,storage_path,property_id&order=created_at.desc&limit=200`
+    ).catch(() => []);
+    if (!rows.length) {
+      $("documentsList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No documents yet</h3>
+          <p>Tenancy agreements, EPCs and inventories you upload will live here.</p>
+        </div>`;
+      return;
+    }
+    $("documentsList").innerHTML = rows
+      .map(
+        (d) => `
+        <div class="elp-list-item">
+          <div class="elp-list-item-main">
+            <div class="elp-list-item-title">${ELP.esc(d.filename || "Document")}</div>
+            <div class="elp-list-item-sub">${ELP.esc(d.doc_type || "Document")} · ${ELP.fmtDate(d.created_at)}</div>
+          </div>
+        </div>`
+      )
+      .join("");
+  }
+
+  // ---- Settings ---------------------------------------------------------
+  async function loadSettings() {
+    const profile = await ELP.rest(
+      `landlord_profiles?user_id=eq.${user.id}&select=director_name,company_name,company_number,phone&limit=1`
+    ).catch(() => []);
+    const p = profile[0] || {};
+    $("setDirector").value = p.director_name || user.user_metadata?.full_name || "";
+    $("setCompany").value = p.company_name || "";
+    $("setCompanyNumber").value = p.company_number || "";
+    $("setPhone").value = p.phone || user.user_metadata?.phone || "";
+  }
+  $("settingsForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const body = {
+      user_id: user.id,
+      director_name: $("setDirector").value.trim() || null,
+      company_name: $("setCompany").value.trim() || null,
+      company_number: $("setCompanyNumber").value.trim() || null,
+      phone: $("setPhone").value.trim() || null,
+    };
+    try {
+      await ELP.rest("landlord_profiles?on_conflict=user_id", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify(body),
+      });
+      ELP.toast("Profile saved", "success");
+    } catch (err) {
+      ELP.toast(err.message || "Couldn't save", "error");
+    }
+  });
+
+  // ---- Helpers ----------------------------------------------------------
+  function labelStatus(s) {
+    if (!s) return "—";
+    return String(s).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  function badge(s) {
+    const cls =
+      ["active", "signed", "approved", "live", "confirmed"].includes(s) ? "live" :
+      ["pending", "awaiting_review", "submitted", "referencing", "sent", "draft"].includes(s) ? "pending" :
+      ["rejected", "archived", "no_show", "delisted", "declined"].includes(s) ? "warn" : "muted";
+    return `<span class="elp-badge elp-badge-${cls}">${ELP.esc(labelStatus(s))}</span>`;
+  }
+</script>
+</body>
+</html>
