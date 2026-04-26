@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/assets/easierlet.css?v=20260426d">
-  <link rel="stylesheet" href="/assets/portal.css?v=20260426d">
+  <link rel="stylesheet" href="/assets/easierlet.css?v=20260426e">
+  <link rel="stylesheet" href="/assets/portal.css?v=20260426e">
 
   <style>
     .priority-low      { background: var(--el-green-pale); color: var(--el-green); }
@@ -127,6 +127,8 @@
       <a href="#" class="elp-tab-link" data-mr-filter="all">All</a>
     </div>
 
+    <div id="propertyFilter" class="elp-property-filter" style="display:none"></div>
+
     <div id="reqList" class="elp-list">
       <div class="elp-loading"><div class="elp-spinner"></div>Loading…</div>
     </div>
@@ -223,7 +225,9 @@
   const OPEN_STATUSES = ["new", "acknowledged", "awaiting_info", "scheduled", "in_progress", "open"];
 
   let allRequests = [];
+  let allProperties = [];
   let filter = "open";
+  let propertyFilter = "all";
   let groupByTrade = false;
 
   // Populate trade dropdown in new-request modal
@@ -232,13 +236,45 @@
     TRADES.map(([k, label]) => `<option value="${k}">${label}</option>`).join("");
 
   async function load() {
-    allRequests = await ELP.rest(
-      `maintenance_requests?user_id=eq.${user.id}&select=*,properties(address,address_line1,address_line2,city,postcode),tenants(name,full_name,email)&order=created_at.desc&limit=200`
-    ).catch(() => []);
+    const [requests, props] = await Promise.all([
+      ELP.rest(
+        `maintenance_requests?user_id=eq.${user.id}&select=*,properties(address,address_line1,address_line2,city,postcode),tenants(name,full_name,email)&order=created_at.desc&limit=200`
+      ).catch(() => []),
+      ELP.rest(
+        `properties?user_id=eq.${user.id}&archived=eq.false&select=id,address_line1,city&order=created_at.desc`
+      ).catch(() => []),
+    ]);
+    allRequests = requests;
+    allProperties = props;
+    renderPropertyFilter();
     render();
   }
 
+  function renderPropertyFilter() {
+    const filterEl = $("propertyFilter");
+    if (allProperties.length <= 1) {
+      filterEl.style.display = "none";
+      return;
+    }
+    const pillFor = (id, label) =>
+      `<button type="button" class="elp-property-pill ${propertyFilter === id ? "is-active" : ""}" data-prop="${ELP.esc(id)}">${ELP.esc(label)}</button>`;
+    filterEl.innerHTML =
+      pillFor("all", "All properties") +
+      allProperties.map((p) => pillFor(p.id, [p.address_line1, p.city].filter(Boolean).join(", ") || "Property")).join("");
+    filterEl.style.display = "";
+    filterEl.querySelectorAll("[data-prop]").forEach((b) =>
+      b.addEventListener("click", () => {
+        propertyFilter = b.dataset.prop;
+        filterEl.querySelectorAll("[data-prop]").forEach((x) =>
+          x.classList.toggle("is-active", x.dataset.prop === propertyFilter)
+        );
+        render();
+      })
+    );
+  }
+
   function passesFilter(r) {
+    if (propertyFilter !== "all" && r.property_id !== propertyFilter) return false;
     if (filter === "all") return true;
     if (filter === "open") return OPEN_STATUSES.includes(r.status);
     if (filter === "completed") return ["completed", "closed"].includes(r.status);

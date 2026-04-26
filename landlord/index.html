@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/assets/easierlet.css?v=20260426d">
-  <link rel="stylesheet" href="/assets/portal.css?v=20260426d">
+  <link rel="stylesheet" href="/assets/easierlet.css?v=20260426e">
+  <link rel="stylesheet" href="/assets/portal.css?v=20260426e">
 
   <style>
     /* Listing row table-style */
@@ -413,6 +413,7 @@
         </div>
         <button class="el-btn el-btn-primary" id="uploadDocBtn">+ Upload document</button>
       </div>
+      <div id="documentsFilter" class="elp-property-filter" style="display:none"></div>
       <div id="documentsList" class="elp-list">
         <div class="elp-loading"><div class="elp-spinner"></div>Loading documents…</div>
       </div>
@@ -797,7 +798,7 @@
       ELP.rest(`tenants?user_id=eq.${user.id}&status=neq.archived&select=id,name,full_name,property_id,status,role`).catch(() => []),
       ELP.rest(`documents?user_id=eq.${user.id}&select=id,name,category,property_id,expiry_date`).catch(() => []),
       ELP.rest(`maintenance_requests?user_id=eq.${user.id}&select=id,title,priority,status,property_id,created_at&order=created_at.desc&limit=50`).catch(() => []),
-      ELP.rest(`transactions?user_id=eq.${user.id}&select=id,amount,description,type,property_id,created_at&order=created_at.desc&limit=30`).catch(() => []),
+      ELP.rest(`transactions?user_id=eq.${user.id}&select=id,amount,note,type,property_id,created_at&order=created_at.desc&limit=30`).catch(() => []),
       ELP.rest(`inventory_reports?user_id=eq.${user.id}&select=id,status,tenant_name,property_id,sent_at,completed_at,created_at&order=created_at.desc&limit=20`).catch(() => []),
       ELP.rest(`tenancy_agreements?user_id=eq.${user.id}&select=id,status,start_date,dps_ref,property_id&limit=20`).catch(() => []),
       ELP.rest(`property_visits?user_id=eq.${user.id}&select=id,property_id,visit_type,title,scheduled_date,status&order=scheduled_date.asc&limit=50`).catch(() => []),
@@ -1071,7 +1072,6 @@
     };
     const feed = [];
     for (const t of transactions) {
-      // transactions query above doesn't pull created_at — fall back to skip if absent
       if (!t.created_at) continue;
       const isIncome = t.type === "income" || (t.amount || 0) > 0;
       feed.push({
@@ -1079,7 +1079,7 @@
         icon: isIncome ? "↓" : "↑",
         bg: isIncome ? "var(--el-green-pale)" : "#FFE8DC",
         color: isIncome ? "var(--el-green)" : "var(--el-danger)",
-        title: `${t.description || "Transaction"} — £${Math.round(Math.abs(t.amount || 0))}`,
+        title: `${t.note || "Transaction"} — £${Math.round(Math.abs(t.amount || 0))}`,
         sub: propAddr(t.property_id),
       });
     }
@@ -1766,22 +1766,14 @@
   }
 
   // ---- Tenancies --------------------------------------------------------
+  // tenancy_agreements has `user_id` (not `landlord_id`) and no `end_date`
+  // (only `start_date` — tenancy end_date lives on `public.tenancies`).
+  // Both fields were used in the original loader, so the catch returned []
+  // and the tab always showed "No tenancies yet".
   async function loadTenancies() {
-    // Try landlord_id first; fall back to property ownership.
-    let rows = await ELP.rest(
-      `tenancy_agreements?landlord_id=eq.${user.id}&select=id,status,start_date,end_date,monthly_rent,deposit,property_id,tenant_id,properties(address_line1,city,postcode),tenants(name,email)&order=start_date.desc.nullslast`
-    ).catch(() => null);
-
-    if (!rows) {
-      const props = await ELP.rest(`properties?user_id=eq.${user.id}&select=id`).catch(() => []);
-      if (!props.length) { rows = []; }
-      else {
-        const ids = props.map((p) => `"${p.id}"`).join(",");
-        rows = await ELP.rest(
-          `tenancy_agreements?property_id=in.(${ids})&select=id,status,start_date,end_date,monthly_rent,deposit,property_id,tenant_id,properties(address_line1,city,postcode),tenants(name,email)&order=start_date.desc.nullslast`
-        ).catch(() => []);
-      }
-    }
+    const rows = await ELP.rest(
+      `tenancy_agreements?user_id=eq.${user.id}&select=id,status,start_date,monthly_rent,deposit,property_id,tenant_id,properties(address_line1,city,postcode),tenants(name,full_name,email)&order=start_date.desc.nullslast`
+    ).catch(() => []);
 
     if (!rows.length) {
       $("tenanciesList").innerHTML = `
@@ -1796,12 +1788,12 @@
         const addr = r.properties
           ? [r.properties.address_line1, r.properties.city, r.properties.postcode].filter(Boolean).join(", ")
           : "Property";
-        const tenantLabel = r.tenants?.name || r.tenants?.email || "Tenant";
+        const tenantLabel = r.tenants?.name || r.tenants?.full_name || r.tenants?.email || "Tenant";
         return `
         <a href="/landlord/tenancy/?id=${r.id}" class="elp-list-item">
           <div class="elp-list-item-main">
             <div class="elp-list-item-title">${ELP.esc(addr)}</div>
-            <div class="elp-list-item-sub">${ELP.esc(tenantLabel)} · ${ELP.fmtDate(r.start_date)}${r.end_date ? ` – ${ELP.fmtDate(r.end_date)}` : ""} · ${ELP.gbp(r.monthly_rent)}/mo</div>
+            <div class="elp-list-item-sub">${ELP.esc(tenantLabel)} · From ${ELP.fmtDate(r.start_date)} · ${ELP.gbp(r.monthly_rent)}/mo</div>
           </div>
           <div class="elp-list-item-end">${badge(r.status)}</div>
         </a>`;
@@ -1847,15 +1839,59 @@
   // Documents schema is name / category / file_path / expiry_date — earlier
   // code used filename / doc_type / storage_path which don't exist and 400'd.
   // The dashboard "Certificates Expiring" tile lands on this tab, so surface
-  // expiring docs at the top with an explicit count + colour.
+  // expiring docs at the top with an explicit count + colour. Property filter
+  // pills mirror the iOS DocumentsView pattern for portfolios with > 1 prop.
+  let _docsAll = [];
+  let _docsProperties = [];
+  let _docsPropertyFilter = "all";
   async function loadDocuments() {
-    const rows = await ELP.rest(
-      `documents?user_id=eq.${user.id}&select=id,name,category,type,expiry_date,created_at,property_id,properties(address_line1,city)&order=expiry_date.asc.nullslast,created_at.desc&limit=200`
-    ).catch(() => []);
+    const [docs, props] = await Promise.all([
+      ELP.rest(
+        `documents?user_id=eq.${user.id}&select=id,name,category,type,expiry_date,created_at,property_id,properties(address_line1,city)&order=expiry_date.asc.nullslast,created_at.desc&limit=200`
+      ).catch(() => []),
+      ELP.rest(
+        `properties?user_id=eq.${user.id}&archived=eq.false&select=id,address_line1,city&order=created_at.desc`
+      ).catch(() => []),
+    ]);
+    _docsAll = docs;
+    _docsProperties = props;
+
+    // Build the property filter pills (only when 2+ properties exist)
+    const filterEl = $("documentsFilter");
+    if (props.length > 1) {
+      const pillFor = (id, label) =>
+        `<button type="button" class="elp-property-pill ${_docsPropertyFilter === id ? "is-active" : ""}" data-doc-prop="${ELP.esc(id)}">${ELP.esc(label)}</button>`;
+      filterEl.innerHTML =
+        pillFor("all", "All properties") +
+        props.map((p) => pillFor(p.id, [p.address_line1, p.city].filter(Boolean).join(", ") || "Property")).join("");
+      filterEl.style.display = "";
+      filterEl.querySelectorAll("[data-doc-prop]").forEach((b) =>
+        b.addEventListener("click", () => {
+          _docsPropertyFilter = b.dataset.docProp;
+          filterEl.querySelectorAll("[data-doc-prop]").forEach((x) =>
+            x.classList.toggle("is-active", x.dataset.docProp === _docsPropertyFilter)
+          );
+          renderDocuments();
+        })
+      );
+    } else {
+      filterEl.style.display = "none";
+    }
+    renderDocuments();
+  }
+
+  function renderDocuments() {
+    let rows = _docsAll;
+    if (_docsPropertyFilter !== "all") {
+      rows = rows.filter((d) => d.property_id === _docsPropertyFilter);
+    }
     if (!rows.length) {
+      const noun = _docsPropertyFilter === "all"
+        ? "documents"
+        : "documents for this property";
       $("documentsList").innerHTML = `
         <div class="elp-empty">
-          <h3>No documents yet</h3>
+          <h3>No ${noun} yet</h3>
           <p>Tenancy agreements, EPCs and inventories you upload will live here.</p>
         </div>`;
       return;
@@ -2008,10 +2044,11 @@
   }
   $("txForm").addEventListener("submit", async (e) => {
     e.preventDefault();
+    // transactions schema only has `type` (not `kind`). Earlier insert
+    // tried both, which 400'd the whole row.
     const body = {
       user_id: user.id,
       type: $("txType").value,
-      kind: $("txType").value, // accommodate either column name
       date: $("txDate").value,
       property_id: $("txProperty").value || null,
       category: $("txCategory").value,
@@ -2057,13 +2094,13 @@
         upsert: false,
       });
       if (upErr) throw upErr;
+      // documents schema uses `file_path` only — no `storage_path` column.
       const body = {
         user_id: user.id,
         property_id: $("docProperty").value || null,
         name: $("docName").value.trim(),
         category: $("docCategory").value,
         file_path: path,
-        storage_path: path, // some schemas use this
         file_size: file.size,
         mime_type: file.type,
         expiry_date: $("docExpiry").value || null,
@@ -2197,8 +2234,10 @@
       const addr = t.properties ? [t.properties.address_line1, t.properties.city, t.properties.postcode].filter(Boolean).join(", ") : "—";
       $("tdSub").textContent = `${addr} · ${labelStatus(t.status)}`;
 
+      // tenant_references has no `reviewed_at` column — drop it from the
+      // select so the references panel actually renders.
       const refs = await ELP.rest(
-        `tenant_references?tenant_id=eq.${tenantId}&select=id,form_type,status,submitted_at,reviewed_at&order=created_at.desc`
+        `tenant_references?tenant_id=eq.${tenantId}&select=id,form_type,status,submitted_at&order=created_at.desc`
       ).catch(() => []);
 
       $("tdBody").innerHTML = `

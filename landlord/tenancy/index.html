@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/assets/easierlet.css?v=20260426d">
-  <link rel="stylesheet" href="/assets/portal.css?v=20260426d">
+  <link rel="stylesheet" href="/assets/easierlet.css?v=20260426e">
+  <link rel="stylesheet" href="/assets/portal.css?v=20260426e">
 
   <style>
     /* Signature pad */
@@ -237,14 +237,22 @@
       ? props.map((p) => `<option value="${p.id}">${ELP.esc([p.address_line1, p.city, p.postcode].filter(Boolean).join(", "))}</option>`).join("")
       : '<option value="">No properties</option>';
 
+    // Pre-fill DPS scheme + membership from the landlord profile — those
+    // columns live there, not on tenancy_agreements. Earlier code tried to
+    // read them from the agreement and write them back, both of which 400'd.
+    const lp = await ELP.rest(
+      `landlord_profiles?user_id=eq.${user.id}&select=dps_scheme,dps_membership&limit=1`
+    ).catch(() => []);
+    const profile = lp[0] || {};
+    $("agDpsScheme").value = profile.dps_scheme || "";
+    $("agDpsMembership").value = profile.dps_membership || "";
+
     if (agreement) {
       $("agProperty").value = agreement.property_id || "";
       $("agStart").value = agreement.start_date || "";
       $("agRent").value = agreement.monthly_rent ?? "";
       $("agDeposit").value = agreement.deposit ?? "";
       $("agOccupiers").value = agreement.permitted_occupiers || "";
-      $("agDpsScheme").value = agreement.dps_scheme || "";
-      $("agDpsMembership").value = agreement.dps_membership || "";
       $("agDpsRef").value = agreement.dps_ref || "";
       $("agClauses").value = agreement.additional_clauses || "";
       signers = signatures.map((s) => ({
@@ -346,6 +354,8 @@
   // ---- Save draft ------------------------------------------------------
   $("agSaveBtn").addEventListener("click", saveDraft);
   async function saveDraft() {
+    // dps_scheme + dps_membership live on landlord_profiles, not on the
+    // agreement. Only dps_ref (the per-deposit reference) is saved here.
     const body = {
       user_id: user.id,
       property_id: $("agProperty").value,
@@ -353,8 +363,6 @@
       monthly_rent: numOrNull($("agRent").value),
       deposit: numOrNull($("agDeposit").value),
       permitted_occupiers: $("agOccupiers").value.trim() || null,
-      dps_scheme: $("agDpsScheme").value || null,
-      dps_membership: $("agDpsMembership").value.trim() || null,
       dps_ref: $("agDpsRef").value.trim() || null,
       additional_clauses: $("agClauses").value.trim() || null,
       tenant_id: signers.find((s) => s.role === "lead")?.tenant_id || signers[0]?.tenant_id || null,

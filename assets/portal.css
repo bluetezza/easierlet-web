@@ -383,6 +383,37 @@ body.elp-body {
 }
 .dash-feed-toggle:hover { background: var(--el-green-pale); }
 
+/* ---- Property filter pills (Documents, Maintenance, etc.) ---- */
+/* Mirrors the iOS Property picker in DocumentsView: horizontal scroll
+   of teal-outline pills, selected pill is filled. "All" is the leftmost. */
+.elp-property-filter {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  margin-bottom: 14px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.elp-property-filter::-webkit-scrollbar { height: 4px; }
+.elp-property-filter::-webkit-scrollbar-thumb { background: var(--el-line); border-radius: 2px; }
+.elp-property-pill {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: 18px;
+  border: 1px solid var(--el-green);
+  background: rgba(26,107,85,0.10);
+  color: var(--el-green);
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.elp-property-pill:hover { background: rgba(26,107,85,0.18); }
+.elp-property-pill.is-active {
+  background: var(--el-green); color: #fff;
+}
+
 /* ---- Stat tiles ---- */
 .elp-stats {
   display: grid;

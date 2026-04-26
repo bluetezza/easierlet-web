@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/assets/easierlet.css?v=20260426d">
-  <link rel="stylesheet" href="/assets/portal.css?v=20260426d">
+  <link rel="stylesheet" href="/assets/easierlet.css?v=20260426e">
+  <link rel="stylesheet" href="/assets/portal.css?v=20260426e">
 </head>
 <body class="elp-body">
 
@@ -178,8 +178,10 @@
 
     // Pull a single tenants row for this auth user. The tenants table holds
     // most of the application/lifecycle data; tenant_auth_id links to auth.
+    // Schema has no `prequal_status` or `updated_at` — only `status` +
+    // `created_at`. Earlier select for those 400'd silently.
     const tenants = await ELP.rest(
-      `tenants?tenant_auth_id=eq.${user.id}&select=id,name,status,property_id,created_at,updated_at,prequal_status&order=updated_at.desc`
+      `tenants?tenant_auth_id=eq.${user.id}&select=id,name,full_name,status,property_id,created_at&order=created_at.desc`
     ).catch(() => []);
 
     const activeApps = tenants.filter((t) =>
@@ -187,8 +189,9 @@
     );
     $("statApplications").textContent = activeApps.length;
 
+    // tenancy_agreements has no `end_date` column — that lives on `public.tenancies`.
     const tenancies = await ELP.rest(
-      `tenancy_agreements?tenant_id=in.(${tenants.map((t) => `"${t.id}"`).join(",") || '""'})&select=id,status,start_date,end_date,monthly_rent,property_id&order=start_date.desc.nullslast`
+      `tenancy_agreements?tenant_id=in.(${tenants.map((t) => `"${t.id}"`).join(",") || '""'})&select=id,status,start_date,monthly_rent,property_id&order=start_date.desc.nullslast`
     ).catch(() => []);
     const active = tenancies.find((t) => ["active", "signed", "sent"].includes(t.status));
     $("statTenancy").textContent = active ? "Active" : (tenancies[0] ? "—" : "None");
@@ -205,7 +208,7 @@
       items.push({
         kind: "application",
         title: `Application — ${labelStatus(t.status)}`,
-        sub: `Updated ${ELP.fmtDate(t.updated_at)}`,
+        sub: `Submitted ${ELP.fmtDate(t.created_at)}`,
         href: `/tenant/?tab=applications`,
       })
     );
@@ -259,7 +262,7 @@
   // ---- Applications -----------------------------------------------------
   async function loadApplications() {
     const rows = await ELP.rest(
-      `tenants?tenant_auth_id=eq.${user.id}&select=id,name,status,prequal_status,created_at,updated_at,property_id,properties(address_line1,city,postcode)&order=updated_at.desc`
+      `tenants?tenant_auth_id=eq.${user.id}&select=id,name,full_name,status,created_at,property_id,properties(address_line1,city,postcode)&order=created_at.desc`
     ).catch((e) => { throw e; });
 
     if (!rows.length) {
@@ -330,8 +333,9 @@
       return;
     }
     const ids = tenants.map((t) => `"${t.id}"`).join(",");
+    // tenancy_agreements has no end_date — schema only stores start_date.
     const rows = await ELP.rest(
-      `tenancy_agreements?tenant_id=in.(${ids})&select=id,status,start_date,end_date,monthly_rent,deposit,property_id,properties(address_line1,city,postcode)&order=start_date.desc.nullslast`
+      `tenancy_agreements?tenant_id=in.(${ids})&select=id,status,start_date,monthly_rent,deposit,property_id,properties(address_line1,city,postcode)&order=start_date.desc.nullslast`
     ).catch(() => []);
 
     if (!rows.length) {
@@ -347,7 +351,7 @@
         <div class="elp-list-item">
           <div class="elp-list-item-main">
             <div class="elp-list-item-title">${ELP.esc(addr)}</div>
-            <div class="elp-list-item-sub">${ELP.fmtDate(r.start_date)}${r.end_date ? ` – ${ELP.fmtDate(r.end_date)}` : ""} · ${ELP.gbp(r.monthly_rent)}/mo</div>
+            <div class="elp-list-item-sub">From ${ELP.fmtDate(r.start_date)} · ${ELP.gbp(r.monthly_rent)}/mo</div>
           </div>
           <div class="elp-list-item-end">${badge(r.status)}</div>
         </div>`;
@@ -364,19 +368,43 @@
   }
 
   // ---- Documents --------------------------------------------------------
+  // Schema: documents has tenant_id (→ tenants.id), not tenant_auth_id.
+  // Real columns are name / category / type / file_path / expiry_date.
+  // Earlier select used filename / doc_type / storage_path / tenant_auth_id
+  // — none exist — so PostgREST 400'd and the tab showed empty.
   async function loadDocuments() {
-    // Tenants typically receive documents via the tenancy. We pull documents
-    // shared explicitly with this tenant — falling back to an empty state if
-    // RLS doesn't expose any.
-    const rows = await ELP.rest(
-      `documents?or=(tenant_auth_id.eq.${user.id},user_id.eq.${user.id})&select=id,filename,doc_type,created_at,storage_path&order=created_at.desc&limit=50`
+    // First find the tenant rows for this auth user, then pull documents
+    // linked to those tenants OR shared on the tenant's property.
+    const tenants = await ELP.rest(
+      `tenants?tenant_auth_id=eq.${user.id}&select=id,property_id`
     ).catch(() => []);
+    if (!tenants.length) {
+      $("documentsList").innerHTML = noDocsEmpty();
+      return;
+    }
+    const tenantIds = tenants.map((t) => `"${t.id}"`).join(",");
+    const propIds = tenants.map((t) => t.property_id).filter(Boolean);
+    const propIdsList = propIds.map((id) => `"${id}"`).join(",");
+    // Two queries: documents directly linked to tenant_id + documents on
+    // property that are flagged shared_with_tenants. Stitched + de-duped here.
+    const [byTenant, byProperty] = await Promise.all([
+      ELP.rest(
+        `documents?tenant_id=in.(${tenantIds})&select=id,name,category,type,file_path,expiry_date,created_at&order=created_at.desc`
+      ).catch(() => []),
+      propIdsList
+        ? ELP.rest(
+            `documents?property_id=in.(${propIdsList})&shared_with_tenants=eq.true&select=id,name,category,type,file_path,expiry_date,created_at&order=created_at.desc`
+          ).catch(() => [])
+        : Promise.resolve([]),
+    ]);
+    const seen = new Set();
+    const rows = [...byTenant, ...byProperty].filter((d) => {
+      if (seen.has(d.id)) return false;
+      seen.add(d.id);
+      return true;
+    });
     if (!rows.length) {
-      $("documentsList").innerHTML = `
-        <div class="elp-empty">
-          <h3>No documents yet</h3>
-          <p>Tenancy agreements, inventories and other documents your landlord shares with you will live here.</p>
-        </div>`;
+      $("documentsList").innerHTML = noDocsEmpty();
       return;
     }
     $("documentsList").innerHTML = rows
@@ -384,12 +412,19 @@
         (d) => `
         <div class="elp-list-item">
           <div class="elp-list-item-main">
-            <div class="elp-list-item-title">${ELP.esc(d.filename || "Document")}</div>
-            <div class="elp-list-item-sub">${ELP.esc(d.doc_type || "Document")} · ${ELP.fmtDate(d.created_at)}</div>
+            <div class="elp-list-item-title">${ELP.esc(d.name || "Document")}</div>
+            <div class="elp-list-item-sub">${ELP.esc(d.category || d.type || "Document")} · ${ELP.fmtDate(d.created_at)}${d.expiry_date ? ` · expires ${ELP.fmtDate(d.expiry_date)}` : ""}</div>
           </div>
         </div>`
       )
       .join("");
+  }
+  function noDocsEmpty() {
+    return `
+      <div class="elp-empty">
+        <h3>No documents yet</h3>
+        <p>Tenancy agreements, inventories and other documents your landlord shares with you will live here.</p>
+      </div>`;
   }
 
   // ---- Settings ---------------------------------------------------------
