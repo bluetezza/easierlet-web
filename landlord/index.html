@@ -1731,9 +1731,13 @@
   }
 
   // ---- Tenants ----------------------------------------------------------
+  // The earlier select asked for `prequal_status` which doesn't exist on the
+  // tenants table — PostgREST 400'd, the catch returned [], and the tab
+  // showed the empty state. The tenants table also has both `name` and
+  // `full_name` (legacy + structured), so prefer either.
   async function loadTenants() {
     const rows = await ELP.rest(
-      `tenants?user_id=eq.${user.id}&select=id,name,email,phone,status,prequal_status,created_at,updated_at,property_id,properties(address_line1,city,postcode)&order=updated_at.desc.nullslast,created_at.desc`
+      `tenants?user_id=eq.${user.id}&select=id,name,full_name,email,phone,status,role,created_at,updated_at,property_id,properties(address_line1,city,postcode)&order=updated_at.desc.nullslast,created_at.desc`
     ).catch(() => []);
     if (!rows.length) {
       $("tenantsList").innerHTML = `
@@ -1748,10 +1752,11 @@
         const addr = t.properties
           ? [t.properties.address_line1, t.properties.city, t.properties.postcode].filter(Boolean).join(", ")
           : "—";
+        const display = t.name || t.full_name || t.email || "Applicant";
         return `
         <div class="elp-list-item" data-tenant-id="${t.id}">
           <div class="elp-list-item-main">
-            <div class="elp-list-item-title">${ELP.esc(t.name || t.email || "Applicant")}</div>
+            <div class="elp-list-item-title">${ELP.esc(display)}</div>
             <div class="elp-list-item-sub">${ELP.esc(addr)} · ${ELP.esc(t.email || "")}${t.phone ? ` · ${ELP.esc(t.phone)}` : ""}</div>
           </div>
           <div class="elp-list-item-end">${badge(t.status)}</div>
@@ -1805,9 +1810,11 @@
   }
 
   // ---- Transactions -----------------------------------------------------
+  // Real column is `type` (income/expense), not `kind`. Earlier select with
+  // `kind` 400'd and the tab showed empty.
   async function loadTransactions() {
     const rows = await ELP.rest(
-      `transactions?user_id=eq.${user.id}&select=id,date,amount,kind,category,note,property_id,properties(address_line1,city)&order=date.desc&limit=200`
+      `transactions?user_id=eq.${user.id}&select=id,date,amount,type,category,note,property_id,properties(address_line1,city)&order=date.desc&limit=200`
     ).catch(() => []);
     if (!rows.length) {
       $("transactionsList").innerHTML = `
@@ -1822,8 +1829,8 @@
         const addr = t.properties
           ? [t.properties.address_line1, t.properties.city].filter(Boolean).join(", ")
           : "—";
-        const sign = t.kind === "expense" ? "-" : "+";
-        const colour = t.kind === "expense" ? "var(--el-danger)" : "var(--el-green)";
+        const sign = t.type === "expense" ? "-" : "+";
+        const colour = t.type === "expense" ? "var(--el-danger)" : "var(--el-green)";
         return `
         <div class="elp-list-item">
           <div class="elp-list-item-main">
@@ -1837,9 +1844,13 @@
   }
 
   // ---- Documents --------------------------------------------------------
+  // Documents schema is name / category / file_path / expiry_date — earlier
+  // code used filename / doc_type / storage_path which don't exist and 400'd.
+  // The dashboard "Certificates Expiring" tile lands on this tab, so surface
+  // expiring docs at the top with an explicit count + colour.
   async function loadDocuments() {
     const rows = await ELP.rest(
-      `documents?user_id=eq.${user.id}&select=id,filename,doc_type,created_at,storage_path,property_id&order=created_at.desc&limit=200`
+      `documents?user_id=eq.${user.id}&select=id,name,category,type,expiry_date,created_at,property_id,properties(address_line1,city)&order=expiry_date.asc.nullslast,created_at.desc&limit=200`
     ).catch(() => []);
     if (!rows.length) {
       $("documentsList").innerHTML = `
@@ -1849,17 +1860,52 @@
         </div>`;
       return;
     }
-    $("documentsList").innerHTML = rows
-      .map(
-        (d) => `
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const daysUntil = (s) => {
+      if (!s) return null;
+      const d = new Date(s.length <= 10 ? s + "T00:00:00" : s);
+      return Math.round((d - today) / 86400000);
+    };
+    const expiring = rows
+      .map((d) => ({ ...d, _days: daysUntil(d.expiry_date) }))
+      .filter((d) => d._days !== null && d._days <= 60);
+    const others = rows.filter((d) => {
+      const days = daysUntil(d.expiry_date);
+      return days === null || days > 60;
+    });
+
+    const banner = expiring.length
+      ? `<div class="elp-card" style="background:#FFF8EC;border-color:#F0D080;margin-bottom:14px;padding:14px 16px">
+          <strong style="color:#8A6000">${expiring.length} certificate${expiring.length === 1 ? "" : "s"} expiring within 60 days</strong>
+          <div style="font-size:13px;color:#8A6000;margin-top:2px">Listed first below — renew with a Maintenance / Property visit when ready.</div>
+        </div>`
+      : "";
+
+    const rowHtml = (d, expiringOne) => {
+      const addr = d.properties ? [d.properties.address_line1, d.properties.city].filter(Boolean).join(", ") : "—";
+      const days = expiringOne ? d._days : null;
+      const expiryLabel = d.expiry_date
+        ? (days !== null && days < 0 ? `Expired ${Math.abs(days)}d ago`
+          : days !== null && days <= 14 ? `Expires in ${days}d`
+          : `Expires ${ELP.fmtDate(d.expiry_date)}`)
+        : "";
+      const expiryColor = days !== null
+        ? (days < 0 ? "var(--el-danger)" : days <= 14 ? "var(--el-danger)" : "#D97A3F")
+        : "var(--el-muted)";
+      return `
         <div class="elp-list-item">
           <div class="elp-list-item-main">
-            <div class="elp-list-item-title">${ELP.esc(d.filename || "Document")}</div>
-            <div class="elp-list-item-sub">${ELP.esc(d.doc_type || "Document")} · ${ELP.fmtDate(d.created_at)}</div>
+            <div class="elp-list-item-title">${ELP.esc(d.name || "Document")}</div>
+            <div class="elp-list-item-sub">${ELP.esc(d.category || d.type || "Document")} · ${ELP.esc(addr)}${expiryLabel ? ` · <span style="color:${expiryColor}">${ELP.esc(expiryLabel)}</span>` : ""}</div>
           </div>
-        </div>`
-      )
-      .join("");
+          <div class="elp-list-item-end">${ELP.fmtDate(d.created_at)}</div>
+        </div>`;
+    };
+
+    $("documentsList").innerHTML = banner
+      + expiring.map((d) => rowHtml(d, true)).join("")
+      + others.map((d) => rowHtml(d, false)).join("");
   }
 
   // ---- Settings ---------------------------------------------------------
