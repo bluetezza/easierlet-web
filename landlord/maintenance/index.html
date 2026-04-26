@@ -20,6 +20,21 @@
     .priority-high     { background: #FFE8DC; color: var(--el-danger); }
     .priority-emergency{ background: var(--el-danger); color: #fff; }
 
+    .status-new          { background: #DCEAFD; color: #1F4D8E; }
+    .status-acknowledged { background: #FFE8C9; color: #8A5500; }
+    .status-awaiting     { background: #EFE0FB; color: #5A2E9C; }
+    .status-scheduled    { background: #D6F0EE; color: #15716D; }
+    .status-in_progress  { background: #FFE8C9; color: #8A5500; }
+    .status-completed    { background: #DDF0E4; color: #19663E; }
+    .status-closed       { background: #E5EAE7; color: #6B8278; }
+    .status-rejected     { background: #FBE0E0; color: #B23434; }
+
+    .trade-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
+      background: var(--el-green-pale); color: var(--el-green);
+    }
+
     .modal-backdrop {
       position: fixed; inset: 0;
       background: rgba(15,46,40,0.45);
@@ -29,7 +44,7 @@
     }
     .modal-backdrop.open { display: flex; }
     .modal {
-      width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto;
+      width: 100%; max-width: 620px; max-height: 92vh; overflow-y: auto;
       background: #fff; border-radius: 16px; padding: 28px;
     }
     .modal h2 {
@@ -37,7 +52,7 @@
       font-size: 22px; margin-bottom: 6px; letter-spacing: -0.4px;
     }
     .modal-sub { color: var(--el-muted); font-size: 13px; margin-bottom: 20px; }
-    .modal .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+    .modal .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
 
     .req-detail {
       display: grid; grid-template-columns: 140px 1fr;
@@ -47,6 +62,43 @@
     }
     .req-detail .label { color: var(--el-muted); }
     .req-detail .value { color: var(--el-ink); }
+
+    .triage-grid { display: grid; gap: 10px; margin-top: 16px; }
+    .triage-card {
+      border: 1px solid var(--el-line-soft); border-radius: 12px; padding: 14px;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .triage-card:hover { background: var(--el-bg); }
+    .triage-card.is-open { background: var(--el-bg); border-color: var(--el-green); }
+    .triage-card-head {
+      display: flex; gap: 12px; align-items: center; font-size: 14px;
+    }
+    .triage-card-head .icon { font-size: 22px; line-height: 1; }
+    .triage-card-head strong { display: block; color: var(--el-ink); }
+    .triage-card-head span    { color: var(--el-muted); font-size: 12px; }
+    .triage-card-form { display: none; padding-top: 12px; }
+    .triage-card.is-open .triage-card-form { display: block; }
+
+    .progression {
+      display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 16px 0;
+    }
+    .progression button {
+      padding: 6px 12px; border-radius: 18px; border: 1px solid var(--el-green);
+      background: rgba(26,107,85,0.10); color: var(--el-green);
+      font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .progression button.is-current { background: var(--el-green); color: #fff; }
+
+    .timeline { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--el-line-soft); }
+    .timeline-row { display: flex; gap: 10px; padding: 6px 0; align-items: center; font-size: 13px; }
+    .timeline-row .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .timeline-row .label { flex: 1; color: var(--el-ink); }
+    .timeline-row .when  { color: var(--el-muted); font-size: 12px; }
+
+    .rejection-card {
+      background: #FDF1F1; border-left: 3px solid #D99B9B;
+      padding: 14px; border-radius: 8px; margin-top: 16px;
+    }
   </style>
 </head>
 <body class="elp-body">
@@ -58,15 +110,20 @@
     <div class="elp-page-head" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
       <div>
         <h1 class="elp-page-title">Maintenance</h1>
-        <p class="elp-page-sub">Requests raised by tenants and any you've logged yourself.</p>
+        <p class="elp-page-sub">Triage tenant requests, schedule contractors, and track outcomes.</p>
       </div>
-      <button class="el-btn el-btn-primary" id="newReqBtn">+ Log request</button>
+      <div style="display:flex;gap:10px">
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--el-muted)">
+          <input type="checkbox" id="groupByTrade"> Group by trade
+        </label>
+        <button class="el-btn el-btn-primary" id="newReqBtn">+ Log request</button>
+      </div>
     </div>
 
     <div class="elp-tabs">
       <a href="#" class="elp-tab-link active" data-mr-filter="open">Open</a>
-      <a href="#" class="elp-tab-link" data-mr-filter="acknowledged">Acknowledged</a>
-      <a href="#" class="elp-tab-link" data-mr-filter="resolved">Resolved</a>
+      <a href="#" class="elp-tab-link" data-mr-filter="completed">Completed</a>
+      <a href="#" class="elp-tab-link" data-mr-filter="rejected">Rejected</a>
       <a href="#" class="elp-tab-link" data-mr-filter="all">All</a>
     </div>
 
@@ -105,8 +162,10 @@
           </select>
         </div>
         <div class="el-field">
-          <label class="el-label">Category (optional)</label>
-          <input class="el-input" id="nrCategory" type="text" placeholder="Plumbing, Electrical…">
+          <label class="el-label">Trade (optional)</label>
+          <select class="el-select" id="nrTrade">
+            <option value="">—</option>
+          </select>
         </div>
       </div>
       <div class="actions">
@@ -142,22 +201,62 @@
 
   const $ = (id) => document.getElementById(id);
 
+  const TRADES = [
+    ["plumbing", "Plumbing"], ["electrical", "Electrical"], ["gas", "Gas"],
+    ["carpentry", "Carpentry"], ["roofing", "Roofing"], ["glazing", "Glazing"],
+    ["locksmith", "Locksmith"], ["plastering", "Plastering"],
+    ["decorating", "Decorating"], ["cleaning", "Cleaning"],
+    ["pest_control", "Pest control"], ["appliance", "Appliance"],
+    ["general", "General"],
+  ];
+  const tradeLabel = (t) => TRADES.find(([k]) => k === t)?.[1] ?? "—";
+
+  const REJECTIONS = [
+    ["tenant_responsibility", "Tenant responsibility"],
+    ["duplicate", "Duplicate request"],
+    ["cosmetic", "Cosmetic — not maintenance"],
+    ["pre_existing", "Pre-existing condition"],
+    ["other", "Other"],
+  ];
+  const rejectionLabel = (k) => REJECTIONS.find(([key]) => key === k)?.[1] ?? "—";
+
+  const OPEN_STATUSES = ["new", "acknowledged", "awaiting_info", "scheduled", "in_progress", "open"];
+
   let allRequests = [];
   let filter = "open";
+  let groupByTrade = false;
+
+  // Populate trade dropdown in new-request modal
+  $("nrTrade").innerHTML =
+    '<option value="">—</option>' +
+    TRADES.map(([k, label]) => `<option value="${k}">${label}</option>`).join("");
 
   async function load() {
     allRequests = await ELP.rest(
-      `maintenance_requests?user_id=eq.${user.id}&select=id,title,description,priority,status,category,created_at,acknowledged_at,resolved_at,property_id,properties(address_line1,city,postcode),tenants(name,email)&order=created_at.desc&limit=200`
+      `maintenance_requests?user_id=eq.${user.id}&select=*,properties(address,address_line1,address_line2,city,postcode),tenants(name,full_name,email)&order=created_at.desc&limit=200`
     ).catch(() => []);
     render();
   }
 
-  function render() {
-    let rows = allRequests;
-    if (filter === "open")          rows = rows.filter((r) => ["new", "open"].includes(r.status));
-    else if (filter === "acknowledged") rows = rows.filter((r) => r.status === "acknowledged" || (r.acknowledged_at && !r.resolved_at));
-    else if (filter === "resolved") rows = rows.filter((r) => r.status === "resolved" || r.resolved_at);
+  function passesFilter(r) {
+    if (filter === "all") return true;
+    if (filter === "open") return OPEN_STATUSES.includes(r.status);
+    if (filter === "completed") return ["completed", "closed"].includes(r.status);
+    if (filter === "rejected") return r.status === "rejected";
+    return true;
+  }
 
+  function emergencyFirst(items) {
+    return items.slice().sort((a, b) => {
+      const ae = a.priority === "emergency" ? 1 : 0;
+      const be = b.priority === "emergency" ? 1 : 0;
+      if (ae !== be) return be - ae;
+      return (b.created_at || "").localeCompare(a.created_at || "");
+    });
+  }
+
+  function render() {
+    const rows = allRequests.filter(passesFilter);
     if (!rows.length) {
       $("reqList").innerHTML = `
         <div class="elp-empty">
@@ -167,21 +266,54 @@
       return;
     }
 
-    $("reqList").innerHTML = rows.map((r) => {
-      const addr = r.properties ? [r.properties.address_line1, r.properties.city].filter(Boolean).join(", ") : "—";
-      return `
-      <div class="elp-list-item" data-req-id="${r.id}" style="cursor:pointer">
-        <div class="elp-list-item-main">
-          <div class="elp-list-item-title">${ELP.esc(r.title || "Maintenance request")}</div>
-          <div class="elp-list-item-sub">${ELP.esc(addr)}${r.tenants?.name ? ` · ${ELP.esc(r.tenants.name)}` : ""} · ${ELP.fmtDate(r.created_at)}</div>
-        </div>
-        <div class="elp-list-item-end">
-          <span class="elp-badge priority-${r.priority || "medium"}">${ELP.esc(labelStatus(r.priority || "medium"))}</span>
-          ${badge(r.status)}
-        </div>
-      </div>`;
-    }).join("");
+    if (!groupByTrade) {
+      $("reqList").innerHTML = emergencyFirst(rows).map(rowHtml).join("");
+    } else {
+      const groups = {};
+      for (const r of rows) {
+        const k = r.trade_type ? tradeLabel(r.trade_type) : "Untriaged";
+        (groups[k] ||= []).push(r);
+      }
+      const keys = Object.keys(groups).sort((a, b) => {
+        if (a === "Untriaged") return -1;
+        if (b === "Untriaged") return 1;
+        return a.localeCompare(b);
+      });
+      $("reqList").innerHTML = keys.map((key) => {
+        const items = emergencyFirst(groups[key]);
+        return `
+          <div class="elp-section-head" style="margin-top:18px">
+            <h3 style="font-size:11px;letter-spacing:0.5px;color:var(--el-muted);text-transform:uppercase;margin-bottom:8px">${ELP.esc(key)} · ${items.length}</h3>
+          </div>
+          ${items.map(rowHtml).join("")}
+        `;
+      }).join("");
+    }
   }
+
+  function rowHtml(r) {
+    const addr = r.properties ? [r.properties.address_line1, r.properties.city].filter(Boolean).join(", ") : "—";
+    const tenantName = r.tenants?.name || r.tenants?.full_name || "";
+    return `
+    <div class="elp-list-item" data-req-id="${r.id}" style="cursor:pointer">
+      <div class="elp-list-item-main">
+        <div class="elp-list-item-title">${ELP.esc(r.title || "Maintenance request")}</div>
+        <div class="elp-list-item-sub">${ELP.esc(addr)}${tenantName ? ` · ${ELP.esc(tenantName)}` : ""} · ${ELP.fmtDate(r.created_at)}</div>
+        ${r.trade_type ? `<div style="margin-top:4px"><span class="trade-pill">${ELP.esc(tradeLabel(r.trade_type))}</span></div>` : ""}
+      </div>
+      <div class="elp-list-item-end">
+        <span class="elp-badge priority-${r.priority || "medium"}">${ELP.esc((r.priority || "medium").toUpperCase())}</span>
+        ${statusBadge(r.status)}
+      </div>
+    </div>`;
+  }
+
+  function statusBadge(s) {
+    const key = OPEN_STATUSES.includes(s) && s !== "in_progress" && s !== "acknowledged" && s !== "awaiting_info" && s !== "scheduled" ? "new" : s;
+    return `<span class="elp-badge status-${s}">${ELP.esc(humanise(s))}</span>`;
+  }
+
+  function humanise(s) { return !s ? "—" : String(s).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()); }
 
   // Filter tabs
   document.querySelectorAll("[data-mr-filter]").forEach((el) =>
@@ -194,6 +326,8 @@
     })
   );
 
+  $("groupByTrade").addEventListener("change", (e) => { groupByTrade = e.target.checked; render(); });
+
   // Click row → detail
   $("reqList").addEventListener("click", (e) => {
     const row = e.target.closest("[data-req-id]");
@@ -205,51 +339,220 @@
     const r = allRequests.find((x) => x.id === reqId);
     if (!r) return;
     const addr = r.properties ? [r.properties.address_line1, r.properties.city, r.properties.postcode].filter(Boolean).join(", ") : "—";
+    const tenantName = r.tenants?.name || r.tenants?.full_name || "—";
     $("dmTitle").textContent = r.title || "Request";
     $("dmSub").textContent = `${addr} · Logged ${ELP.fmtDate(r.created_at)}`;
+
+    const isNew = ["new", "open"].includes(r.status);
+    const isRejected = r.status === "rejected";
+    const isClosed = r.status === "closed";
+
     $("dmBody").innerHTML = `
-      <div class="req-detail"><div class="label">Status</div><div class="value">${badge(r.status)}</div></div>
-      <div class="req-detail"><div class="label">Priority</div><div class="value"><span class="elp-badge priority-${r.priority || "medium"}">${ELP.esc(labelStatus(r.priority || "medium"))}</span></div></div>
-      ${r.category ? `<div class="req-detail"><div class="label">Category</div><div class="value">${ELP.esc(r.category)}</div></div>` : ""}
-      ${r.tenants?.name ? `<div class="req-detail"><div class="label">Tenant</div><div class="value">${ELP.esc(r.tenants.name)} · ${ELP.esc(r.tenants.email || "")}</div></div>` : ""}
+      <div class="req-detail"><div class="label">Status</div><div class="value">${statusBadge(r.status)}</div></div>
+      <div class="req-detail"><div class="label">Priority</div><div class="value"><span class="elp-badge priority-${r.priority || "medium"}">${ELP.esc((r.priority || "medium").toUpperCase())}</span></div></div>
+      ${r.trade_type ? `<div class="req-detail"><div class="label">Trade</div><div class="value"><span class="trade-pill">${ELP.esc(tradeLabel(r.trade_type))}</span></div></div>` : ""}
+      <div class="req-detail"><div class="label">Tenant</div><div class="value">${ELP.esc(tenantName)}${r.tenants?.email ? ` · ${ELP.esc(r.tenants.email)}` : ""}</div></div>
       ${r.description ? `<div class="req-detail"><div class="label">Description</div><div class="value">${ELP.esc(r.description)}</div></div>` : ""}
-      <div class="req-detail"><div class="label">Logged</div><div class="value">${ELP.fmtDateTime(r.created_at)}</div></div>
-      ${r.acknowledged_at ? `<div class="req-detail"><div class="label">Acknowledged</div><div class="value">${ELP.fmtDateTime(r.acknowledged_at)}</div></div>` : ""}
-      ${r.resolved_at ? `<div class="req-detail"><div class="label">Resolved</div><div class="value">${ELP.fmtDateTime(r.resolved_at)}</div></div>` : ""}
 
-      <div style="margin-top:18px">
-        <label class="el-label">Landlord notes</label>
-        <textarea class="el-textarea" id="dmNotes" rows="3">${ELP.esc(r.landlord_notes || "")}</textarea>
-      </div>
+      ${isNew ? renderTriage(r) : ""}
+      ${!isNew && !isRejected && !isClosed ? renderProgress(r) : ""}
+      ${isRejected ? renderRejection(r) : ""}
 
-      <div class="actions" style="margin-top:18px">
-        ${!r.acknowledged_at ? `<button class="el-btn el-btn-secondary" data-mark="acknowledge">Acknowledge</button>` : ""}
-        ${!r.resolved_at ? `<button class="el-btn el-btn-primary" data-mark="resolve">Mark resolved</button>` : ""}
-        <button class="el-btn el-btn-ghost" data-mark="save">Save notes</button>
-      </div>
+      ${renderTimeline(r)}
     `;
-    $("dmBody").querySelectorAll("[data-mark]").forEach((b) =>
-      b.addEventListener("click", () => updateRequest(reqId, b.dataset.mark))
-    );
+
+    wireDetail(reqId);
     $("detailModal").classList.add("open");
   }
 
-  async function updateRequest(reqId, action) {
-    const notes = $("dmNotes")?.value.trim() || null;
-    const body = { landlord_notes: notes };
+  function renderTriage(r) {
+    return `
+      <div class="triage-grid">
+        ${triageCard("acknowledge", "✅", "Acknowledge", "Pick this up and assign a trade", `
+          <div class="el-field"><label class="el-label">Trade type</label>
+            <select class="el-select" id="ackTrade">
+              <option value="">Select…</option>
+              ${TRADES.map(([k, label]) => `<option value="${k}" ${r.trade_type === k ? "selected" : ""}>${label}</option>`).join("")}
+            </select>
+          </div>
+          <div class="el-field"><label class="el-label">Urgency override</label>
+            <select class="el-select" id="ackPriority">
+              ${["low","medium","high","emergency"].map((p) => `<option value="${p}" ${r.priority === p ? "selected" : ""}>${p[0].toUpperCase()+p.slice(1)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="el-field"><label class="el-label">Acknowledgement notes</label>
+            <textarea class="el-textarea" id="ackNotes" rows="3" placeholder="What's next?"></textarea></div>
+          <div class="el-field"><label class="el-label">Expected completion (optional)</label>
+            <input class="el-input" id="ackExpected" type="date"></div>
+          <div class="actions"><button class="el-btn el-btn-primary" data-mark="acknowledge">Save acknowledgement</button></div>
+        `)}
+        ${triageCard("reject", "🚫", "Reject", "Decline this request with a reason", `
+          <div class="el-field"><label class="el-label">Reason</label>
+            <select class="el-select" id="rejReason">
+              ${REJECTIONS.map(([k, label]) => `<option value="${k}">${label}</option>`).join("")}
+            </select>
+          </div>
+          <div class="el-field"><label class="el-label">Notes</label>
+            <textarea class="el-textarea" id="rejNotes" rows="3" placeholder="Explain why…"></textarea></div>
+          <div class="actions"><button class="el-btn el-btn-primary" data-mark="reject">Reject request</button></div>
+        `)}
+        ${triageCard("info", "❓", "Request more info", "Ask the tenant a question", `
+          <div class="el-field"><label class="el-label">What do you need?</label>
+            <textarea class="el-textarea" id="infoNote" rows="3" placeholder="e.g. Can you send a photo?"></textarea></div>
+          <div class="actions"><button class="el-btn el-btn-primary" data-mark="awaiting_info">Send to tenant</button></div>
+        `)}
+      </div>
+    `;
+  }
+
+  function triageCard(id, icon, title, sub, formHtml) {
+    return `
+      <div class="triage-card" data-triage="${id}">
+        <div class="triage-card-head">
+          <div class="icon">${icon}</div>
+          <div><strong>${title}</strong><span>${sub}</span></div>
+        </div>
+        <div class="triage-card-form">${formHtml}</div>
+      </div>`;
+  }
+
+  function renderProgress(r) {
+    const stages = [
+      ["acknowledged", "Acknowledged"], ["scheduled", "Scheduled"],
+      ["in_progress", "In progress"], ["completed", "Completed"], ["closed", "Closed"],
+    ];
+    return `
+      <div style="margin-top:16px">
+        <div style="font-size:11px;color:var(--el-muted);font-weight:600;letter-spacing:0.5px;margin-bottom:6px">PROGRESS</div>
+        <div class="progression">
+          ${stages.map(([k, label]) => `<button data-status="${k}" class="${r.status === k ? "is-current" : ""}">${label}</button>`).join("")}
+        </div>
+
+        <div class="el-field-row">
+          <div class="el-field"><label class="el-label">Contractor name</label>
+            <input class="el-input" id="prContractorName" type="text" value="${ELP.esc(r.contractor_name || "")}"></div>
+          <div class="el-field"><label class="el-label">Contractor phone</label>
+            <input class="el-input" id="prContractorPhone" type="tel" value="${ELP.esc(r.contractor_phone || "")}"></div>
+        </div>
+        <div class="el-field-row">
+          <div class="el-field"><label class="el-label">Scheduled date</label>
+            <input class="el-input" id="prScheduled" type="date" value="${r.scheduled_date || ""}"></div>
+          <div class="el-field"><label class="el-label">Expected completion</label>
+            <input class="el-input" id="prExpected" type="date" value="${r.expected_completion_date || ""}"></div>
+        </div>
+        ${["in_progress", "completed", "closed"].includes(r.status) ? `
+          <div class="el-field"><label class="el-label">Resolution notes</label>
+            <textarea class="el-textarea" id="prResolution" rows="3">${ELP.esc(r.resolution_notes || "")}</textarea></div>
+        ` : ""}
+        <div class="actions">
+          <button class="el-btn el-btn-secondary" data-mark="save-progress">Save changes</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderRejection(r) {
+    return `
+      <div class="rejection-card">
+        <p style="font-size:13px;color:#6B4242;margin-bottom:6px"><strong>Reason</strong>: ${ELP.esc(rejectionLabel(r.rejection_reason))}</p>
+        ${r.rejection_notes ? `<p style="color:#6B4242;font-size:13px">${ELP.esc(r.rejection_notes)}</p>` : ""}
+      </div>
+      <div class="actions"><button class="el-btn el-btn-primary" data-mark="reopen">Reopen</button></div>
+    `;
+  }
+
+  function renderTimeline(r) {
+    const rows = [];
+    if (r.created_at) rows.push({ icon: "📨", label: "Submitted", color: "#6B8278", when: ELP.fmtDateTime(r.created_at) });
+    if (r.acknowledged_at) rows.push({ icon: "✅", label: "Acknowledged", color: "#D97A3F", when: ELP.fmtDateTime(r.acknowledged_at) });
+    if (r.scheduled_date) rows.push({ icon: "📅", label: r.contractor_name ? `Scheduled with ${r.contractor_name}` : "Scheduled", color: "#15716D", when: r.scheduled_date });
+    if (r.completed_at) rows.push({ icon: "🎯", label: "Completed", color: "#19663E", when: ELP.fmtDateTime(r.completed_at) });
+    else if (r.resolved_at) rows.push({ icon: "🎯", label: "Resolved", color: "#19663E", when: ELP.fmtDateTime(r.resolved_at) });
+    if (r.status === "closed") rows.push({ icon: "🔒", label: "Closed", color: "#6B8278", when: "" });
+    if (r.rejected_at) rows.push({ icon: "🚫", label: "Rejected", color: "#B23434", when: ELP.fmtDateTime(r.rejected_at) });
+    if (!rows.length) return "";
+    return `
+      <div class="timeline">
+        <div style="font-size:11px;color:var(--el-muted);font-weight:600;letter-spacing:0.5px;margin-bottom:8px">TIMELINE</div>
+        ${rows.map((r) => `
+          <div class="timeline-row">
+            <span style="font-size:14px">${r.icon}</span>
+            <span class="label">${ELP.esc(r.label)}</span>
+            <span class="when">${ELP.esc(r.when)}</span>
+          </div>`).join("")}
+      </div>
+    `;
+  }
+
+  function wireDetail(reqId) {
+    const body = $("dmBody");
+    body.querySelectorAll(".triage-card").forEach((card) => {
+      card.querySelector(".triage-card-head").addEventListener("click", () => {
+        const open = card.classList.contains("is-open");
+        body.querySelectorAll(".triage-card").forEach((c) => c.classList.remove("is-open"));
+        if (!open) card.classList.add("is-open");
+      });
+    });
+    body.querySelectorAll("[data-mark]").forEach((btn) =>
+      btn.addEventListener("click", () => triageAction(reqId, btn.dataset.mark))
+    );
+    body.querySelectorAll("[data-status]").forEach((btn) =>
+      btn.addEventListener("click", () => advanceStatus(reqId, btn.dataset.status))
+    );
+  }
+
+  async function triageAction(reqId, action) {
+    let body = {};
+    let notify = null;
     if (action === "acknowledge") {
-      body.status = "acknowledged";
-      body.acknowledged_at = new Date().toISOString();
-    } else if (action === "resolve") {
-      body.status = "resolved";
-      body.resolved_at = new Date().toISOString();
-    }
+      const trade = $("ackTrade").value;
+      if (!trade) { ELP.toast("Pick a trade first", "error"); return; }
+      body = {
+        status: "acknowledged",
+        trade_type: trade,
+        priority: $("ackPriority").value,
+        acknowledged_at: new Date().toISOString(),
+      };
+      const notes = $("ackNotes").value.trim();
+      if (notes) body.acknowledgement_notes = notes;
+      const exp = $("ackExpected").value; if (exp) body.expected_completion_date = exp;
+      notify = { action: "status_changed", new_status: "acknowledged", notes: notes || null };
+    } else if (action === "reject") {
+      const reason = $("rejReason").value;
+      const notes = $("rejNotes").value.trim();
+      if (reason === "other" && !notes) { ELP.toast("Add a note explaining why", "error"); return; }
+      body = {
+        status: "rejected",
+        rejection_reason: reason,
+        rejection_notes: notes || null,
+        rejected_at: new Date().toISOString(),
+      };
+      notify = { action: "status_changed", new_status: "rejected", notes: notes || null };
+    } else if (action === "awaiting_info") {
+      const note = $("infoNote").value.trim();
+      if (!note) { ELP.toast("Type your question first", "error"); return; }
+      body = { status: "awaiting_info", landlord_notes: note };
+      notify = { action: "status_changed", new_status: "awaiting_info", notes: note };
+    } else if (action === "save-progress") {
+      body = {
+        contractor_name: ($("prContractorName")?.value || "").trim() || null,
+        contractor_phone: ($("prContractorPhone")?.value || "").trim() || null,
+        scheduled_date: $("prScheduled")?.value || null,
+        expected_completion_date: $("prExpected")?.value || null,
+      };
+      const res = $("prResolution")?.value;
+      if (res !== undefined) body.resolution_notes = (res || "").trim() || null;
+    } else if (action === "reopen") {
+      body = { status: "new", rejection_reason: null, rejection_notes: null, rejected_at: null };
+    } else { return; }
+
     try {
       await ELP.rest(`maintenance_requests?id=eq.${reqId}`, {
         method: "PATCH",
         headers: { Prefer: "return=minimal" },
         body: JSON.stringify(body),
       });
+      if (notify) await sendNotify(reqId, notify);
       ELP.toast("Saved", "success");
       $("detailModal").classList.remove("open");
       load();
@@ -257,6 +560,37 @@
       ELP.toast(err.message || "Could not update", "error");
     }
   }
+
+  async function advanceStatus(reqId, status) {
+    let body = { status };
+    if (status === "completed") {
+      body.completed_at = new Date().toISOString();
+      body.resolved_at = body.completed_at;
+    }
+    try {
+      await ELP.rest(`maintenance_requests?id=eq.${reqId}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(body),
+      });
+      await sendNotify(reqId, { action: "status_changed", new_status: status, notes: null });
+      ELP.toast(`Marked as ${humanise(status)}`, "success");
+      $("detailModal").classList.remove("open");
+      load();
+    } catch (err) {
+      ELP.toast(err.message || "Could not update", "error");
+    }
+  }
+
+  async function sendNotify(reqId, payload) {
+    try {
+      await ELP.callFn("maintenance-notify", {
+        method: "POST",
+        body: JSON.stringify({ ...payload, maintenance_id: reqId }),
+      });
+    } catch (e) { /* best-effort */ console.warn("notify failed", e); }
+  }
+
   $("dmClose").addEventListener("click", () => $("detailModal").classList.remove("open"));
   $("detailModal").addEventListener("click", (e) => { if (e.target === $("detailModal")) $("detailModal").classList.remove("open"); });
 
@@ -274,18 +608,19 @@
   $("newReqForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     try {
+      const body = {
+        user_id: user.id,
+        property_id: $("nrProperty").value,
+        title: $("nrTitle").value.trim(),
+        description: $("nrDescription").value.trim() || null,
+        priority: $("nrPriority").value,
+        trade_type: $("nrTrade").value || null,
+        status: "new",
+      };
       await ELP.rest("maintenance_requests", {
         method: "POST",
         headers: { Prefer: "return=minimal" },
-        body: JSON.stringify({
-          user_id: user.id,
-          property_id: $("nrProperty").value,
-          title: $("nrTitle").value.trim(),
-          description: $("nrDescription").value.trim() || null,
-          priority: $("nrPriority").value,
-          category: $("nrCategory").value.trim() || null,
-          status: "open",
-        }),
+        body: JSON.stringify(body),
       });
       ELP.toast("Request logged", "success");
       $("newReqModal").classList.remove("open");
@@ -295,15 +630,6 @@
       ELP.toast(err.message || "Could not save", "error");
     }
   });
-
-  function labelStatus(s) { return !s ? "—" : String(s).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()); }
-  function badge(s) {
-    const cls =
-      ["resolved", "completed"].includes(s) ? "live" :
-      ["acknowledged", "in_progress"].includes(s) ? "pending" :
-      ["new", "open"].includes(s) ? "warn" : "muted";
-    return `<span class="elp-badge elp-badge-${cls}">${ELP.esc(labelStatus(s))}</span>`;
-  }
 
   load();
 </script>

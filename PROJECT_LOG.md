@@ -49,10 +49,11 @@ Newest entries at the top of each section.
 3. **Tenancy agreement** — `tenancy-workflow` and `tenant-workflow` Edge Functions. Multi-tenant signing. Lead/joint role system. Generic referencing language. Only finalised agreements saved to Documents.
 4. **Inventory** — `inventory_reports`/`inventory_rooms`/`inventory_items` tables. Excellent/Good/Fair/Poor/Damaged scale. Web form for landlord ratings, tenant adds own. `inventory-workflow` Edge Function. Digital signature: tenant via `signature_pad`, landlord via native `LandlordSignatureView`. Meter readings at move-in and move-out.
 5. **Public website + portals on easierlet.com** ✅ (2026-04-26) — Homepage with hero search, `/properties/` searchable index (area / beds / max rent / available-by / furnishing), unified `/login/` that routes by `profiles.role`, full landlord portal with iOS parity (Properties CRUD with postcode lookup, full Listing editor, Inventory create+send+finalise, Tenancy agreement create+sign with canvas signature, Maintenance triage, Useful links, Director's loan placeholder), tenant portal with Applications/Viewings/Tenancy/Documents/Settings. Listing media upload manager (R2 presigned PUT). All RLS-scoped — same auth as iOS.
+6. **Maintenance overhaul + Property visits** ✅ (2026-04-26) — Full triage workflow (Acknowledge / Reject / Request more info), 13-trade picker + group-by-trade list, 8-status flow (`new → acknowledged → awaiting_info → scheduled → in_progress → completed → closed` + `rejected`), structured rejection reasons, contractor + scheduled-date fields, transaction linking, vertical timeline. Tenant portal handles awaiting-info reply + post-completion confirm. Three new Edge Functions (`maintenance-notify`, `visit-notify`, `visit-response`) wired through Resend. Unified property visits table with 24hr UK notice enforcement, tenant accept/reschedule via tokenised `/visit-response/` web form. Visits surfaced on dashboard activity feed, summary actions, and per-property cards. Certificate-renewal action items prompt scheduling when gas/EICR/EPC expire within 60 days with no matching visit booked.
 
 ### In progress 🟡
 
-6. **Tenant portal** — iOS side complete: Home/Docs/Maintenance/Guide views, visual timeline, maintenance workflow (acknowledge/urgency/dates/transaction link), role-based auth routing, archived docs section, two-stage referencing flow, password-based tenant signup at pre-app approval.
+7. **Tenant portal** — iOS side complete: Home/Docs/Maintenance/Guide views, visual timeline, maintenance workflow (acknowledge/urgency/dates/transaction link), role-based auth routing, archived docs section, two-stage referencing flow, password-based tenant signup at pre-app approval. Now also: visits section on Home tab with inline confirm / request-reschedule.
 
    **Pending items on tenant portal:**
    - [ ] Delete account from tenant profile
@@ -62,7 +63,6 @@ Newest entries at the top of each section.
 
 ### Queued
 
-7. **Maintenance overhaul + Property visits** — full triage workflow (acknowledge/reject/request info), trade type assignment, contractor grouping, unified property visit scheduling with tenant notice (24hr UK legal minimum). Spec complete — Claude Code prompt prepared 2026-04-26.
 8. Monthly invoicing (additive to existing transactions — rent only, income side)
 9. CT600 export
 10. Landlord in-app help/guides
@@ -75,13 +75,13 @@ Newest entries at the top of each section.
 
 ### Standalone features — interleaved where logical
 
-- **Contractor grouping** — groups open maintenance + expiring certs by trade type with Checkatrade deep-link using property postcode. Will be built as part of the maintenance overhaul.
+- **Contractor grouping** — Group-by-trade list view ✅ shipped 2026-04-26 as part of the maintenance overhaul. Future: postcode-based Checkatrade deep-link from a trade group header.
 - **Inventory intelligence** — `dispute_flag`, AI agent that diffs move-out vs move-in, auto-raises maintenance tasks
 
 ### Future features (scoped, not yet built)
 
-- **Maintenance overhaul** — new status flow: `new → acknowledged → awaiting_info → scheduled → in_progress → completed → closed` + `rejected`. Trade type enum for contractor grouping. Rejection reasons. Landlord triage UI (acknowledge/reject/request info). Notification Edge Function `maintenance-notify`. Full spec in `[maintenance-and-visits-prompt.md](http://maintenance-and-visits-prompt.md)`.
-- **Property visits** — unified scheduling for maintenance visits, inspections, gas safety, EICR, EPC. `property_visits` + `visit_maintenance_links` tables. 24hr notice enforcement (UK law). Tenant notification via Resend with accept/reschedule response flow. Certificate renewal prompting. Full spec in `[maintenance-and-visits-prompt.md](http://maintenance-and-visits-prompt.md)`.
+- ~~**Maintenance overhaul**~~ — ✅ shipped 2026-04-26 (see Completed item 6).
+- ~~**Property visits**~~ — ✅ shipped 2026-04-26 (see Completed item 6).
 - **Email-based maintenance submission** — tenant emails `[maintenance@easierlet.com](mailto:maintenance@easierlet.com)`, system parses, returns GitHub Pages web form pre-filled with tenant/property/issue. Submitted form creates `maintenance_request` row.
 - **Viewing workflow fork** — `viewing_manager` field at **property level** (not listing) = `'self'` or `'agent'` (+ `agent_email`). Agent route: plain forwarded email via Resend, timestamp logged. Self route: accept/propose alternative, `.ics` calendar invite (address/time/landlord contact). Manual "viewing completed" button triggers application form send (no auto-fire, avoids no-show sends).
 - **Room metadata on listing photos** — enum `listing_room_type` (exterior/living/kitchen/dining/kitchen_diner/bedroom_main/bedroom/bathroom/ensuite/wc/hallway/garden/garage/parking/other) + `is_hero` bool (unique per listing) + `room_caption` + `room_label_source` (ai/landlord/default). AI pre-fill via Claude Haiku in `listing-media-upload` confirm; landlord can override.
@@ -114,6 +114,9 @@ Newest entries at the top of each section.
 | `tenant-portal` | current | Yes (tenant JWT) | Tenant-side endpoint; returns own data scoped by RLS. |
 | `address-lookup` | current | Yes | Postcode → addresses via [ideal-postcodes.co.uk](http://ideal-postcodes.co.uk); wraps API key. Now also called from `/landlord/properties/` add/edit form. |
 | `notify_vorensys_submitted` | **DEPRECATED** | — | Renamed to `notify_referencing_submitted` in tenant-workflow. Kept until in-flight invites drain. |
+| `maintenance-notify` | **NEW (2026-04-26)** | Yes | Resend wrapper. Actions: `new_request` (emails landlord with priority callout), `status_changed` (emails tenant per status: acknowledged / rejected / awaiting_info / scheduled / completed). Skips silently if no email on file. |
+| `visit-notify` | **NEW (2026-04-26)** | Yes | Resend wrapper for property visits. Actions: `send_notice` (validates ≥24h notice, emails active tenants with tokenised confirm link, sets visit→`notice_sent`), `send_update` (re-sends with "Updated" subject), `send_cancellation` (emails + sets visit→`cancelled`). |
+| `visit-response` | **NEW (2026-04-26)** | No (token-auth) | Tenant accepts or requests reschedule via per-row `access_token`. GET returns visit+property+landlord snapshot for the web form; POST `accept` flips `tenant_response=accepted` + status→`confirmed` + emails landlord; POST `request_reschedule` stores note + emails landlord. |
 
 #### Key Edge Function behaviours
 
@@ -146,6 +149,7 @@ Newest entries at the top of each section.
 | `/apply-v2/?slug=…` or `/apply-v2/?invite=…` | `listing-apply` | **Unified apply form** (2026-04-22). Cold-apply (slug, Turnstile, listing card) and invited (token, no Turnstile, no card). `preferred_role` radio (lead/joint/unsure). Full validation. |
 | `/book-viewing/` | `viewing-request` | Standalone book-a-viewing page (same modal also lives in-page on /listings/). |
 | `/viewing-response/?token=…` | `viewing-response` | Viewer accepts or declines a proposed viewing time. |
+| `/visit-response/?token=…` | `visit-response` | **NEW (2026-04-26)** Tenant confirms a landlord property visit or requests a reschedule with optional note. Branded teal layout matching `/viewing-response/`. |
 | `/sign-tenancy/?token=…` | `tenancy-workflow` | Per-signer tenancy agreement signing. `signature_pad` canvas. |
 | `/inventory/?token=…` | `inventory-workflow` | Tenant-side inventory web form. |
 | `/privacy/` | — | Privacy policy. |
@@ -245,6 +249,68 @@ joint  if a lead already exists
 Status flow: `draft → live → let_agreed → archived`. `let_agreed` hides apply/book-viewing CTAs and shows a banner on the public page.
 
 Listing slugs: 7-character base58 codes generated by `generate_unique_listing_slug()` RPC (no-arg, collision retry). Existing listings keep legacy address-based slugs.
+
+### Database (`maintenance_requests` table) — overhauled 2026-04-26
+
+Added columns: `trade_type`, `rejection_reason`, `rejection_notes`, `rejected_at`, `scheduled_date`, `contractor_name`, `contractor_phone`, `completed_at`, `linked_visit_id` (FK → `property_visits`).
+
+CHECK constraints (replaced):
+- `status` ∈ `new`, `acknowledged`, `awaiting_info`, `scheduled`, `in_progress`, `completed`, `closed`, `rejected` (default `new`)
+- `trade_type` ∈ `plumbing`, `electrical`, `gas`, `carpentry`, `roofing`, `glazing`, `locksmith`, `plastering`, `decorating`, `cleaning`, `pest_control`, `appliance`, `general` (nullable)
+- `rejection_reason` ∈ `tenant_responsibility`, `duplicate`, `cosmetic`, `pre_existing`, `other` (nullable)
+
+Index added: `idx_maintenance_requests_user_status (user_id, status)` for badge polling.
+
+Status flow (landlord-side):
+
+```
+new → acknowledged → scheduled → in_progress → completed → closed
+                  ↘ awaiting_info ↗
+                  ↘ rejected
+```
+
+Tenant-portal flow: `new` (initial insert) → may be flipped back to `new` when tenant replies to an `awaiting_info` request; tenant can confirm `completed` → `closed`.
+
+`tenant_id` is now set on every tenant-portal insert so the landlord triage UI can attribute the request and `maintenance-notify` can email the right tenant.
+
+### Database (`property_visits` table) — new 2026-04-26
+
+```
+id, user_id, property_id, visit_type, title, description,
+scheduled_date (NOT NULL), scheduled_time_from, scheduled_time_to,
+contractor_name, contractor_phone, contractor_email,
+status (default 'draft'), notice_sent_at, tenant_response (default 'none'),
+tenant_reschedule_note, completion_notes, linked_document_id,
+access_token (UUID UNIQUE NOT NULL DEFAULT gen_random_uuid()),
+created_at, updated_at
+```
+
+CHECK constraints:
+- `visit_type` ∈ `maintenance`, `inspection`, `gas_safety`, `eicr`, `epc`, `inventory`, `other`
+- `status` ∈ `draft`, `notice_sent`, `confirmed`, `completed`, `cancelled`
+- `tenant_response` ∈ `none`, `accepted`, `requested_reschedule` (nullable)
+
+Indexes: `idx_property_visits_user_status (user_id, status)`, `idx_property_visits_property_date (property_id, scheduled_date)`.
+
+`updated_at` maintained by trigger `trg_property_visits_updated_at` calling `public.set_updated_at()`.
+
+RLS:
+- Landlord owns: `auth.uid() = user_id`
+- Active tenants on the property: SELECT-only via subquery on `tenants` table
+
+`access_token` is the only auth for the public `visit-response` flow. Per-row scope, idempotent. Same pattern as `viewing_requests.access_token`.
+
+### Database (`visit_maintenance_links` table) — new 2026-04-26
+
+Junction for many-to-many visit ↔ maintenance request:
+
+```
+visit_id uuid REFERENCES property_visits(id) ON DELETE CASCADE,
+maintenance_id uuid REFERENCES maintenance_requests(id) ON DELETE CASCADE,
+PRIMARY KEY (visit_id, maintenance_id)
+```
+
+RLS: row visible/manageable iff caller owns the visit. Used by Create-visit form to attach in-flight maintenance requests; iOS also back-fills `maintenance_requests.linked_visit_id` for fast lookup from the maintenance side.
 
 ### Database (`viewing_requests` table)
 
@@ -409,7 +475,7 @@ Status flow: `pending → proposed → (viewer-accepts) → confirmed → comple
 
 ## Current priorities (as of 2026-04-26)
 
-1. **Maintenance overhaul + Property visits** — spec complete, Claude Code prompt ready (`[maintenance-and-visits-prompt.md](http://maintenance-and-visits-prompt.md)`). Part A: maintenance triage/status/notification. Part B: property visits system.
+1. **End-to-end smoke-test the maintenance overhaul + visits build** — tenant raises a request → landlord acknowledges with trade + ack notes → tenant receives `maintenance-notify` email → landlord schedules a visit linked to the request → tenant receives `visit-notify` email → tenant accepts via `/visit-response/` → landlord marks visit completed (+ linked maintenance) → tenant receives completion email → tenant confirms in portal. Key checks: `tenant_id` populated on every new request, RLS lets active tenants see their property's visits, 24h notice gate fires, junction `visit_maintenance_links` populated. The MCP migrations and EF deploys are already live.
 2. **Verify the website portals end-to-end** with a real landlord and tenant account: properties CRUD, listing publish from web, viewing-request confirm, tenancy generate+sign canvas signature, inventory send, document upload. Particularly check that all the RLS policies allow inserts via the user JWT (everything that works in iOS should work here, but worth confirming).
 3. **Add `https://easierlet.com/login/` to Supabase Auth → URL Configuration → Redirect URLs** so magic links sent by `/login/` actually land back on it (the legacy `/tenant/login/` and `/landlord/login/` redirect stubs already preserve the auth fragment, but the canonical URL should be in the allow-list).
 4. TEST `invite-tenant` `getUser(jwt)` fix end-to-end — deployed 2026-04-22 but unverified
@@ -420,6 +486,7 @@ Status flow: `pending → proposed → (viewer-accepts) → confirmed → comple
 9. Delete `AddTenantChooserView.swift` from Xcode project
 10. Re-verify Stonebridge Drive + remaining 10 properties via postcode picker (populate structured fields + coords)
 11. Delete `/apply/` (old form) after E2E test of `/apply-v2/` passes
+12. Wire **Group-by-trade list header → Checkatrade postcode deep-link** for the contractor batching flow.
 
 ---
 
@@ -437,6 +504,50 @@ Status flow: `pending → proposed → (viewer-accepts) → confirmed → comple
 ---
 
 ## Session history (newest first)
+
+### 2026-04-26 — Maintenance overhaul + Property visits shipped (Claude Code build)
+
+End-to-end build of roadmap item 6. Both the iOS app (`bluetezza/easierlet-swift`) and the web (`bluetezza/easierlet-web`) now share the new flow. Production migrations applied direct to project `ffzknvcptqjlkxmkdxuk`; three Edge Functions deployed.
+
+**Database (live)**
+
+- `maintenance_requests`: added `trade_type`, `rejection_reason`, `rejection_notes`, `rejected_at`, `scheduled_date`, `contractor_name`, `contractor_phone`, `completed_at`, `linked_visit_id`. Replaced `status` CHECK with the 8-state flow. Added `trade_type` and `rejection_reason` CHECKs. Default status flipped to `'new'`. Added `idx_maintenance_requests_user_status`.
+- New `property_visits` table — see "Database (`property_visits` table)" above for full schema. RLS: landlord owns; active tenants on the property get SELECT.
+- New `visit_maintenance_links` junction.
+- `maintenance_requests.linked_visit_id` → FK to `property_visits.id` once that table existed.
+- `set_updated_at()` trigger function (re-installable via `CREATE OR REPLACE`) wired to `property_visits`.
+
+**Edge Functions (live)**
+
+- `maintenance-notify` — Resend wrapper. `new_request` emails landlord; `status_changed` emails tenant per status (acknowledged / rejected / awaiting_info / scheduled / completed). Branded shell matching `viewing-response`.
+- `visit-notify` — `send_notice` (24h gate, returns `notice_too_short` if violated; emails active tenants with tokenised confirm link; sets visit→`notice_sent`), `send_update`, `send_cancellation`.
+- `visit-response` — token-auth public endpoint. GET returns visit/property/landlord snapshot; POST `accept` flips `tenant_response=accepted` + status→`confirmed` + emails landlord; POST `request_reschedule` saves note + emails landlord.
+
+All three: `deno.json` present, esbuild-clean, deployed via `supabase functions deploy …` from `~/Documents/EasierLet/`. `visit-response` deployed with `--no-verify-jwt` (token-auth).
+
+**iOS — bluetezza/easierlet-swift**
+
+- `MaintenanceRequest` struct expanded with all new columns + computed `statusLabel`/`statusColor`/`tradeLabel`/`rejectionReasonLabel`/`isOpen`.
+- `TenantsViewModel`: replaced `updateMaintenanceStatus` with a flexible `updateMaintenanceRequest(_:updates:notifyAction:notifyStatus:notifyNotes:)` that hooks into `MaintenanceNotifier`; legacy method kept as a wrapper. Added `loadTransactions(for:)` and `tenantById(_:)`.
+- `MaintenanceDetailView` rebuilt — header card, triage section (Acknowledge / Reject / Request more info each with inline forms), progress section (status chip row, contractor + dates + resolution notes + transaction picker + Schedule visit button), rejection card with Reopen, vertical timeline.
+- `MaintenanceView` (PlaceholderViews): filter chips All / Open / Completed / Rejected, group-by-trade toggle, emergency-first sort, trade pills on rows.
+- Tenant portal maintenance card (`TenantMaintenanceCard`) handles awaiting-info reply (appends timestamped note + flips status back to `new`), shows rejection reason, lets tenant confirm completed → closed.
+- `DashboardView`: open/maintenance counts updated for new statuses; activity feed reflects per-status colour + label; `PropertySummaryData` carries a `nextVisit` field; PropertySummarySheet shows next visit; cert renewal action items prompt scheduling when gas/EICR/EPC expire ≤60d with no matching visit booked; "X visits in next 2 weeks" surfaced in actions list.
+- New files: `MaintenanceNotifier.swift`, `VisitNotifier.swift`, `PropertyVisit.swift` (model + `PropertyVisitsViewModel`), `PropertyVisitsView.swift` (list + Create + Detail).
+- More tab gains a "Visits" section linking to `PropertyVisitsView`. `MaintenanceDetailView` exposes "Schedule visit" pre-linked to the request.
+- Tenant portal Home tab gains `TenantVisitsSection` — upcoming + collapsible past list, inline Confirm / Reschedule buttons that hit `visit-response` directly via the per-row token (no auth needed).
+
+**Web — bluetezza/easierlet-web**
+
+- `/landlord/maintenance/` rewritten — open / completed / rejected / all tabs, group-by-trade toggle, full triage modal mirroring iOS (acknowledge / reject / request-info forms), progression chip row, contractor + dates + resolution editor, reopen, timeline, status badge palette.
+- New `/visit-response/` — branded teal page mirroring `/viewing-response/`. Reads visit by token, shows date / type / who / address, Accept or Request Reschedule (with optional note). Handles cancelled / already-responded states.
+- All web maintenance writes call `maintenance-notify` via `ELP.callFn` after the PATCH so emails fire from the web too.
+
+**Conventions reinforced**
+
+- Direct Swift → Supabase REST update for the `maintenance_requests` row, then `MaintenanceNotifier.shared.notify(...)` for the email. Justifies keeping the EF separate from a status-only mutation EF — avoids duplicating the column-set logic on both sides.
+- Edge Function emails always from `no.reply@easierlet.com` via Resend, branded shell duplicated rather than shared (each EF stays self-contained).
+- `[String: String?]` updates dictionary handles nullable field clears (e.g. on Reopen).
 
 ### 2026-04-26 — easierLet website live: homepage, search, full landlord portal, unified login
 
