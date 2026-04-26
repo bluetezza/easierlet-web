@@ -223,7 +223,91 @@
         <p class="elp-page-sub">A snapshot of your portfolio activity.</p>
       </div>
 
-      <div class="elp-stats">
+      <!-- Account balance -->
+      <div class="dash-balance-card">
+        <div>
+          <div class="dash-balance-label">Account balance</div>
+          <div class="dash-balance-value" id="dashBalance">—</div>
+        </div>
+        <div class="dash-balance-split">
+          <div>
+            <div class="dash-balance-sub-label">Income (all time)</div>
+            <div class="dash-balance-sub-value income" id="dashIncome">—</div>
+          </div>
+          <div>
+            <div class="dash-balance-sub-label">Expenses (all time)</div>
+            <div class="dash-balance-sub-value expense" id="dashExpenses">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary strip (action-oriented) -->
+      <div class="dash-summary-strip">
+        <a href="/landlord/?tab=documents" class="dash-summary-cell" id="dashCertsCell">
+          <div class="dash-summary-icon" style="color:#D97A3F">📄</div>
+          <div class="dash-summary-value" id="dashCertsValue">—</div>
+          <div class="dash-summary-label">Expiring certs</div>
+          <div class="dash-summary-sub" id="dashCertsSub">in next 60d</div>
+        </a>
+        <a href="#" class="dash-summary-cell" id="dashActionsCell">
+          <div class="dash-summary-icon" style="color:#D97A3F">🔔</div>
+          <div class="dash-summary-value" id="dashActionsValue">—</div>
+          <div class="dash-summary-label">Actions needed</div>
+          <div class="dash-summary-sub" id="dashActionsSub">tap to view</div>
+        </a>
+        <a href="/landlord/maintenance/" class="dash-summary-cell">
+          <div class="dash-summary-icon" style="color:#D97A3F">🛠</div>
+          <div class="dash-summary-value" id="dashMaintValue">—</div>
+          <div class="dash-summary-label">Open maintenance</div>
+          <div class="dash-summary-sub" id="dashMaintSub">requests</div>
+        </a>
+        <a href="#" class="dash-summary-cell" id="dashVisitsCell">
+          <div class="dash-summary-icon" style="color:#1A6B55">📅</div>
+          <div class="dash-summary-value" id="dashVisitsValue">—</div>
+          <div class="dash-summary-label">Upcoming visits</div>
+          <div class="dash-summary-sub" id="dashVisitsSub">next 14d</div>
+        </a>
+      </div>
+
+      <!-- Action items list (revealed on tap) -->
+      <div class="elp-card" id="dashActionsList" style="display:none">
+        <div class="elp-card-head">
+          <div>
+            <div class="elp-card-title">Actions needed</div>
+            <div class="elp-card-sub">Outstanding items across your portfolio</div>
+          </div>
+        </div>
+        <div id="dashActionsBody" class="elp-list"></div>
+      </div>
+
+      <!-- Per-property cards -->
+      <div class="elp-card">
+        <div class="elp-card-head">
+          <div>
+            <div class="elp-card-title">Properties</div>
+            <div class="elp-card-sub">Per-property snapshot — tenants, certs, maintenance, next visit</div>
+          </div>
+        </div>
+        <div id="dashPropertyGrid" class="dash-property-grid">
+          <div class="elp-loading"><div class="elp-spinner"></div>Loading…</div>
+        </div>
+      </div>
+
+      <!-- Recent activity feed -->
+      <div class="elp-card">
+        <div class="elp-card-head">
+          <div>
+            <div class="elp-card-title">Recent activity</div>
+            <div class="elp-card-sub">Newest first — last 30 days</div>
+          </div>
+        </div>
+        <div id="dashActivityFeed" class="dash-activity-feed">
+          <div class="elp-loading"><div class="elp-spinner"></div>Loading…</div>
+        </div>
+      </div>
+
+      <!-- Portfolio overview (the old stats — kept lower as supplementary) -->
+      <div class="elp-stats" style="margin-top:24px">
         <div class="elp-stat">
           <div class="elp-stat-label">Live listings</div>
           <div class="elp-stat-value" id="statLive">—</div>
@@ -243,18 +327,6 @@
           <div class="elp-stat-label">Active tenancies</div>
           <div class="elp-stat-value" id="statTenancies">—</div>
           <div class="elp-stat-sub">In progress</div>
-        </div>
-      </div>
-
-      <div class="elp-card">
-        <div class="elp-card-head">
-          <div>
-            <div class="elp-card-title">Quick actions</div>
-            <div class="elp-card-sub">What needs your attention now</div>
-          </div>
-        </div>
-        <div id="quickActions" class="elp-list">
-          <div class="elp-loading"><div class="elp-spinner"></div>Loading…</div>
         </div>
       </div>
     </section>
@@ -695,75 +767,349 @@
     const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "there";
     $("welcome").textContent = `Welcome back, ${ELP.esc(name)}`;
 
-    const [listings, viewings, tenancies] = await Promise.all([
+    // Fire all the queries in parallel — same data scope as the iOS DashboardViewModel.
+    const [
+      listings, viewings, properties, tenants, docs,
+      maintenance, transactions, refs, inventories, agreements, visits,
+    ] = await Promise.all([
       ELP.rest(`property_listings?user_id=eq.${user.id}&select=id,status,lead_count,viewing_count`).catch(() => []),
       ELP.rest(`viewing_requests?user_id=eq.${user.id}&status=eq.pending&select=id`).catch(() => []),
-      ELP.rest(`tenancy_agreements?landlord_id=eq.${user.id}&status=eq.active&select=id`).catch(async () => {
-        // landlord_id may not exist; fall back via property ownership
-        const props = await ELP.rest(`properties?user_id=eq.${user.id}&select=id`).catch(() => []);
-        if (!props.length) return [];
-        const ids = props.map((p) => `"${p.id}"`).join(",");
-        return ELP.rest(`tenancy_agreements?property_id=in.(${ids})&status=eq.active&select=id`).catch(() => []);
-      }),
+      ELP.rest(`properties?user_id=eq.${user.id}&archived=eq.false&select=id,address,address_line1,city,postcode&order=created_at.desc`).catch(() => []),
+      ELP.rest(`tenants?user_id=eq.${user.id}&status=neq.archived&select=id,name,full_name,property_id,status,role,created_at`).catch(() => []),
+      ELP.rest(`documents?user_id=eq.${user.id}&select=id,name,category,property_id,expiry_date`).catch(() => []),
+      ELP.rest(`maintenance_requests?user_id=eq.${user.id}&select=id,title,priority,status,property_id,trade_type,created_at&order=created_at.desc&limit=30`).catch(() => []),
+      ELP.rest(`transactions?user_id=eq.${user.id}&select=id,amount,description,type,property_id,created_at&order=created_at.desc&limit=20`).catch(() => []),
+      ELP.rest(`tenant_references?user_id=eq.${user.id}&select=id,tenant_id,status,submitted_at,created_at&order=created_at.desc&limit=20`).catch(() => []),
+      ELP.rest(`inventory_reports?user_id=eq.${user.id}&select=id,status,tenant_name,property_id,sent_at,completed_at,created_at&order=created_at.desc&limit=20`).catch(() => []),
+      ELP.rest(`tenancy_agreements?user_id=eq.${user.id}&select=id,status,start_date,dps_ref,property_id&limit=20`).catch(() => []),
+      ELP.rest(`property_visits?user_id=eq.${user.id}&select=id,property_id,visit_type,title,scheduled_date,status,tenant_response&order=scheduled_date.asc&limit=50`).catch(() => []),
     ]);
 
-    const live = listings.filter((l) => l.status === "live").length;
-    const leads = listings.reduce((s, l) => s + (l.lead_count || 0), 0);
-    $("statLive").textContent = live;
-    $("statLeads").textContent = leads;
-    $("statViewings").textContent = viewings.length;
-    $("statTenancies").textContent = tenancies.length;
+    // ── Account balance ─────────────────────────────────────────────
+    const totalIncome = transactions.filter((t) => t.type === "income").reduce((s, t) => s + (t.amount || 0), 0);
+    const totalExpenses = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + (t.amount || 0), 0);
+    const balance = totalIncome - totalExpenses;
+    const fmt = (n) => `£${Math.round(n).toLocaleString("en-GB")}`;
+    $("dashBalance").textContent = fmt(balance);
+    $("dashIncome").textContent = fmt(totalIncome);
+    $("dashExpenses").textContent = fmt(totalExpenses);
 
-    // Quick actions: pending viewings, applications awaiting review
-    const apps = await ELP.rest(
-      `tenants?status=eq.awaiting_review&user_id=eq.${user.id}&select=id,name,property_id,created_at&order=created_at.desc&limit=5`
-    ).catch(() => []);
+    // ── Summary strip ───────────────────────────────────────────────
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const daysUntil = (s) => {
+      if (!s) return null;
+      const d = new Date(s.length <= 10 ? s + "T00:00:00" : s);
+      return Math.round((d - today) / (1000 * 60 * 60 * 24));
+    };
 
-    const items = [];
-    viewings.slice(0, 4).forEach(() => {});
-    if (viewings.length) {
-      items.push({
-        title: `${viewings.length} viewing request${viewings.length === 1 ? "" : "s"} awaiting your response`,
-        sub: "Review and confirm a time, or propose another.",
-        href: "/landlord/?tab=viewings",
-      });
-    }
-    if (apps.length) {
-      items.push({
-        title: `${apps.length} application${apps.length === 1 ? "" : "s"} to review`,
-        sub: "Pre-applications are sitting in Awaiting review.",
+    const certCount = docs.filter((d) => {
+      const days = daysUntil(d.expiry_date);
+      return days !== null && days <= 60;
+    }).length;
+    const OPEN_M = ["new", "open", "acknowledged", "awaiting_info", "scheduled", "in_progress"];
+    const openMaint = maintenance.filter((m) => OPEN_M.includes(m.status)).length;
+    const upcomingVisits = visits.filter((v) => {
+      if (v.status === "cancelled" || v.status === "completed") return false;
+      const days = daysUntil(v.scheduled_date);
+      return days !== null && days >= 0 && days <= 14;
+    }).length;
+
+    setSummary("dashCertsValue", "dashCertsSub", certCount, "in next 60d", "all current");
+    setSummary("dashMaintValue",  "dashMaintSub",  openMaint,  "open requests", "none open");
+    setSummary("dashVisitsValue", "dashVisitsSub", upcomingVisits, "next 14d", "none upcoming");
+
+    // ── Action items ────────────────────────────────────────────────
+    const actions = [];
+    const awaitingRefs = tenants.filter((t) => t.status === "awaiting_review");
+    if (awaitingRefs.length) {
+      actions.push({
+        text: `${awaitingRefs.length} reference${awaitingRefs.length === 1 ? "" : "s"} to review`,
         href: "/landlord/?tab=tenants",
       });
     }
-    if (live === 0) {
-      items.push({
-        title: "No live listings yet",
-        sub: "Publish your first listing to start attracting applicants.",
-        href: "/landlord/?tab=listings",
+    const awaitingInv = inventories.filter((i) => i.status === "completed");
+    if (awaitingInv.length) {
+      actions.push({
+        text: `${awaitingInv.length} inventor${awaitingInv.length === 1 ? "y" : "ies"} to sign`,
+        href: "/landlord/inventory/",
       });
     }
-    if (!items.length) {
-      $("quickActions").innerHTML = `
-        <div class="elp-empty">
-          <h3>You're all caught up</h3>
-          <p>No outstanding actions right now.</p>
-        </div>`;
-      return;
+    const dpsOverdue = agreements.filter((a) => {
+      if (a.status !== "finalised") return false;
+      const ref = (a.dps_ref || "").toLowerCase();
+      const missing = !ref || ref.includes("to be provided") || ref.includes("to be confirmed");
+      if (!missing || !a.start_date) return false;
+      const days = -1 * daysUntil(a.start_date);
+      return days >= 30;
+    });
+    if (dpsOverdue.length) {
+      actions.push({
+        text: `${dpsOverdue.length} deposit${dpsOverdue.length === 1 ? "" : "s"} not yet protected — overdue`,
+        href: "/landlord/?tab=tenancies",
+      });
     }
-    $("quickActions").innerHTML = items
-      .map(
-        (it) => `
-        <a href="${ELP.esc(it.href)}" class="elp-list-item">
+    if (upcomingVisits) {
+      actions.push({
+        text: `${upcomingVisits} visit${upcomingVisits === 1 ? "" : "s"} in the next 2 weeks`,
+        href: "#",
+      });
+    }
+    // Cert renewal prompts
+    const certCategories = [
+      { kw: "gas",        type: "gas_safety", label: "Gas safety" },
+      { kw: "eicr",       type: "eicr",       label: "EICR" },
+      { kw: "electrical", type: "eicr",       label: "EICR" },
+      { kw: "epc",        type: "epc",        label: "EPC" },
+    ];
+    for (const prop of properties) {
+      const propDocs = docs.filter((d) => d.property_id === prop.id);
+      for (const doc of propDocs) {
+        const days = daysUntil(doc.expiry_date);
+        if (days === null || days > 60) continue;
+        const lc = ((doc.category || "") + " " + (doc.name || "")).toLowerCase();
+        const match = certCategories.find((c) => lc.includes(c.kw));
+        if (!match) continue;
+        const alreadyScheduled = visits.some((v) =>
+          v.property_id === prop.id && v.visit_type === match.type
+          && v.status !== "cancelled" && v.status !== "completed"
+          && (daysUntil(v.scheduled_date) ?? -1) >= 0
+        );
+        if (!alreadyScheduled) {
+          const addr = [prop.address_line1, prop.city].filter(Boolean).join(", ") || prop.address;
+          actions.push({
+            text: `Schedule ${match.label} renewal — ${addr} (expires in ${days}d)`,
+            href: "/landlord/maintenance/",
+          });
+        }
+      }
+    }
+    setSummary("dashActionsValue", "dashActionsSub", actions.length, "tap to view", "all clear");
+
+    $("dashActionsCell").addEventListener("click", (e) => {
+      e.preventDefault();
+      const list = $("dashActionsList");
+      list.style.display = list.style.display === "none" ? "" : "none";
+    });
+    if (actions.length) {
+      $("dashActionsBody").innerHTML = actions.map((a) => `
+        <a href="${ELP.esc(a.href)}" class="elp-list-item">
           <div class="elp-list-item-main">
-            <div class="elp-list-item-title">${ELP.esc(it.title)}</div>
-            <div class="elp-list-item-sub">${ELP.esc(it.sub)}</div>
+            <div class="elp-list-item-title">${ELP.esc(a.text)}</div>
           </div>
           <div class="elp-list-item-end">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--el-muted)"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
-        </a>`
-      )
-      .join("");
+        </a>`).join("");
+    } else {
+      $("dashActionsBody").innerHTML = `<div class="elp-empty"><h3>You're all caught up</h3><p>No outstanding actions right now.</p></div>`;
+    }
+
+    // ── Property cards ──────────────────────────────────────────────
+    if (!properties.length) {
+      $("dashPropertyGrid").innerHTML = `<div class="elp-empty"><h3>No properties yet</h3><p>Add your first property in the Properties tab.</p></div>`;
+    } else {
+      $("dashPropertyGrid").innerHTML = properties.map((prop) => {
+        const propTenants = tenants.filter((t) => t.property_id === prop.id);
+        const lead = propTenants.find((t) => t.status === "active" && t.role === "lead")
+                  || propTenants.find((t) => t.role === "lead")
+                  || propTenants.find((t) => t.status === "active")
+                  || propTenants[0];
+        const tenantName = lead ? (lead.name || lead.full_name || "Tenant") : "No active tenant";
+        const tenantStatus = lead ? humanise(lead.status) : "";
+
+        const propDocs = docs.filter((d) => d.property_id === prop.id);
+        let docLine = "";
+        const expiringSoonest = propDocs
+          .map((d) => ({ doc: d, days: daysUntil(d.expiry_date) }))
+          .filter((x) => x.days !== null && x.days <= 60)
+          .sort((a, b) => a.days - b.days)[0];
+        if (expiringSoonest) {
+          const cls = expiringSoonest.days <= 14 ? "urgent" : "warn";
+          const text = expiringSoonest.days < 0
+            ? `${expiringSoonest.doc.name} expired`
+            : `${expiringSoonest.doc.name} in ${expiringSoonest.days}d`;
+          docLine = `<div class="pc-line ${cls}">⚠️ ${ELP.esc(text)}</div>`;
+        }
+
+        const openCount = maintenance.filter((m) => m.property_id === prop.id && OPEN_M.includes(m.status)).length;
+        const maintLine = openCount
+          ? `<div class="pc-line warn">🛠 ${openCount} open maintenance</div>` : "";
+
+        const nextVisit = visits.find((v) =>
+          v.property_id === prop.id && v.status !== "cancelled" && v.status !== "completed"
+          && (daysUntil(v.scheduled_date) ?? -1) >= -1
+        );
+        let visitLine = "";
+        if (nextVisit) {
+          const days = daysUntil(nextVisit.scheduled_date);
+          const when = days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days}d`;
+          const typeLabel = ({
+            maintenance: "Maintenance", inspection: "Inspection",
+            gas_safety: "Gas safety", eicr: "EICR", epc: "EPC",
+            inventory: "Inventory", other: "Visit",
+          })[nextVisit.visit_type] || "Visit";
+          visitLine = `<div class="pc-line teal">📅 ${ELP.esc(typeLabel)} visit ${ELP.esc(when)}</div>`;
+        }
+
+        const addr = [prop.address_line1, prop.city, prop.postcode].filter(Boolean).join(", ") || prop.address;
+        return `
+          <a class="dash-property-card" href="/landlord/properties/">
+            <div class="pc-addr">🏠 ${ELP.esc(addr)}</div>
+            <div class="pc-line">👤 ${ELP.esc(tenantName)} ${tenantStatus ? `<span class="pc-tenant-pill">${ELP.esc(tenantStatus)}</span>` : ""}</div>
+            ${docLine}
+            ${maintLine}
+            ${visitLine}
+          </a>`;
+      }).join("");
+    }
+
+    // ── Activity feed ───────────────────────────────────────────────
+    const feed = [];
+    const propAddr = (id) => {
+      const p = properties.find((x) => x.id === id);
+      if (!p) return "Property";
+      return [p.address_line1, p.city].filter(Boolean).join(", ") || p.address;
+    };
+    const tenantById = Object.fromEntries(tenants.map((t) => [t.id, t]));
+    for (const t of transactions) {
+      const date = t.created_at ? new Date(t.created_at) : null;
+      if (!date) continue;
+      const isIncome = t.type === "income" || (t.amount || 0) > 0;
+      feed.push({
+        date,
+        icon: isIncome ? "↓" : "↑",
+        bg: isIncome ? "var(--el-green-pale)" : "#FFE8DC",
+        color: isIncome ? "var(--el-green)" : "var(--el-danger)",
+        title: `${t.description || "Transaction"} — £${Math.round(Math.abs(t.amount || 0))}`,
+        sub: propAddr(t.property_id),
+      });
+    }
+    for (const r of refs) {
+      const date = r.submitted_at || r.created_at;
+      if (!date) continue;
+      const t = tenantById[r.tenant_id];
+      const tn = t ? (t.name || t.full_name) : "Tenant";
+      const verb = r.status === "approved" ? "reference approved"
+                 : r.status === "rejected" ? "reference rejected"
+                 : r.status === "submitted" ? "submitted reference form"
+                 : "reference form sent";
+      feed.push({
+        date: new Date(date), icon: r.status === "approved" ? "✓" : "📄",
+        bg: "var(--el-green-pale)", color: "var(--el-green)",
+        title: `${tn} — ${verb}`, sub: propAddr(t?.property_id),
+      });
+    }
+    for (const inv of inventories) {
+      const tn = inv.tenant_name || "Tenant";
+      const addr = propAddr(inv.property_id);
+      if (inv.status === "sent" && inv.sent_at) {
+        feed.push({ date: new Date(inv.sent_at), icon: "📋", bg: "#FFF4D6", color: "#8A6000",
+          title: `Inventory sent to ${tn}`, sub: addr });
+      }
+      if (inv.status === "completed" && inv.completed_at) {
+        feed.push({ date: new Date(inv.completed_at), icon: "✏️", bg: "#DCEAFD", color: "#1F4D8E",
+          title: `Inventory completed by ${tn} — sign to finalise`, sub: addr });
+      }
+      if (inv.status === "locked" && inv.completed_at) {
+        feed.push({ date: new Date(inv.completed_at), icon: "🔒", bg: "var(--el-green-pale)", color: "var(--el-green)",
+          title: `Inventory finalised — ${tn}`, sub: addr });
+      }
+    }
+    for (const m of maintenance) {
+      if (!m.created_at) continue;
+      const labels = { new: "New", open: "New", acknowledged: "Acknowledged",
+        awaiting_info: "Awaiting info", scheduled: "Scheduled",
+        in_progress: "In progress", completed: "Completed",
+        closed: "Closed", rejected: "Rejected" };
+      const colors = {
+        rejected: { bg: "#FBE0E0", color: "#B23434" },
+        completed: { bg: "var(--el-green-pale)", color: "var(--el-green)" },
+        closed:    { bg: "var(--el-green-pale)", color: "var(--el-green)" },
+        awaiting_info: { bg: "#EFE0FB", color: "#5A2E9C" },
+      };
+      const c = colors[m.status] || (m.priority === "emergency" ? { bg: "#FBE0E0", color: "#B23434" }
+                                  : m.priority === "high" ? { bg: "#FFE8DC", color: "#D97A3F" }
+                                  : { bg: "#DCEAFD", color: "#1F4D8E" });
+      feed.push({
+        date: new Date(m.created_at), icon: "🛠",
+        bg: c.bg, color: c.color,
+        title: `Maintenance (${labels[m.status] || m.status}): ${m.title}`,
+        sub: propAddr(m.property_id),
+      });
+    }
+    for (const v of visits) {
+      const days = daysUntil(v.scheduled_date);
+      if (days === null || days < 0 || days > 14 || v.status === "cancelled") continue;
+      const typeLabel = ({
+        maintenance: "Maintenance", inspection: "Inspection",
+        gas_safety: "Gas safety", eicr: "EICR", epc: "EPC",
+        inventory: "Inventory", other: "Visit",
+      })[v.visit_type] || "Visit";
+      const respHint = v.tenant_response === "accepted" ? " · tenant confirmed"
+                     : v.tenant_response === "requested_reschedule" ? " · reschedule requested" : "";
+      feed.push({
+        date: new Date(v.scheduled_date + "T00:00:00"), icon: "📅",
+        bg: "var(--el-green-pale)", color: "var(--el-green)",
+        title: `${typeLabel} visit: ${v.title}${respHint}`,
+        sub: propAddr(v.property_id),
+      });
+    }
+    for (const doc of docs) {
+      const days = daysUntil(doc.expiry_date);
+      if (days === null || days > 60) continue;
+      feed.push({
+        date: new Date(doc.expiry_date + "T00:00:00"), icon: "⚠️",
+        bg: days <= 14 ? "#FBE0E0" : "#FFE8DC",
+        color: days <= 14 ? "var(--el-danger)" : "#D97A3F",
+        title: days < 0 ? `${doc.name} expired` : `${doc.name} expires in ${days}d`,
+        sub: propAddr(doc.property_id),
+      });
+    }
+
+    feed.sort((a, b) => b.date - a.date);
+    const top = feed.slice(0, 20);
+    $("dashActivityFeed").innerHTML = top.length
+      ? top.map((it) => `
+        <div class="dash-activity-row">
+          <div class="dash-activity-icon" style="background:${it.bg};color:${it.color}">${it.icon}</div>
+          <div class="dash-activity-main">
+            <div class="dash-activity-title">${ELP.esc(it.title)}</div>
+            <div class="dash-activity-sub">${ELP.esc(it.sub)}</div>
+          </div>
+          <div class="dash-activity-time">${relativeTime(it.date)}</div>
+        </div>`).join("")
+      : `<div class="elp-empty"><h3>Quiet here</h3><p>No recent activity to show.</p></div>`;
+
+    // ── Portfolio overview (existing 4 stats) ───────────────────────
+    const live = listings.filter((l) => l.status === "live").length;
+    const leads = listings.reduce((s, l) => s + (l.lead_count || 0), 0);
+    const activeTen = tenants.filter((t) => t.status === "active").length;
+    $("statLive").textContent = live;
+    $("statLeads").textContent = leads;
+    $("statViewings").textContent = viewings.length;
+    $("statTenancies").textContent = activeTen;
+  }
+
+  function setSummary(valueId, subId, value, subText, zeroText) {
+    const el = $(valueId);
+    el.textContent = value;
+    el.classList.toggle("zero", value === 0);
+    $(subId).textContent = value === 0 ? zeroText : subText;
+  }
+
+  function humanise(s) {
+    if (!s) return "";
+    return String(s).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  function relativeTime(d) {
+    const diff = (Date.now() - d.getTime()) / 1000;
+    if (diff < 60) return "Just now";
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    if (diff < 172800) return "Yesterday";
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   }
 
   // ---- Listings ---------------------------------------------------------
