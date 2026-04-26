@@ -135,12 +135,17 @@ const NAV = {
   ],
   landlord: [
     { href: "/landlord/",                  id: "home",         label: "Dashboard",       icon: "home" },
+    { href: "/landlord/properties/",       id: "properties",   label: "Properties",      icon: "building" },
     { href: "/landlord/?tab=listings",     id: "listings",     label: "Listings",        icon: "house" },
     { href: "/landlord/?tab=viewings",     id: "viewings",     label: "Viewing requests",icon: "eye" },
     { href: "/landlord/?tab=tenants",      id: "tenants",      label: "Tenants",         icon: "users" },
     { href: "/landlord/?tab=tenancies",    id: "tenancies",    label: "Tenancies",       icon: "key" },
+    { href: "/landlord/inventory/",        id: "inventory",    label: "Inventories",     icon: "checklist" },
+    { href: "/landlord/maintenance/",      id: "maintenance",  label: "Maintenance",     icon: "wrench" },
     { href: "/landlord/?tab=transactions", id: "transactions", label: "Transactions",    icon: "coins" },
     { href: "/landlord/?tab=documents",    id: "documents",    label: "Documents",       icon: "doc" },
+    { href: "/landlord/loan/",             id: "loan",         label: "Director's loan", icon: "coins" },
+    { href: "/landlord/useful-links/",     id: "useful-links", label: "Useful links",    icon: "link" },
   ],
 };
 
@@ -153,6 +158,10 @@ const ICONS = {
   doc:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>',
   users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>',
   coins: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1115.63 22"/><path d="M7 6h2a2 2 0 010 4H7v4"/><path d="M9 12h-2"/></svg>',
+  building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1"/><line x1="9" y1="7" x2="9" y2="7"/><line x1="15" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="9" y2="11"/><line x1="15" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="9" y2="15"/><line x1="15" y1="15" x2="15" y2="15"/><path d="M10 21V18a2 2 0 014 0v3"/></svg>',
+  checklist: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>',
+  wrench: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 005.4 5.4l-9.6 9.6a2 2 0 01-2.8-2.8l9.6-9.6a4 4 0 00-2.6-2.6"/></svg>',
+  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7"/></svg>',
 };
 
 function mountShell({ user } = {}) {

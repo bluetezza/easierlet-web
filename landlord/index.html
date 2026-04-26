@@ -284,9 +284,12 @@
 
     <!-- Viewings -->
     <section data-tab-panel="viewings" style="display:none">
-      <div class="elp-page-head">
-        <h1 class="elp-page-title">Viewing requests</h1>
-        <p class="elp-page-sub">Confirm, propose new times or decline viewing requests from prospects.</p>
+      <div class="elp-page-head" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+        <div>
+          <h1 class="elp-page-title">Viewing requests</h1>
+          <p class="elp-page-sub">Confirm, propose new times or decline viewing requests from prospects.</p>
+        </div>
+        <button class="el-btn el-btn-secondary" id="addViewingBtn">+ Add viewing</button>
       </div>
       <div id="viewingsList" class="elp-list">
         <div class="elp-loading"><div class="elp-spinner"></div>Loading viewing requests…</div>
@@ -295,9 +298,12 @@
 
     <!-- Tenants -->
     <section data-tab-panel="tenants" style="display:none">
-      <div class="elp-page-head">
-        <h1 class="elp-page-title">Tenants</h1>
-        <p class="elp-page-sub">Applicants and tenants linked to your properties.</p>
+      <div class="elp-page-head" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+        <div>
+          <h1 class="elp-page-title">Tenants</h1>
+          <p class="elp-page-sub">Applicants and tenants linked to your properties.</p>
+        </div>
+        <button class="el-btn el-btn-primary" id="inviteTenantBtn">+ Invite tenant</button>
       </div>
       <div id="tenantsList" class="elp-list">
         <div class="elp-loading"><div class="elp-spinner"></div>Loading tenants…</div>
@@ -306,9 +312,12 @@
 
     <!-- Tenancies -->
     <section data-tab-panel="tenancies" style="display:none">
-      <div class="elp-page-head">
-        <h1 class="elp-page-title">Tenancies</h1>
-        <p class="elp-page-sub">Tenancy agreements you've issued.</p>
+      <div class="elp-page-head" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+        <div>
+          <h1 class="elp-page-title">Tenancies</h1>
+          <p class="elp-page-sub">Tenancy agreements you've issued.</p>
+        </div>
+        <a href="/landlord/tenancy/" class="el-btn el-btn-primary">+ New tenancy</a>
       </div>
       <div id="tenanciesList" class="elp-list">
         <div class="elp-loading"><div class="elp-spinner"></div>Loading tenancies…</div>
@@ -317,9 +326,12 @@
 
     <!-- Transactions -->
     <section data-tab-panel="transactions" style="display:none">
-      <div class="elp-page-head">
-        <h1 class="elp-page-title">Transactions</h1>
-        <p class="elp-page-sub">Rent received, expenses and other movements logged against your properties.</p>
+      <div class="elp-page-head" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+        <div>
+          <h1 class="elp-page-title">Transactions</h1>
+          <p class="elp-page-sub">Rent received, expenses and other movements logged against your properties.</p>
+        </div>
+        <button class="el-btn el-btn-primary" id="addTxBtn">+ Add transaction</button>
       </div>
       <div id="transactionsList" class="elp-list">
         <div class="elp-loading"><div class="elp-spinner"></div>Loading transactions…</div>
@@ -328,9 +340,12 @@
 
     <!-- Documents -->
     <section data-tab-panel="documents" style="display:none">
-      <div class="elp-page-head">
-        <h1 class="elp-page-title">Documents</h1>
-        <p class="elp-page-sub">Tenancy agreements, EPCs, gas safety certificates and other paperwork.</p>
+      <div class="elp-page-head" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+        <div>
+          <h1 class="elp-page-title">Documents</h1>
+          <p class="elp-page-sub">Tenancy agreements, EPCs, gas safety certificates and other paperwork.</p>
+        </div>
+        <button class="el-btn el-btn-primary" id="uploadDocBtn">+ Upload document</button>
       </div>
       <div id="documentsList" class="elp-list">
         <div class="elp-loading"><div class="elp-spinner"></div>Loading documents…</div>
@@ -372,6 +387,195 @@
 
   </div>
 </main>
+
+<!-- Add transaction modal -->
+<div class="modal-backdrop" id="txModal">
+  <div class="modal">
+    <h2 id="txTitle">Add transaction</h2>
+    <p class="modal-sub">Log income or an expense against a property.</p>
+    <form id="txForm">
+      <div class="el-field-row">
+        <div class="el-field">
+          <label class="el-label">Type</label>
+          <select class="el-select" id="txType" required>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+        </div>
+        <div class="el-field">
+          <label class="el-label">Date</label>
+          <input class="el-input" id="txDate" type="date" required>
+        </div>
+      </div>
+      <div class="el-field">
+        <label class="el-label">Property</label>
+        <select class="el-select" id="txProperty"></select>
+      </div>
+      <div class="el-field-row">
+        <div class="el-field">
+          <label class="el-label">Category</label>
+          <select class="el-select" id="txCategory" required></select>
+        </div>
+        <div class="el-field">
+          <label class="el-label">Amount (£)</label>
+          <input class="el-input" id="txAmount" type="number" min="0.01" step="0.01" required>
+        </div>
+      </div>
+      <div class="el-field">
+        <label class="el-label">Note (optional)</label>
+        <textarea class="el-textarea" id="txNote" rows="2"></textarea>
+      </div>
+      <div class="actions">
+        <button type="button" class="el-btn el-btn-ghost" id="txCancel">Cancel</button>
+        <button type="submit" class="el-btn el-btn-primary">Save transaction</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Upload document modal -->
+<div class="modal-backdrop" id="docModal">
+  <div class="modal">
+    <h2>Upload document</h2>
+    <p class="modal-sub">Stored privately in your account. Choose a property to link it to a tenancy or keep it general.</p>
+    <form id="docForm">
+      <div class="el-field">
+        <label class="el-label">File</label>
+        <input class="el-input" id="docFile" type="file" required>
+        <div class="el-hint">PDF, JPEG or PNG, up to 25MB.</div>
+      </div>
+      <div class="el-field">
+        <label class="el-label">Name</label>
+        <input class="el-input" id="docName" type="text" required>
+      </div>
+      <div class="el-field-row">
+        <div class="el-field">
+          <label class="el-label">Category</label>
+          <select class="el-select" id="docCategory" required>
+            <option>Certificates</option>
+            <option>Agreements</option>
+            <option>Insurance</option>
+            <option>Property</option>
+            <option>Finance</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="el-field">
+          <label class="el-label">Expiry (optional)</label>
+          <input class="el-input" id="docExpiry" type="date">
+        </div>
+      </div>
+      <div class="el-field">
+        <label class="el-label">Property (optional)</label>
+        <select class="el-select" id="docProperty"></select>
+      </div>
+      <div class="el-field">
+        <label class="el-label">Notes (optional)</label>
+        <textarea class="el-textarea" id="docNotes" rows="2"></textarea>
+      </div>
+      <div class="actions">
+        <button type="button" class="el-btn el-btn-ghost" id="docCancel">Cancel</button>
+        <button type="submit" class="el-btn el-btn-primary" id="docSubmit">Upload</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Invite tenant modal -->
+<div class="modal-backdrop" id="inviteModal">
+  <div class="modal">
+    <h2>Invite a tenant</h2>
+    <p class="modal-sub">We'll email them a one-tap apply link. The link is valid for 14 days.</p>
+    <form id="inviteForm">
+      <div class="el-field">
+        <label class="el-label">Property</label>
+        <select class="el-select" id="invProperty" required></select>
+      </div>
+      <div class="el-field">
+        <label class="el-label">Listing (optional)</label>
+        <select class="el-select" id="invListing"></select>
+      </div>
+      <div class="el-field-row">
+        <div class="el-field">
+          <label class="el-label">Their name</label>
+          <input class="el-input" id="invName" type="text" required>
+        </div>
+        <div class="el-field">
+          <label class="el-label">Email</label>
+          <input class="el-input" id="invEmail" type="email" required>
+        </div>
+      </div>
+      <div class="el-field">
+        <label class="el-label">Phone (optional)</label>
+        <input class="el-input" id="invPhone" type="tel">
+      </div>
+      <div class="el-field">
+        <label class="el-label">Message (optional)</label>
+        <textarea class="el-textarea" id="invMessage" rows="3" placeholder="A short note that goes in the invite email."></textarea>
+      </div>
+      <div class="actions">
+        <button type="button" class="el-btn el-btn-ghost" id="invCancel">Cancel</button>
+        <button type="submit" class="el-btn el-btn-primary">Send invite</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add viewing modal -->
+<div class="modal-backdrop" id="viewingModal">
+  <div class="modal">
+    <h2>Add viewing</h2>
+    <p class="modal-sub">Log a viewing you've agreed offline so it shows up in your inbox.</p>
+    <form id="viewingForm">
+      <div class="el-field">
+        <label class="el-label">Listing</label>
+        <select class="el-select" id="vwListing" required></select>
+      </div>
+      <div class="el-field-row">
+        <div class="el-field">
+          <label class="el-label">Prospect name</label>
+          <input class="el-input" id="vwName" type="text" required>
+        </div>
+        <div class="el-field">
+          <label class="el-label">Email</label>
+          <input class="el-input" id="vwEmail" type="email" required>
+        </div>
+      </div>
+      <div class="el-field-row">
+        <div class="el-field">
+          <label class="el-label">Phone</label>
+          <input class="el-input" id="vwPhone" type="tel">
+        </div>
+        <div class="el-field">
+          <label class="el-label">When</label>
+          <input class="el-input" id="vwWhen" type="datetime-local" required>
+        </div>
+      </div>
+      <div class="el-field">
+        <label class="el-label">Notes (optional)</label>
+        <textarea class="el-textarea" id="vwNotes" rows="2"></textarea>
+      </div>
+      <div class="actions">
+        <button type="button" class="el-btn el-btn-ghost" id="vwCancel">Cancel</button>
+        <button type="submit" class="el-btn el-btn-primary">Save viewing</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Tenant detail modal -->
+<div class="modal-backdrop" id="tenantModal">
+  <div class="modal modal-lg">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px">
+      <div>
+        <h2 id="tdName">Tenant</h2>
+        <p class="modal-sub" id="tdSub">—</p>
+      </div>
+      <button class="el-btn el-btn-ghost" id="tdClose" type="button" style="padding:4px 10px;font-size:13px">Close</button>
+    </div>
+    <div id="tdBody" class="elp-loading"><div class="elp-spinner"></div>Loading…</div>
+  </div>
+</div>
 
 <!-- Media manager modal -->
 <div class="modal-backdrop" id="mediaModal">
@@ -634,6 +838,7 @@
             <select data-listing-id="${l.id}" data-action="status">
               ${["draft","live","let_agreed","delisted"].map((s) => `<option value="${s}" ${s === l.status ? "selected" : ""}>${labelStatus(s)}</option>`).join("")}
             </select>
+            <a href="/landlord/listing/?id=${l.id}">Edit</a>
             <a href="#" data-listing-id="${l.id}" data-action="media">Media</a>
             ${l.slug && l.status === "live" ? `<a href="/listings/?slug=${encodeURIComponent(l.slug)}" target="_blank">View</a>` : ""}
           </div>
@@ -1113,7 +1318,7 @@
           ? [t.properties.address_line1, t.properties.city, t.properties.postcode].filter(Boolean).join(", ")
           : "—";
         return `
-        <div class="elp-list-item">
+        <div class="elp-list-item" data-tenant-id="${t.id}">
           <div class="elp-list-item-main">
             <div class="elp-list-item-title">${ELP.esc(t.name || t.email || "Applicant")}</div>
             <div class="elp-list-item-sub">${ELP.esc(addr)} · ${ELP.esc(t.email || "")}${t.phone ? ` · ${ELP.esc(t.phone)}` : ""}</div>
@@ -1157,13 +1362,13 @@
           : "Property";
         const tenantLabel = r.tenants?.name || r.tenants?.email || "Tenant";
         return `
-        <div class="elp-list-item">
+        <a href="/landlord/tenancy/?id=${r.id}" class="elp-list-item">
           <div class="elp-list-item-main">
             <div class="elp-list-item-title">${ELP.esc(addr)}</div>
             <div class="elp-list-item-sub">${ELP.esc(tenantLabel)} · ${ELP.fmtDate(r.start_date)}${r.end_date ? ` – ${ELP.fmtDate(r.end_date)}` : ""} · ${ELP.gbp(r.monthly_rent)}/mo</div>
           </div>
           <div class="elp-list-item-end">${badge(r.status)}</div>
-        </div>`;
+        </a>`;
       })
       .join("");
   }
@@ -1269,6 +1474,301 @@
       ["pending", "awaiting_review", "submitted", "referencing", "sent", "draft"].includes(s) ? "pending" :
       ["rejected", "archived", "no_show", "delisted", "declined"].includes(s) ? "warn" : "muted";
     return `<span class="elp-badge elp-badge-${cls}">${ELP.esc(labelStatus(s))}</span>`;
+  }
+
+  // -----------------------------------------------------------------------
+  // Action modals: transaction / document / invite / viewing / tenant
+  // -----------------------------------------------------------------------
+  function bindModal(id, opener) {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener("click", (e) => { if (e.target === el) el.classList.remove("open"); });
+    if (opener) opener.addEventListener("click", () => openModal(id));
+  }
+  function openModal(id) { $(id).classList.add("open"); }
+  function closeModal(id) { $(id).classList.remove("open"); }
+
+  async function loadPropertiesSelect(selectId, includeBlank = false) {
+    const props = await ELP.rest(
+      `properties?user_id=eq.${user.id}&archived=eq.false&select=id,address_line1,city,postcode&order=created_at.desc`
+    ).catch(() => []);
+    const sel = $(selectId);
+    sel.innerHTML = (includeBlank ? '<option value="">—</option>' : "") +
+      (props.length
+        ? props.map((p) => `<option value="${p.id}">${ELP.esc([p.address_line1, p.city, p.postcode].filter(Boolean).join(", "))}</option>`).join("")
+        : '<option value="">No properties — add one first</option>');
+    return props;
+  }
+
+  // ---- Transactions: add ------------------------------------------------
+  const TX_CATEGORIES = {
+    income:  ["Rental Income", "Other Income"],
+    expense: ["Mortgage Interest", "Insurance", "Repairs & Maintenance", "Letting Agent Fees", "Utilities", "Ground Rent", "Service Charge", "Accountancy", "Other Expense"],
+  };
+
+  bindModal("txModal", $("addTxBtn"));
+  $("txCancel")?.addEventListener("click", () => closeModal("txModal"));
+  $("addTxBtn").addEventListener("click", async () => {
+    $("txDate").value = new Date().toISOString().slice(0, 10);
+    $("txType").value = "income";
+    refreshTxCategories();
+    await loadPropertiesSelect("txProperty", true);
+  });
+  $("txType").addEventListener("change", refreshTxCategories);
+  function refreshTxCategories() {
+    const t = $("txType").value;
+    $("txCategory").innerHTML = TX_CATEGORIES[t].map((c) => `<option>${c}</option>`).join("");
+  }
+  $("txForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const body = {
+      user_id: user.id,
+      type: $("txType").value,
+      kind: $("txType").value, // accommodate either column name
+      date: $("txDate").value,
+      property_id: $("txProperty").value || null,
+      category: $("txCategory").value,
+      amount: Number($("txAmount").value),
+      note: $("txNote").value.trim() || null,
+    };
+    try {
+      await ELP.rest("transactions", {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(body),
+      });
+      ELP.toast("Transaction saved", "success");
+      closeModal("txModal");
+      $("txForm").reset();
+      loaded.delete("transactions");
+      ensureLoaded("transactions");
+    } catch (err) {
+      ELP.toast(err.message || "Could not save", "error");
+    }
+  });
+
+  // ---- Documents: upload ------------------------------------------------
+  bindModal("docModal", $("uploadDocBtn"));
+  $("docCancel")?.addEventListener("click", () => closeModal("docModal"));
+  $("uploadDocBtn").addEventListener("click", async () => {
+    await loadPropertiesSelect("docProperty", true);
+  });
+  $("docFile").addEventListener("change", (e) => {
+    if (!$("docName").value && e.target.files[0]) $("docName").value = e.target.files[0].name.replace(/\.[^.]+$/, "");
+  });
+  $("docForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const file = $("docFile").files[0];
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) { ELP.toast("File is over 25MB", "error"); return; }
+    $("docSubmit").disabled = true;
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `${user.id}/${crypto.randomUUID()}/${safeName}`;
+      const { error: upErr } = await ELP.client.storage.from("documents").upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+      if (upErr) throw upErr;
+      const body = {
+        user_id: user.id,
+        property_id: $("docProperty").value || null,
+        name: $("docName").value.trim(),
+        category: $("docCategory").value,
+        file_path: path,
+        storage_path: path, // some schemas use this
+        file_size: file.size,
+        mime_type: file.type,
+        expiry_date: $("docExpiry").value || null,
+        notes: $("docNotes").value.trim() || null,
+      };
+      await ELP.rest("documents", {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(body),
+      });
+      ELP.toast("Document uploaded", "success");
+      closeModal("docModal");
+      $("docForm").reset();
+      loaded.delete("documents");
+      ensureLoaded("documents");
+    } catch (err) {
+      ELP.toast(err.message || "Upload failed", "error");
+    } finally {
+      $("docSubmit").disabled = false;
+    }
+  });
+
+  // ---- Invite tenant ----------------------------------------------------
+  bindModal("inviteModal", $("inviteTenantBtn"));
+  $("invCancel")?.addEventListener("click", () => closeModal("inviteModal"));
+  $("inviteTenantBtn").addEventListener("click", async () => {
+    const props = await loadPropertiesSelect("invProperty", false);
+    await refreshInviteListings(props[0]?.id);
+  });
+  $("invProperty")?.addEventListener("change", () => refreshInviteListings($("invProperty").value));
+  async function refreshInviteListings(propertyId) {
+    const sel = $("invListing");
+    if (!propertyId) { sel.innerHTML = '<option value="">—</option>'; return; }
+    const listings = await ELP.rest(
+      `property_listings?user_id=eq.${user.id}&property_id=eq.${propertyId}&select=id,headline,status&order=created_at.desc`
+    ).catch(() => []);
+    sel.innerHTML = '<option value="">— None —</option>' +
+      listings.map((l) => `<option value="${l.id}">${ELP.esc(l.headline || "Listing")} (${l.status})</option>`).join("");
+  }
+  $("inviteForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      const res = await ELP.callFn("invite-tenant", {
+        property_id: $("invProperty").value,
+        listing_id: $("invListing").value || undefined,
+        name: $("invName").value.trim(),
+        email: $("invEmail").value.trim(),
+        phone: $("invPhone").value.trim() || undefined,
+        message: $("invMessage").value.trim() || undefined,
+      });
+      if (!res.ok) throw new Error(res.data?.error || `invite_failed (${res.status})`);
+      ELP.toast("Invite sent", "success");
+      closeModal("inviteModal");
+      $("inviteForm").reset();
+      loaded.delete("tenants");
+      ensureLoaded("tenants");
+    } catch (err) {
+      ELP.toast(err.message || "Could not send invite", "error");
+    }
+  });
+
+  // ---- Add viewing ------------------------------------------------------
+  bindModal("viewingModal", $("addViewingBtn"));
+  $("vwCancel")?.addEventListener("click", () => closeModal("viewingModal"));
+  $("addViewingBtn").addEventListener("click", async () => {
+    const listings = await ELP.rest(
+      `property_listings?user_id=eq.${user.id}&select=id,headline,property_id,properties(address_line1,city)&order=created_at.desc`
+    ).catch(() => []);
+    $("vwListing").innerHTML = listings.length
+      ? listings.map((l) => {
+          const addr = l.properties ? [l.properties.address_line1, l.properties.city].filter(Boolean).join(", ") : "Property";
+          return `<option value="${l.id}" data-property="${l.property_id}">${ELP.esc(l.headline || addr)}</option>`;
+        }).join("")
+      : '<option value="">No listings yet</option>';
+  });
+  $("viewingForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const opt = $("vwListing").selectedOptions[0];
+    const body = {
+      user_id: user.id,
+      listing_id: $("vwListing").value,
+      property_id: opt?.dataset.property || null,
+      prospect_name: $("vwName").value.trim(),
+      prospect_email: $("vwEmail").value.trim(),
+      prospect_phone: $("vwPhone").value.trim() || null,
+      confirmed_datetime: new Date($("vwWhen").value).toISOString(),
+      proposed_datetime: new Date($("vwWhen").value).toISOString(),
+      status: "confirmed",
+      submitted_from: "landlord_manual",
+      landlord_notes: $("vwNotes").value.trim() || null,
+    };
+    try {
+      await ELP.rest("viewing_requests", {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(body),
+      });
+      ELP.toast("Viewing added", "success");
+      closeModal("viewingModal");
+      $("viewingForm").reset();
+      loaded.delete("viewings");
+      ensureLoaded("viewings");
+    } catch (err) {
+      ELP.toast(err.message || "Could not save", "error");
+    }
+  });
+
+  // ---- Tenant detail (click a tenant row) -------------------------------
+  bindModal("tenantModal", null);
+  $("tdClose")?.addEventListener("click", () => closeModal("tenantModal"));
+
+  // Event-delegate the row click so we don't need to rebind after each
+  // re-render of the tenants list.
+  $("tenantsList").addEventListener("click", (e) => {
+    const row = e.target.closest(".elp-list-item[data-tenant-id]");
+    if (!row) return;
+    openTenantDetail(row.dataset.tenantId);
+  });
+  $("tenantsList").style.cursor = "pointer";
+
+  async function openTenantDetail(tenantId) {
+    openModal("tenantModal");
+    $("tdBody").innerHTML = '<div class="elp-loading"><div class="elp-spinner"></div>Loading…</div>';
+    try {
+      const rows = await ELP.rest(
+        `tenants?id=eq.${tenantId}&select=*,properties(address_line1,city,postcode)&limit=1`
+      );
+      const t = rows[0];
+      if (!t) throw new Error("not_found");
+      $("tdName").textContent = t.full_name || t.name || t.email || "Tenant";
+      const addr = t.properties ? [t.properties.address_line1, t.properties.city, t.properties.postcode].filter(Boolean).join(", ") : "—";
+      $("tdSub").textContent = `${addr} · ${labelStatus(t.status)}`;
+
+      const refs = await ELP.rest(
+        `tenant_references?tenant_id=eq.${tenantId}&select=id,form_type,status,submitted_at,reviewed_at&order=created_at.desc`
+      ).catch(() => []);
+
+      $("tdBody").innerHTML = `
+        <div class="elp-card" style="margin:0 0 14px">
+          <div class="elp-card-title" style="margin-bottom:10px">Contact</div>
+          <div class="stat-row" style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px"><span style="color:var(--el-muted)">Email</span><span>${ELP.esc(t.email || "—")}</span></div>
+          <div class="stat-row" style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px"><span style="color:var(--el-muted)">Phone</span><span>${ELP.esc(t.phone || "—")}</span></div>
+          <div class="stat-row" style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px"><span style="color:var(--el-muted)">Role</span><span>${ELP.esc(t.role ? labelStatus(t.role) : "—")}</span></div>
+          <div class="stat-row" style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px"><span style="color:var(--el-muted)">Source</span><span>${ELP.esc(t.application_source ? labelStatus(t.application_source) : "—")}</span></div>
+        </div>
+        <div class="elp-card" style="margin:0 0 14px">
+          <div class="elp-card-title" style="margin-bottom:10px">Application</div>
+          <div class="stat-row" style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px"><span style="color:var(--el-muted)">Status</span><span>${badge(t.status)}</span></div>
+          <div class="stat-row" style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px"><span style="color:var(--el-muted)">Pre-qualification</span><span>${ELP.esc(labelStatus(t.prequal_status || "—"))}</span></div>
+          <div class="stat-row" style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px"><span style="color:var(--el-muted)">Right to rent</span><span>${ELP.esc(labelStatus(t.right_to_rent_status || "—"))}</span></div>
+          <div class="stat-row" style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px"><span style="color:var(--el-muted)">Employment</span><span>${ELP.esc(t.employment_status || "—")}</span></div>
+          ${t.job_title ? `<div class="stat-row" style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px"><span style="color:var(--el-muted)">Job title</span><span>${ELP.esc(t.job_title)}</span></div>` : ""}
+          ${t.current_address ? `<div class="stat-row" style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px"><span style="color:var(--el-muted)">Current address</span><span style="text-align:right;max-width:60%">${ELP.esc(t.current_address)}</span></div>` : ""}
+        </div>
+        ${refs.length ? `
+        <div class="elp-card" style="margin:0 0 14px">
+          <div class="elp-card-title" style="margin-bottom:10px">References (${refs.length})</div>
+          ${refs.map((r) => `
+            <div class="stat-row" style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px">
+              <span style="color:var(--el-muted)">${ELP.esc(labelStatus(r.form_type || "Reference"))}</span>
+              <span>${badge(r.status)}</span>
+            </div>
+          `).join("")}
+        </div>` : ""}
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+          ${t.status === "awaiting_review" ? `<button class="el-btn el-btn-primary" data-tenant-status="approved" data-tenant-id="${t.id}">Approve</button>` : ""}
+          ${t.status === "awaiting_review" ? `<button class="el-btn el-btn-secondary" data-tenant-status="referencing" data-tenant-id="${t.id}">Send to referencing</button>` : ""}
+          ${t.status !== "archived" ? `<button class="el-btn el-btn-ghost" data-tenant-status="archived" data-tenant-id="${t.id}" style="color:var(--el-danger)">Archive</button>` : ""}
+        </div>
+      `;
+      $("tdBody").querySelectorAll("[data-tenant-status]").forEach((b) =>
+        b.addEventListener("click", () => updateTenantStatus(b.dataset.tenantId, b.dataset.tenantStatus))
+      );
+    } catch (err) {
+      $("tdBody").innerHTML = `<div class="elp-empty"><h3>Couldn't load tenant</h3><p>${ELP.esc(err.message || "Try again.")}</p></div>`;
+    }
+  }
+
+  async function updateTenantStatus(id, status) {
+    try {
+      await ELP.rest(`tenants?id=eq.${id}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({ status }),
+      });
+      ELP.toast(`Updated to ${labelStatus(status)}`, "success");
+      closeModal("tenantModal");
+      loaded.delete("tenants");
+      ensureLoaded("tenants");
+    } catch (err) {
+      ELP.toast(err.message || "Could not update", "error");
+    }
   }
 </script>
 </body>

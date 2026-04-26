@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
+  <title>Properties — easierLet</title>
+  <meta name="robots" content="noindex">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/assets/easierlet.css">
+  <link rel="stylesheet" href="/assets/portal.css">
+
+  <style>
+    /* Address picker */
+    .ap-results {
+      max-height: 220px; overflow-y: auto;
+      border: 1px solid var(--el-line);
+      border-radius: 10px;
+      margin-top: 8px;
+      display: none;
+      background: #fff;
+    }
+    .ap-results.show { display: block; }
+    .ap-result {
+      display: block; width: 100%; text-align: left;
+      padding: 10px 14px;
+      font-size: 14px; color: var(--el-ink);
+      border: none; background: none;
+      border-bottom: 1px solid var(--el-line-soft);
+      cursor: pointer;
+    }
+    .ap-result:hover { background: var(--el-green-pale); }
+    .ap-result:last-child { border-bottom: none; }
+
+    .property-tile {
+      background: #fff;
+      border: 1px solid var(--el-line-soft);
+      border-radius: 14px;
+      padding: 18px;
+      display: flex; gap: 16px; align-items: flex-start;
+      transition: transform 150ms ease, box-shadow 150ms ease;
+    }
+    .property-tile:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(15,46,40,0.06); }
+    .property-tile-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      background: var(--el-green-pale); color: var(--el-green);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .property-tile-main { flex: 1; min-width: 0; }
+    .property-tile-title { font-size: 15px; font-weight: 500; color: var(--el-ink); margin-bottom: 3px; }
+    .property-tile-sub { font-size: 13px; color: var(--el-muted); margin-bottom: 10px; }
+    .property-tile-stats { display: flex; gap: 20px; font-size: 13px; color: var(--el-ink-soft); flex-wrap: wrap; }
+    .property-tile-stat strong { display: block; font-size: 16px; color: var(--el-ink); font-weight: 500; }
+    .property-tile-stat span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--el-muted); }
+    .property-tile-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .property-tile-actions button {
+      font-size: 13px; padding: 7px 12px;
+      border-radius: 8px; border: 1px solid var(--el-line);
+      background: #fff; color: var(--el-ink-soft); cursor: pointer;
+    }
+    .property-tile-actions button:hover { background: var(--el-green-pale); color: var(--el-green); }
+    .property-tile-actions .danger:hover { background: #FFE8DC; color: var(--el-danger); border-color: #F5C5B0; }
+
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(15, 46, 40, 0.45);
+      backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center;
+      padding: 24px; z-index: 100;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto;
+      background: #fff; border-radius: 16px; padding: 28px;
+    }
+    .modal h2 {
+      font-family: 'Fraunces', serif; font-weight: 400;
+      font-size: 24px; margin-bottom: 6px; letter-spacing: -0.4px;
+    }
+    .modal-sub { color: var(--el-muted); font-size: 13px; margin-bottom: 22px; }
+    .modal .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+
+    .filter-toggle {
+      display: flex; gap: 10px; margin-bottom: 18px;
+      font-size: 13px; color: var(--el-muted);
+    }
+    .filter-toggle label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  </style>
+</head>
+<body class="elp-body">
+
+<div id="portal-shell" data-role="landlord" data-active="properties" data-title="Properties"></div>
+
+<main class="elp-main">
+  <div class="elp-main-inner">
+    <div class="elp-page-head" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+      <div>
+        <h1 class="elp-page-title">Properties</h1>
+        <p class="elp-page-sub">Add, edit and archive your portfolio.</p>
+      </div>
+      <button class="el-btn el-btn-primary" id="addBtn">+ Add property</button>
+    </div>
+
+    <div class="filter-toggle">
+      <label><input type="checkbox" id="showArchived"> Show archived</label>
+    </div>
+
+    <div id="propertiesList" style="display:flex;flex-direction:column;gap:12px">
+      <div class="elp-loading"><div class="elp-spinner"></div>Loading properties…</div>
+    </div>
+  </div>
+</main>
+
+<div class="modal-backdrop" id="propertyModal">
+  <div class="modal">
+    <h2 id="modalTitle">Add property</h2>
+    <p class="modal-sub">Look up the address by postcode, then we'll fill in the rest.</p>
+
+    <form id="propertyForm">
+      <div class="el-field">
+        <label class="el-label" for="postcode">Postcode</label>
+        <div style="display:flex;gap:8px">
+          <input class="el-input" id="postcode" type="text" placeholder="e.g. SW1A 1AA" autocomplete="off" style="flex:1">
+          <button type="button" class="el-btn el-btn-secondary" id="lookupBtn">Look up</button>
+        </div>
+        <div class="ap-results" id="addressResults"></div>
+        <div class="el-hint" id="lookupHint"></div>
+      </div>
+
+      <div class="el-field">
+        <label class="el-label" for="addressLine1">Address line 1</label>
+        <input class="el-input" id="addressLine1" type="text" required>
+      </div>
+      <div class="el-field">
+        <label class="el-label" for="addressLine2">Address line 2 (optional)</label>
+        <input class="el-input" id="addressLine2" type="text">
+      </div>
+      <div class="el-field-row">
+        <div class="el-field">
+          <label class="el-label" for="city">Town / city</label>
+          <input class="el-input" id="city" type="text" required>
+        </div>
+        <div class="el-field">
+          <label class="el-label" for="postcodeFinal">Postcode</label>
+          <input class="el-input" id="postcodeFinal" type="text" required>
+        </div>
+      </div>
+
+      <div class="el-field-row">
+        <div class="el-field">
+          <label class="el-label" for="bedrooms">Bedrooms</label>
+          <input class="el-input" id="bedrooms" type="number" min="0" max="20">
+        </div>
+        <div class="el-field">
+          <label class="el-label" for="bathrooms">Bathrooms</label>
+          <input class="el-input" id="bathrooms" type="number" min="0" max="20">
+        </div>
+      </div>
+
+      <div class="el-field-row">
+        <div class="el-field">
+          <label class="el-label" for="furnished">Furnishing</label>
+          <select class="el-select" id="furnished">
+            <option value="">—</option>
+            <option value="furnished">Furnished</option>
+            <option value="part_furnished">Part-furnished</option>
+            <option value="unfurnished">Unfurnished</option>
+          </select>
+        </div>
+        <div class="el-field">
+          <label class="el-label" for="epc">EPC rating</label>
+          <select class="el-select" id="epc">
+            <option value="">—</option>
+            <option>A</option><option>B</option><option>C</option><option>D</option>
+            <option>E</option><option>F</option><option>G</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="el-field-row">
+        <div class="el-field">
+          <label class="el-label" for="purchasePrice">Purchase price (£)</label>
+          <input class="el-input" id="purchasePrice" type="number" min="0" step="1000">
+        </div>
+        <div class="el-field">
+          <label class="el-label" for="monthlyRent">Monthly rent (£)</label>
+          <input class="el-input" id="monthlyRent" type="number" min="0" step="50">
+        </div>
+      </div>
+
+      <details style="margin-top:8px">
+        <summary style="cursor:pointer;font-size:13px;color:var(--el-muted);padding:8px 0">Mortgage details (optional)</summary>
+        <div class="el-field-row" style="margin-top:10px">
+          <div class="el-field">
+            <label class="el-label">Lender</label>
+            <input class="el-input" id="mortgageLender" type="text">
+          </div>
+          <div class="el-field">
+            <label class="el-label">Type</label>
+            <select class="el-select" id="mortgageType">
+              <option value="">—</option>
+              <option value="repayment">Repayment</option>
+              <option value="interest_only">Interest only</option>
+            </select>
+          </div>
+        </div>
+        <div class="el-field-row">
+          <div class="el-field">
+            <label class="el-label">Original balance (£)</label>
+            <input class="el-input" id="mortgageBalance" type="number" min="0">
+          </div>
+          <div class="el-field">
+            <label class="el-label">Interest rate (%)</label>
+            <input class="el-input" id="mortgageRate" type="number" step="0.01" min="0">
+          </div>
+        </div>
+        <div class="el-field-row">
+          <div class="el-field">
+            <label class="el-label">Start date</label>
+            <input class="el-input" id="mortgageStart" type="date">
+          </div>
+          <div class="el-field">
+            <label class="el-label">Term (months)</label>
+            <input class="el-input" id="mortgageTerm" type="number" min="1">
+          </div>
+        </div>
+      </details>
+
+      <div class="actions">
+        <button type="button" class="el-btn el-btn-ghost" id="cancelBtn">Cancel</button>
+        <button type="submit" class="el-btn el-btn-primary" id="saveBtn">Save property</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="/assets/portal.js"></script>
+<script type="module">
+  while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
+  const ELP = window.ELP;
+  const session = await ELP.requireSession("/landlord/login/");
+  if (!session) throw new Error("redirecting");
+  ELP.mountShell({ user: session.user });
+  const user = session.user;
+
+  const $ = (id) => document.getElementById(id);
+  const list = $("propertiesList");
+  const showArchived = $("showArchived");
+
+  let editingId = null;
+
+  async function load() {
+    list.innerHTML = `<div class="elp-loading"><div class="elp-spinner"></div>Loading properties…</div>`;
+    const archivedFilter = showArchived.checked ? "" : "&archived=eq.false";
+    const rows = await ELP.rest(
+      `properties?user_id=eq.${user.id}${archivedFilter}&select=id,address,address_line1,address_line2,city,postcode,bedrooms,bathrooms,furnished_status,epc_rating,monthly_rent,purchase_price,archived&order=created_at.desc`
+    ).catch(() => []);
+
+    if (!rows.length) {
+      list.innerHTML = `
+        <div class="elp-empty">
+          <h3>No properties yet</h3>
+          <p>Add your first property to start creating listings, tenancies and inventories.</p>
+          <button class="el-btn el-btn-primary" onclick="document.getElementById('addBtn').click()">+ Add property</button>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = rows.map(renderProperty).join("");
+    list.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openEdit(b.dataset.edit)));
+    list.querySelectorAll("[data-archive]").forEach((b) => b.addEventListener("click", () => archive(b.dataset.archive, true)));
+    list.querySelectorAll("[data-unarchive]").forEach((b) => b.addEventListener("click", () => archive(b.dataset.unarchive, false)));
+  }
+
+  function renderProperty(p) {
+    const addr = [p.address_line1, p.address_line2, p.city, p.postcode].filter(Boolean).join(", ");
+    return `
+    <div class="property-tile">
+      <div class="property-tile-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12L12 3l9 9"/><path d="M5 10v10h14V10"/></svg>
+      </div>
+      <div class="property-tile-main">
+        <div class="property-tile-title">${ELP.esc(addr || "Property")}</div>
+        <div class="property-tile-sub">${p.archived ? '<span class="elp-badge elp-badge-warn">Archived</span> ' : ""}${ELP.esc(p.furnished_status ? labelStatus(p.furnished_status) : "")}${p.epc_rating ? ` · EPC ${ELP.esc(p.epc_rating)}` : ""}</div>
+        <div class="property-tile-stats">
+          ${p.bedrooms != null ? `<div class="property-tile-stat"><strong>${p.bedrooms}</strong><span>Beds</span></div>` : ""}
+          ${p.bathrooms != null ? `<div class="property-tile-stat"><strong>${p.bathrooms}</strong><span>Baths</span></div>` : ""}
+          ${p.monthly_rent ? `<div class="property-tile-stat"><strong>${ELP.gbp(p.monthly_rent)}</strong><span>Rent / mo</span></div>` : ""}
+        </div>
+      </div>
+      <div class="property-tile-actions">
+        <button data-edit="${p.id}">Edit</button>
+        ${p.archived
+          ? `<button data-unarchive="${p.id}">Restore</button>`
+          : `<button class="danger" data-archive="${p.id}">Archive</button>`}
+      </div>
+    </div>`;
+  }
+
+  function labelStatus(s) {
+    return String(s).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  // ---- Modal ------------------------------------------------------------
+  const modal = $("propertyModal");
+  $("addBtn").addEventListener("click", () => openCreate());
+  $("cancelBtn").addEventListener("click", () => modal.classList.remove("open"));
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("open"); });
+  showArchived.addEventListener("change", load);
+
+  function openCreate() {
+    editingId = null;
+    $("modalTitle").textContent = "Add property";
+    $("propertyForm").reset();
+    $("addressResults").classList.remove("show");
+    $("lookupHint").textContent = "";
+    modal.classList.add("open");
+  }
+
+  async function openEdit(id) {
+    editingId = id;
+    $("modalTitle").textContent = "Edit property";
+    $("addressResults").classList.remove("show");
+    $("lookupHint").textContent = "";
+    const rows = await ELP.rest(`properties?id=eq.${id}&select=*&limit=1`).catch(() => []);
+    const p = rows[0];
+    if (!p) { ELP.toast("Couldn't load property", "error"); return; }
+    $("postcode").value = p.postcode || "";
+    $("addressLine1").value = p.address_line1 || "";
+    $("addressLine2").value = p.address_line2 || "";
+    $("city").value = p.city || "";
+    $("postcodeFinal").value = p.postcode || "";
+    $("bedrooms").value = p.bedrooms ?? "";
+    $("bathrooms").value = p.bathrooms ?? "";
+    $("furnished").value = p.furnished_status || "";
+    $("epc").value = p.epc_rating || "";
+    $("purchasePrice").value = p.purchase_price ?? "";
+    $("monthlyRent").value = p.monthly_rent ?? "";
+    $("mortgageLender").value = p.mortgage_lender || "";
+    $("mortgageType").value = p.mortgage_type || "";
+    $("mortgageBalance").value = p.mortgage_original_balance ?? "";
+    $("mortgageRate").value = p.mortgage_interest_rate ?? "";
+    $("mortgageStart").value = p.mortgage_start_date || "";
+    $("mortgageTerm").value = p.mortgage_term_months ?? "";
+    modal.classList.add("open");
+  }
+
+  // ---- Address lookup ---------------------------------------------------
+  $("lookupBtn").addEventListener("click", lookup);
+  $("postcode").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); lookup(); } });
+
+  async function lookup() {
+    const pc = $("postcode").value.trim();
+    if (!pc) return;
+    $("lookupHint").textContent = "Searching…";
+    $("addressResults").classList.remove("show");
+    try {
+      const res = await ELP.callFn("address-lookup", { postcode: pc });
+      const data = res.data || {};
+      const results = data.result || data.addresses || [];
+      if (!res.ok || !results.length) {
+        $("lookupHint").textContent = data.message || "No addresses found for that postcode.";
+        return;
+      }
+      $("lookupHint").textContent = `${results.length} address${results.length === 1 ? "" : "es"} — pick one to fill the form.`;
+      const ul = $("addressResults");
+      ul.innerHTML = results.map((r, i) => {
+        const label = [r.line_1, r.line_2, r.line_3].filter(Boolean).join(", ") + (r.post_town ? `, ${r.post_town}` : "") + (r.postcode ? `, ${r.postcode}` : "");
+        return `<button type="button" class="ap-result" data-idx="${i}">${ELP.esc(label)}</button>`;
+      }).join("");
+      ul.classList.add("show");
+      ul.querySelectorAll(".ap-result").forEach((btn) =>
+        btn.addEventListener("click", () => {
+          const r = results[parseInt(btn.dataset.idx, 10)];
+          $("addressLine1").value = [r.line_1, r.line_2].filter(Boolean).join(", ");
+          $("addressLine2").value = r.line_3 || "";
+          $("city").value = r.post_town || "";
+          $("postcodeFinal").value = r.postcode || "";
+          ul.classList.remove("show");
+          $("lookupHint").textContent = "Address loaded — review and adjust if needed.";
+          // Stash the geo + UPRN for later save
+          $("propertyForm").dataset.lat = r.latitude ?? "";
+          $("propertyForm").dataset.lng = r.longitude ?? "";
+          $("propertyForm").dataset.uprn = r.uprn != null ? String(r.uprn) : "";
+        })
+      );
+    } catch (err) {
+      $("lookupHint").textContent = err.message || "Lookup failed. Enter the address manually.";
+    }
+  }
+
+  // ---- Save -------------------------------------------------------------
+  $("propertyForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = $("propertyForm");
+    const body = {
+      user_id: user.id,
+      address_line1: $("addressLine1").value.trim(),
+      address_line2: $("addressLine2").value.trim() || null,
+      city: $("city").value.trim(),
+      postcode: $("postcodeFinal").value.trim().toUpperCase(),
+      address: [$("addressLine1").value.trim(), $("addressLine2").value.trim(), $("city").value.trim(), $("postcodeFinal").value.trim().toUpperCase()].filter(Boolean).join(", "),
+      bedrooms: numOrNull($("bedrooms").value),
+      bathrooms: numOrNull($("bathrooms").value),
+      furnished_status: $("furnished").value || null,
+      epc_rating: $("epc").value || null,
+      purchase_price: numOrNull($("purchasePrice").value),
+      monthly_rent: numOrNull($("monthlyRent").value),
+      mortgage_lender: $("mortgageLender").value.trim() || null,
+      mortgage_type: $("mortgageType").value || null,
+      mortgage_original_balance: numOrNull($("mortgageBalance").value),
+      mortgage_interest_rate: numOrNull($("mortgageRate").value),
+      mortgage_start_date: $("mortgageStart").value || null,
+      mortgage_term_months: numOrNull($("mortgageTerm").value),
+    };
+    if (form.dataset.lat) body.latitude = Number(form.dataset.lat);
+    if (form.dataset.lng) body.longitude = Number(form.dataset.lng);
+    if (form.dataset.uprn) body.uprn = form.dataset.uprn;
+
+    try {
+      if (editingId) {
+        await ELP.rest(`properties?id=eq.${editingId}`, {
+          method: "PATCH",
+          headers: { Prefer: "return=minimal" },
+          body: JSON.stringify(body),
+        });
+        ELP.toast("Property saved", "success");
+      } else {
+        await ELP.rest("properties", {
+          method: "POST",
+          headers: { Prefer: "return=minimal" },
+          body: JSON.stringify(body),
+        });
+        ELP.toast("Property added", "success");
+      }
+      modal.classList.remove("open");
+      form.reset();
+      load();
+    } catch (err) {
+      ELP.toast(err.message || "Could not save", "error");
+    }
+  });
+
+  function numOrNull(v) {
+    if (v == null || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  async function archive(id, archived) {
+    if (archived && !confirm("Archive this property? It won't appear in active lists. You can restore it later.")) return;
+    try {
+      await ELP.rest(`properties?id=eq.${id}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({ archived }),
+      });
+      ELP.toast(archived ? "Archived" : "Restored", "success");
+      load();
+    } catch (err) {
+      ELP.toast(err.message || "Could not update", "error");
+    }
+  }
+
+  load();
+</script>
+</body>
+</html>

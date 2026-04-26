@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
+  <title>Tenancy agreement — easierLet</title>
+  <meta name="robots" content="noindex">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/assets/easierlet.css">
+  <link rel="stylesheet" href="/assets/portal.css">
+
+  <style>
+    /* Signature pad */
+    .el-sig {
+      border: 1px solid var(--el-line);
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .el-sig canvas {
+      display: block;
+      width: 100%;
+      height: 200px;
+      background: repeating-linear-gradient(0deg, #fff, #fff 39px, var(--el-line-soft) 39px, var(--el-line-soft) 40px);
+      touch-action: none;
+      cursor: crosshair;
+    }
+    .el-sig-actions {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 14px;
+      border-top: 1px solid var(--el-line-soft);
+      background: var(--el-bg);
+    }
+    .el-sig-actions [data-sig-hint] {
+      font-size: 12px; color: var(--el-muted);
+      transition: opacity 200ms ease;
+    }
+    .el-sig-actions [data-sig-clear] {
+      font-size: 13px; color: var(--el-green);
+      padding: 4px 10px; border-radius: 6px;
+    }
+    .el-sig-actions [data-sig-clear]:hover { background: var(--el-green-pale); }
+
+    .agreement-list {
+      display: flex; flex-direction: column; gap: 10px;
+      padding: 14px 16px;
+      background: #fff;
+      border: 1px solid var(--el-line-soft);
+      border-radius: 12px;
+      margin-bottom: 14px;
+    }
+    .signer-row {
+      display: flex; gap: 10px; align-items: center;
+      padding: 10px 12px;
+      background: var(--el-bg);
+      border-radius: 8px;
+    }
+    .signer-row .info { flex: 1; min-width: 0; }
+    .signer-row .info .name { font-size: 14px; font-weight: 500; color: var(--el-ink); }
+    .signer-row .info .email { font-size: 12px; color: var(--el-muted); }
+    .signer-row select { width: 110px; font-size: 13px; padding: 7px 10px; }
+    .signer-row .remove { color: var(--el-danger); padding: 4px 8px; font-size: 18px; line-height: 1; }
+  </style>
+</head>
+<body class="elp-body">
+
+<div id="portal-shell" data-role="landlord" data-active="tenancies" data-title="Tenancy agreement"></div>
+
+<main class="elp-main">
+  <div class="elp-main-inner">
+    <div class="elp-page-head" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+      <div>
+        <a href="/landlord/?tab=tenancies" class="elp-page-sub" style="display:inline-block;margin-bottom:4px">&larr; Tenancies</a>
+        <h1 class="elp-page-title" id="agTitle">New tenancy agreement</h1>
+        <p class="elp-page-sub" id="agSub">Generate, sign and email an Assured Periodic Tenancy.</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="el-btn el-btn-ghost" id="agSaveBtn">Save draft</button>
+        <button class="el-btn el-btn-primary" id="agSendBtn">Generate & send</button>
+        <button class="el-btn el-btn-primary" id="agFinaliseBtn" style="display:none">Finalise</button>
+      </div>
+    </div>
+
+    <div id="agError" class="elp-empty" style="display:none">
+      <h3>Couldn't load</h3>
+      <p id="agErrorMsg">—</p>
+    </div>
+
+    <div id="agBody">
+
+      <!-- Property + dates -->
+      <div class="elp-card">
+        <div class="elp-card-head"><div class="elp-card-title">Property &amp; dates</div></div>
+        <div class="el-field">
+          <label class="el-label">Property</label>
+          <select class="el-select" id="agProperty" required></select>
+        </div>
+        <div class="el-field-row">
+          <div class="el-field">
+            <label class="el-label">Start date</label>
+            <input class="el-input" id="agStart" type="date" required>
+          </div>
+          <div class="el-field">
+            <label class="el-label">Monthly rent (£)</label>
+            <input class="el-input" id="agRent" type="number" min="0" step="50" required>
+          </div>
+        </div>
+        <div class="el-field-row">
+          <div class="el-field">
+            <label class="el-label">Deposit (£)</label>
+            <input class="el-input" id="agDeposit" type="number" min="0" step="50" required>
+          </div>
+          <div class="el-field">
+            <label class="el-label">Permitted occupiers (optional)</label>
+            <input class="el-input" id="agOccupiers" type="text" placeholder="Names, comma-separated">
+          </div>
+        </div>
+      </div>
+
+      <!-- Deposit scheme -->
+      <div class="elp-card">
+        <div class="elp-card-head">
+          <div>
+            <div class="elp-card-title">Deposit protection scheme</div>
+            <div class="elp-card-sub">Deposits must be protected within 30 days of receipt.</div>
+          </div>
+        </div>
+        <div class="el-field-row">
+          <div class="el-field">
+            <label class="el-label">Scheme</label>
+            <select class="el-select" id="agDpsScheme">
+              <option value="">—</option>
+              <option>Deposit Protection Service (DPS)</option>
+              <option>mydeposits</option>
+              <option>Tenancy Deposit Scheme (TDS)</option>
+            </select>
+          </div>
+          <div class="el-field">
+            <label class="el-label">Membership number</label>
+            <input class="el-input" id="agDpsMembership" type="text">
+          </div>
+        </div>
+        <div class="el-field">
+          <label class="el-label">Reference (optional)</label>
+          <input class="el-input" id="agDpsRef" type="text">
+        </div>
+      </div>
+
+      <!-- Tenants -->
+      <div class="elp-card">
+        <div class="elp-card-head">
+          <div>
+            <div class="elp-card-title">Tenants on the agreement</div>
+            <div class="elp-card-sub">Pick from approved tenants linked to this property. Mark one as Lead.</div>
+          </div>
+        </div>
+        <div id="signersList" class="agreement-list"></div>
+        <button class="el-btn el-btn-secondary" id="addSignerBtn" type="button">+ Add tenant</button>
+      </div>
+
+      <!-- Custom clauses -->
+      <div class="elp-card">
+        <div class="elp-card-head"><div class="elp-card-title">Additional clauses (optional)</div></div>
+        <textarea class="el-textarea" id="agClauses" rows="6" placeholder="Custom terms — e.g. pet-keeping, parking, garden maintenance."></textarea>
+      </div>
+
+      <!-- Landlord signature -->
+      <div class="elp-card" id="landlordSignBlock" style="display:none">
+        <div class="elp-card-head">
+          <div>
+            <div class="elp-card-title">Your signature</div>
+            <div class="elp-card-sub">Sign to lock the agreement once tenants have signed.</div>
+          </div>
+        </div>
+        <div class="el-sig" id="landlordSig">
+          <canvas data-sig-canvas></canvas>
+          <div class="el-sig-actions">
+            <span data-sig-hint>Sign with your mouse, finger or stylus</span>
+            <button data-sig-clear type="button">Clear</button>
+          </div>
+        </div>
+        <button class="el-btn el-btn-primary" id="landlordSignBtn" style="margin-top:12px;width:100%">Sign &amp; lock</button>
+      </div>
+
+    </div>
+
+  </div>
+</main>
+
+<script src="/assets/signature.js"></script>
+<script type="module" src="/assets/portal.js"></script>
+<script type="module">
+  while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
+  const ELP = window.ELP;
+  const session = await ELP.requireSession("/landlord/login/");
+  if (!session) throw new Error("redirecting");
+  ELP.mountShell({ user: session.user });
+  const user = session.user;
+
+  const $ = (id) => document.getElementById(id);
+  const id = new URL(window.location.href).searchParams.get("id");
+
+  let agreement = null;
+  let signatures = []; // tenancy_agreement_signatures[]
+  let availableTenants = [];
+  let signers = []; // [{tenant_id, name, email, role}]
+  let landlordSig = null;
+
+  init();
+
+  async function init() {
+    if (id) {
+      try {
+        const rows = await ELP.rest(`tenancy_agreements?id=eq.${id}&select=*&limit=1`);
+        agreement = rows[0];
+        if (!agreement) throw new Error("not_found");
+        signatures = await ELP.rest(`tenancy_agreement_signatures?agreement_id=eq.${id}&select=*&order=created_at.asc`).catch(() => []);
+        $("agTitle").textContent = "Tenancy agreement";
+      } catch (err) {
+        $("agError").style.display = "block";
+        $("agErrorMsg").textContent = err.message || "Try again.";
+        $("agBody").style.display = "none";
+        return;
+      }
+    }
+
+    // Load properties
+    const props = await ELP.rest(
+      `properties?user_id=eq.${user.id}&archived=eq.false&select=id,address_line1,city,postcode&order=created_at.desc`
+    ).catch(() => []);
+    $("agProperty").innerHTML = props.length
+      ? props.map((p) => `<option value="${p.id}">${ELP.esc([p.address_line1, p.city, p.postcode].filter(Boolean).join(", "))}</option>`).join("")
+      : '<option value="">No properties</option>';
+
+    if (agreement) {
+      $("agProperty").value = agreement.property_id || "";
+      $("agStart").value = agreement.start_date || "";
+      $("agRent").value = agreement.monthly_rent ?? "";
+      $("agDeposit").value = agreement.deposit ?? "";
+      $("agOccupiers").value = agreement.permitted_occupiers || "";
+      $("agDpsScheme").value = agreement.dps_scheme || "";
+      $("agDpsMembership").value = agreement.dps_membership || "";
+      $("agDpsRef").value = agreement.dps_ref || "";
+      $("agClauses").value = agreement.additional_clauses || "";
+      signers = signatures.map((s) => ({
+        signature_id: s.id,
+        tenant_id: s.tenant_id,
+        name: s.tenant_name,
+        email: s.tenant_email,
+        role: s.role || "joint",
+        signed: !!s.signed_at,
+      }));
+      // Lock most controls if not draft
+      if (agreement.status !== "draft") {
+        ["agProperty","agStart","agRent","agDeposit","agOccupiers","agDpsScheme","agDpsMembership","agDpsRef","agClauses"].forEach((id) => $(id).disabled = true);
+        $("agSendBtn").style.display = "none";
+      }
+      // Show landlord sign block when tenants have signed and we haven't
+      const allTenantsSigned = signatures.length > 0 && signatures.every((s) => s.signed_at);
+      const ourTurn = allTenantsSigned && !agreement.landlord_signature && agreement.status !== "finalised";
+      if (ourTurn) {
+        $("landlordSignBlock").style.display = "";
+      }
+      if (agreement.status === "landlord_signed" || (agreement.landlord_signature && allTenantsSigned)) {
+        $("agFinaliseBtn").style.display = "";
+        $("agSendBtn").style.display = "none";
+      }
+    }
+
+    await refreshAvailableTenants($("agProperty").value);
+    renderSigners();
+
+    $("agProperty").addEventListener("change", async () => {
+      await refreshAvailableTenants($("agProperty").value);
+    });
+    $("addSignerBtn").addEventListener("click", addSigner);
+
+    if ($("landlordSignBlock").style.display !== "none") {
+      landlordSig = ELSignature.mount($("landlordSig"));
+      $("landlordSignBtn").addEventListener("click", landlordSign);
+    }
+  }
+
+  async function refreshAvailableTenants(propertyId) {
+    if (!propertyId) { availableTenants = []; return; }
+    availableTenants = await ELP.rest(
+      `tenants?user_id=eq.${user.id}&property_id=eq.${propertyId}&status=in.(approved,active,invited,referencing)&select=id,full_name,name,email,phone&order=created_at.desc`
+    ).catch(() => []);
+  }
+
+  function renderSigners() {
+    const list = $("signersList");
+    if (!signers.length) {
+      list.innerHTML = `<div class="el-hint" style="text-align:center;padding:14px">No tenants added yet — pick approved tenants for this property.</div>`;
+      return;
+    }
+    list.innerHTML = signers.map((s, i) => `
+      <div class="signer-row" data-signer-idx="${i}">
+        <div class="info">
+          <div class="name">${ELP.esc(s.name || "Tenant")}${s.signed ? ' <span class="elp-badge elp-badge-live" style="margin-left:6px">Signed</span>' : ""}</div>
+          <div class="email">${ELP.esc(s.email || "—")}</div>
+        </div>
+        <select data-role-idx="${i}" ${s.signed ? "disabled" : ""}>
+          <option value="lead" ${s.role === "lead" ? "selected" : ""}>Lead</option>
+          <option value="joint" ${s.role !== "lead" ? "selected" : ""}>Joint</option>
+        </select>
+        ${s.signed ? "" : `<button class="remove" data-remove-idx="${i}" type="button">×</button>`}
+      </div>
+    `).join("");
+    list.querySelectorAll("[data-role-idx]").forEach((el) => {
+      el.addEventListener("change", () => signers[parseInt(el.dataset.roleIdx, 10)].role = el.value);
+    });
+    list.querySelectorAll("[data-remove-idx]").forEach((el) => {
+      el.addEventListener("click", () => { signers.splice(parseInt(el.dataset.removeIdx, 10), 1); renderSigners(); });
+    });
+  }
+
+  async function addSigner() {
+    if (!availableTenants.length) {
+      ELP.toast("No approved tenants for this property — invite or approve one first.", "error");
+      return;
+    }
+    const remaining = availableTenants.filter((t) => !signers.some((s) => s.tenant_id === t.id));
+    if (!remaining.length) {
+      ELP.toast("All tenants are already on this agreement.", "info");
+      return;
+    }
+    const choice = prompt("Add tenant — type the email of an approved tenant:\n\n" + remaining.map((t) => `• ${t.full_name || t.name || t.email} <${t.email}>`).join("\n"));
+    if (!choice) return;
+    const found = remaining.find((t) => (t.email || "").toLowerCase() === choice.trim().toLowerCase());
+    if (!found) { ELP.toast("Couldn't find that email", "error"); return; }
+    signers.push({
+      tenant_id: found.id,
+      name: found.full_name || found.name || "",
+      email: found.email,
+      role: signers.length === 0 ? "lead" : "joint",
+    });
+    renderSigners();
+  }
+
+  // ---- Save draft ------------------------------------------------------
+  $("agSaveBtn").addEventListener("click", saveDraft);
+  async function saveDraft() {
+    const body = {
+      user_id: user.id,
+      property_id: $("agProperty").value,
+      start_date: $("agStart").value || null,
+      monthly_rent: numOrNull($("agRent").value),
+      deposit: numOrNull($("agDeposit").value),
+      permitted_occupiers: $("agOccupiers").value.trim() || null,
+      dps_scheme: $("agDpsScheme").value || null,
+      dps_membership: $("agDpsMembership").value.trim() || null,
+      dps_ref: $("agDpsRef").value.trim() || null,
+      additional_clauses: $("agClauses").value.trim() || null,
+      tenant_id: signers.find((s) => s.role === "lead")?.tenant_id || signers[0]?.tenant_id || null,
+      status: "draft",
+    };
+    try {
+      let agId = id;
+      if (agreement) {
+        await ELP.rest(`tenancy_agreements?id=eq.${agreement.id}`, {
+          method: "PATCH",
+          headers: { Prefer: "return=minimal" },
+          body: JSON.stringify(body),
+        });
+      } else {
+        const created = await ELP.rest("tenancy_agreements", {
+          method: "POST",
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify(body),
+        });
+        const row = Array.isArray(created) ? created[0] : created;
+        agId = row.id;
+      }
+      ELP.toast("Draft saved", "success");
+      if (!id) window.location.replace(`/landlord/tenancy/?id=${agId}`);
+    } catch (err) {
+      ELP.toast(err.message || "Could not save", "error");
+    }
+  }
+
+  // ---- Generate and send ------------------------------------------------
+  $("agSendBtn").addEventListener("click", async () => {
+    if (!signers.length) { ELP.toast("Add at least one tenant", "error"); return; }
+    if (!signers.some((s) => s.role === "lead")) { ELP.toast("Mark one tenant as Lead", "error"); return; }
+    if (!confirm("Generate the agreement PDF and email it to all tenants for signing?")) return;
+    try {
+      // Save draft first to capture latest fields
+      await saveDraft();
+      const agId = agreement?.id || new URL(window.location.href).searchParams.get("id");
+      if (!agId) throw new Error("Save the draft first");
+      const res = await ELP.callFn("tenancy-workflow?action=generate_and_send", {
+        agreement_id: agId,
+        tenants: signers.map((s) => ({
+          tenant_id: s.tenant_id,
+          tenant_name: s.name,
+          tenant_email: s.email,
+          role: s.role,
+        })),
+      });
+      if (!res.ok) throw new Error(res.data?.error || `failed (${res.status})`);
+      ELP.toast("Agreement sent to tenants", "success");
+      window.location.reload();
+    } catch (err) {
+      ELP.toast(err.message || "Could not send", "error");
+    }
+  });
+
+  // ---- Landlord signs (after all tenants have signed) -------------------
+  async function landlordSign() {
+    if (!landlordSig || landlordSig.isEmpty()) { ELP.toast("Please sign the box first", "error"); return; }
+    const dataUrl = landlordSig.toDataURL();
+    if (!confirm("Sign and lock this agreement?")) return;
+    try {
+      const res = await ELP.callFn("tenancy-workflow?action=landlord_sign", {
+        agreement_id: agreement.id,
+        signature: dataUrl,
+      });
+      if (!res.ok) throw new Error(res.data?.error || `failed (${res.status})`);
+      ELP.toast("Signed", "success");
+      window.location.reload();
+    } catch (err) {
+      ELP.toast(err.message || "Could not sign", "error");
+    }
+  }
+
+  // ---- Finalise ---------------------------------------------------------
+  $("agFinaliseBtn").addEventListener("click", async () => {
+    if (!confirm("Finalise this agreement? It'll be filed in Documents and the tenancy starts on the start date.")) return;
+    try {
+      const res = await ELP.callFn("tenancy-workflow?action=finalise", { agreement_id: agreement.id });
+      if (!res.ok) throw new Error(res.data?.error || `failed (${res.status})`);
+      ELP.toast("Finalised", "success");
+      window.location.href = "/landlord/?tab=tenancies";
+    } catch (err) {
+      ELP.toast(err.message || "Could not finalise", "error");
+    }
+  });
+
+  function numOrNull(v) {
+    if (v == null || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
+  <title>Inventories — easierLet</title>
+  <meta name="robots" content="noindex">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/assets/easierlet.css">
+  <link rel="stylesheet" href="/assets/portal.css">
+
+  <style>
+    .room-card { margin-bottom: 14px; }
+    .item-row {
+      display: grid;
+      grid-template-columns: 1fr 140px 1fr auto;
+      gap: 10px; align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--el-line-soft);
+    }
+    .item-row:last-child { border-bottom: none; }
+    .item-row input[type=text], .item-row select { padding: 8px 10px; font-size: 13px; }
+    @media (max-width: 720px) {
+      .item-row { grid-template-columns: 1fr; gap: 6px; padding: 12px 0; }
+    }
+    .item-name { font-weight: 500; color: var(--el-ink); }
+    .room-add {
+      width: 100%; padding: 10px;
+      border: 1px dashed var(--el-line);
+      border-radius: 8px;
+      font-size: 13px; color: var(--el-muted);
+    }
+    .room-add:hover { border-color: var(--el-green); color: var(--el-green); background: var(--el-green-pale); }
+
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(15,46,40,0.45);
+      backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center;
+      padding: 24px; z-index: 100;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto;
+      background: #fff; border-radius: 16px; padding: 28px;
+    }
+    .modal h2 {
+      font-family: 'Fraunces', serif; font-weight: 400;
+      font-size: 22px; margin-bottom: 6px; letter-spacing: -0.4px;
+    }
+    .modal-sub { color: var(--el-muted); font-size: 13px; margin-bottom: 20px; }
+    .modal .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+  </style>
+</head>
+<body class="elp-body">
+
+<div id="portal-shell" data-role="landlord" data-active="inventory" data-title="Inventories"></div>
+
+<main class="elp-main">
+  <div class="elp-main-inner">
+
+    <!-- LIST view -->
+    <div id="listView">
+      <div class="elp-page-head" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+        <div>
+          <h1 class="elp-page-title">Inventories</h1>
+          <p class="elp-page-sub">Move-in and move-out condition reports.</p>
+        </div>
+        <button class="el-btn el-btn-primary" id="newInvBtn">+ New inventory</button>
+      </div>
+      <div id="invList" class="elp-list">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading…</div>
+      </div>
+    </div>
+
+    <!-- EDIT view -->
+    <div id="editView" style="display:none">
+      <div class="elp-page-head" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+        <div>
+          <a href="/landlord/inventory/" class="elp-page-sub" style="display:inline-block;margin-bottom:4px">&larr; All inventories</a>
+          <h1 class="elp-page-title" id="invTitle">Inventory</h1>
+          <p class="elp-page-sub" id="invSub">—</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="el-btn el-btn-ghost" id="invSaveBtn">Save</button>
+          <button class="el-btn el-btn-secondary" id="invSendBtn">Send to tenant</button>
+          <button class="el-btn el-btn-primary" id="invFinaliseBtn" style="display:none">Finalise</button>
+        </div>
+      </div>
+
+      <div class="elp-card">
+        <div class="elp-card-head"><div class="elp-card-title">Header</div></div>
+        <div class="el-field-row">
+          <div class="el-field">
+            <label class="el-label">Inventory type</label>
+            <select class="el-select" id="invType">
+              <option value="move_in">Move-in</option>
+              <option value="move_out">Move-out</option>
+            </select>
+          </div>
+          <div class="el-field">
+            <label class="el-label">Status</label>
+            <input class="el-input" id="invStatus" type="text" disabled>
+          </div>
+        </div>
+        <div class="el-field-row">
+          <div class="el-field">
+            <label class="el-label">Tenant name</label>
+            <input class="el-input" id="invTenantName" type="text">
+          </div>
+          <div class="el-field">
+            <label class="el-label">Tenant email</label>
+            <input class="el-input" id="invTenantEmail" type="email">
+          </div>
+        </div>
+      </div>
+
+      <div class="elp-card">
+        <div class="elp-card-head"><div class="elp-card-title">Meter readings</div></div>
+        <div class="el-field-row">
+          <div class="el-field">
+            <label class="el-label">Gas</label>
+            <input class="el-input" id="meterGas" type="text">
+          </div>
+          <div class="el-field">
+            <label class="el-label">Electric</label>
+            <input class="el-input" id="meterElectric" type="text">
+          </div>
+        </div>
+        <div class="el-field">
+          <label class="el-label">Water</label>
+          <input class="el-input" id="meterWater" type="text">
+        </div>
+      </div>
+
+      <div id="roomsContainer"></div>
+      <button class="room-add" id="addRoomBtn" type="button">+ Add room</button>
+
+      <div class="elp-card" style="margin-top:18px">
+        <div class="elp-card-head"><div class="elp-card-title">Notes</div></div>
+        <div class="el-field">
+          <label class="el-label">Landlord notes</label>
+          <textarea class="el-textarea" id="invLandlordNotes" rows="3"></textarea>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- New inventory modal -->
+<div class="modal-backdrop" id="newInvModal">
+  <div class="modal">
+    <h2>New inventory</h2>
+    <p class="modal-sub">Pick a property and a type — we'll pre-populate standard rooms.</p>
+    <form id="newInvForm">
+      <div class="el-field">
+        <label class="el-label">Property</label>
+        <select class="el-select" id="niProperty" required></select>
+      </div>
+      <div class="el-field">
+        <label class="el-label">Type</label>
+        <select class="el-select" id="niType" required>
+          <option value="move_in">Move-in</option>
+          <option value="move_out">Move-out</option>
+        </select>
+      </div>
+      <div class="el-field-row">
+        <div class="el-field">
+          <label class="el-label">Tenant name (optional)</label>
+          <input class="el-input" id="niTenantName" type="text">
+        </div>
+        <div class="el-field">
+          <label class="el-label">Tenant email (optional)</label>
+          <input class="el-input" id="niTenantEmail" type="email">
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" class="el-btn el-btn-ghost" id="niCancel">Cancel</button>
+        <button type="submit" class="el-btn el-btn-primary">Create draft</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="/assets/portal.js"></script>
+<script type="module">
+  while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
+  const ELP = window.ELP;
+  const session = await ELP.requireSession("/landlord/login/");
+  if (!session) throw new Error("redirecting");
+  ELP.mountShell({ user: session.user });
+  const user = session.user;
+
+  const $ = (id) => document.getElementById(id);
+  const id = new URL(window.location.href).searchParams.get("id");
+
+  // Default room template — what we pre-populate a new inventory with.
+  const DEFAULT_ROOMS = [
+    { name: "Living room",  items: ["Walls", "Ceiling", "Flooring", "Windows", "Curtains/blinds", "Sofa", "Coffee table"] },
+    { name: "Kitchen",      items: ["Walls", "Ceiling", "Flooring", "Worktops", "Cooker/oven", "Hob", "Fridge/freezer", "Dishwasher", "Washing machine", "Sink/taps"] },
+    { name: "Bathroom",     items: ["Walls", "Ceiling", "Flooring", "Bath/shower", "Toilet", "Sink/taps", "Tiles", "Extractor fan"] },
+    { name: "Bedroom 1",    items: ["Walls", "Ceiling", "Flooring", "Windows", "Curtains/blinds", "Bed frame", "Mattress", "Wardrobe"] },
+    { name: "Hallway",      items: ["Walls", "Ceiling", "Flooring", "Front door", "Door frames"] },
+    { name: "Exterior",     items: ["Front garden", "Rear garden", "Boundaries", "External walls", "Roof"] },
+  ];
+  const CONDITIONS = ["Excellent", "Good", "Fair", "Poor", "Damaged"];
+
+  if (id) showEdit(); else showList();
+
+  async function showList() {
+    $("listView").style.display = "block";
+    $("editView").style.display = "none";
+    const rows = await ELP.rest(
+      `inventory_reports?user_id=eq.${user.id}&select=id,inventory_type,status,tenant_name,tenant_email,sent_at,completed_at,created_at,property_id,properties(address_line1,city,postcode)&order=created_at.desc`
+    ).catch(() => []);
+    if (!rows.length) {
+      $("invList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No inventories yet</h3>
+          <p>Create a move-in inventory at the start of every tenancy — it's your record of condition for the deposit return.</p>
+          <button class="el-btn el-btn-primary" onclick="document.getElementById('newInvBtn').click()">+ New inventory</button>
+        </div>`;
+      return;
+    }
+    $("invList").innerHTML = rows.map((r) => {
+      const addr = r.properties ? [r.properties.address_line1, r.properties.city, r.properties.postcode].filter(Boolean).join(", ") : "Property";
+      return `
+      <a href="/landlord/inventory/?id=${r.id}" class="elp-list-item">
+        <div class="elp-list-item-main">
+          <div class="elp-list-item-title">${ELP.esc(addr)}</div>
+          <div class="elp-list-item-sub">${labelStatus(r.inventory_type)} · ${r.tenant_name ? ELP.esc(r.tenant_name) + " · " : ""}Created ${ELP.fmtDate(r.created_at)}</div>
+        </div>
+        <div class="elp-list-item-end">${badge(r.status)}</div>
+      </a>`;
+    }).join("");
+  }
+
+  // ---- New inventory modal ---------------------------------------------
+  const niModal = $("newInvModal");
+  $("newInvBtn").addEventListener("click", async () => {
+    const props = await ELP.rest(`properties?user_id=eq.${user.id}&archived=eq.false&select=id,address_line1,city,postcode&order=created_at.desc`).catch(() => []);
+    $("niProperty").innerHTML = props.length
+      ? props.map((p) => `<option value="${p.id}">${ELP.esc([p.address_line1, p.city, p.postcode].filter(Boolean).join(", "))}</option>`).join("")
+      : '<option value="">No properties — add one first</option>';
+    niModal.classList.add("open");
+  });
+  $("niCancel").addEventListener("click", () => niModal.classList.remove("open"));
+  niModal.addEventListener("click", (e) => { if (e.target === niModal) niModal.classList.remove("open"); });
+
+  $("newInvForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      const inv = await ELP.rest("inventory_reports", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          user_id: user.id,
+          property_id: $("niProperty").value,
+          inventory_type: $("niType").value,
+          tenant_name: $("niTenantName").value.trim() || null,
+          tenant_email: $("niTenantEmail").value.trim() || null,
+          status: "draft",
+        }),
+      });
+      const inventory = Array.isArray(inv) ? inv[0] : inv;
+      // Pre-populate with default rooms + items
+      for (let r = 0; r < DEFAULT_ROOMS.length; r++) {
+        const room = DEFAULT_ROOMS[r];
+        const created = await ELP.rest("inventory_rooms", {
+          method: "POST",
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify({ inventory_id: inventory.id, name: room.name, order_index: r }),
+        });
+        const roomRow = Array.isArray(created) ? created[0] : created;
+        const itemRows = room.items.map((name, i) => ({ room_id: roomRow.id, name, order_index: i }));
+        await ELP.rest("inventory_items", {
+          method: "POST",
+          headers: { Prefer: "return=minimal" },
+          body: JSON.stringify(itemRows),
+        });
+      }
+      window.location.href = `/landlord/inventory/?id=${inventory.id}`;
+    } catch (err) {
+      ELP.toast(err.message || "Could not create inventory", "error");
+    }
+  });
+
+  // ---- Edit view --------------------------------------------------------
+  let inventory = null;
+  let rooms = []; // [{room, items: []}]
+
+  async function showEdit() {
+    $("listView").style.display = "none";
+    $("editView").style.display = "block";
+
+    try {
+      const invRows = await ELP.rest(
+        `inventory_reports?id=eq.${id}&select=*,properties(address_line1,city,postcode)&limit=1`
+      );
+      inventory = invRows[0];
+      if (!inventory) throw new Error("not_found");
+
+      const roomsData = await ELP.rest(
+        `inventory_rooms?inventory_id=eq.${id}&select=*&order=order_index.asc`
+      );
+      rooms = await Promise.all(roomsData.map(async (room) => {
+        const items = await ELP.rest(
+          `inventory_items?room_id=eq.${room.id}&select=*&order=order_index.asc`
+        );
+        return { room, items };
+      }));
+    } catch (err) {
+      ELP.toast("Couldn't load inventory", "error");
+      window.location.href = "/landlord/inventory/";
+      return;
+    }
+
+    const addr = inventory.properties ? [inventory.properties.address_line1, inventory.properties.city, inventory.properties.postcode].filter(Boolean).join(", ") : "Property";
+    $("invTitle").textContent = `${labelStatus(inventory.inventory_type)} inventory`;
+    $("invSub").textContent = addr;
+    $("invType").value = inventory.inventory_type;
+    $("invStatus").value = labelStatus(inventory.status);
+    $("invTenantName").value = inventory.tenant_name || "";
+    $("invTenantEmail").value = inventory.tenant_email || "";
+    const m = inventory.meter_readings_landlord || {};
+    $("meterGas").value = m.gas || "";
+    $("meterElectric").value = m.electric || "";
+    $("meterWater").value = m.water || "";
+    $("invLandlordNotes").value = inventory.landlord_notes || "";
+
+    if (["completed", "tenant_review", "sent"].includes(inventory.status)) {
+      $("invFinaliseBtn").style.display = "";
+    }
+
+    renderRooms();
+  }
+
+  function renderRooms() {
+    $("roomsContainer").innerHTML = rooms.map((r, ri) => `
+      <div class="elp-card room-card" data-ri="${ri}">
+        <div class="elp-card-head" style="margin-bottom:10px">
+          <input class="el-input" data-room-name="${r.room.id}" value="${ELP.esc(r.room.name)}" style="font-size:16px;font-weight:500;border:none;padding:0;background:transparent">
+          <button class="el-btn el-btn-ghost" data-room-delete="${r.room.id}" type="button" style="font-size:13px;color:var(--el-danger)">Remove room</button>
+        </div>
+        ${r.items.map((it) => `
+          <div class="item-row" data-item-id="${it.id}">
+            <input class="el-input" type="text" data-item-name value="${ELP.esc(it.name)}" placeholder="Item">
+            <select class="el-select" data-item-condition>
+              <option value="">— Condition —</option>
+              ${CONDITIONS.map((c) => `<option ${it.landlord_condition === c ? "selected" : ""}>${c}</option>`).join("")}
+            </select>
+            <input class="el-input" type="text" data-item-notes value="${ELP.esc(it.landlord_notes || "")}" placeholder="Notes">
+            <button class="el-btn el-btn-ghost" type="button" data-item-delete style="font-size:12px;color:var(--el-danger);padding:4px 8px">×</button>
+          </div>
+        `).join("")}
+        <button class="room-add" type="button" data-add-item="${r.room.id}" style="margin-top:10px">+ Add item</button>
+      </div>
+    `).join("");
+
+    // Bind events for inputs (debounced save on blur)
+    $("roomsContainer").querySelectorAll("[data-item-name], [data-item-condition], [data-item-notes]").forEach((el) => {
+      el.addEventListener("change", () => saveItem(el.closest(".item-row")));
+    });
+    $("roomsContainer").querySelectorAll("[data-room-name]").forEach((el) => {
+      el.addEventListener("change", async () => {
+        const roomId = el.dataset.roomName;
+        await ELP.rest(`inventory_rooms?id=eq.${roomId}`, {
+          method: "PATCH",
+          headers: { Prefer: "return=minimal" },
+          body: JSON.stringify({ name: el.value.trim() }),
+        }).catch((err) => ELP.toast(err.message || "Couldn't save", "error"));
+      });
+    });
+    $("roomsContainer").querySelectorAll("[data-room-delete]").forEach((b) => {
+      b.addEventListener("click", () => deleteRoom(b.dataset.roomDelete));
+    });
+    $("roomsContainer").querySelectorAll("[data-add-item]").forEach((b) => {
+      b.addEventListener("click", () => addItem(b.dataset.addItem));
+    });
+    $("roomsContainer").querySelectorAll("[data-item-delete]").forEach((b) => {
+      b.addEventListener("click", () => deleteItem(b.closest(".item-row").dataset.itemId));
+    });
+  }
+
+  async function saveItem(rowEl) {
+    const itemId = rowEl.dataset.itemId;
+    const body = {
+      name: rowEl.querySelector("[data-item-name]").value.trim(),
+      landlord_condition: rowEl.querySelector("[data-item-condition]").value || null,
+      landlord_notes: rowEl.querySelector("[data-item-notes]").value.trim() || null,
+    };
+    await ELP.rest(`inventory_items?id=eq.${itemId}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(body),
+    }).catch((err) => ELP.toast(err.message || "Couldn't save item", "error"));
+  }
+
+  async function addItem(roomId) {
+    const idx = rooms.find((r) => r.room.id === roomId)?.items.length || 0;
+    const created = await ELP.rest("inventory_items", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ room_id: roomId, name: "", order_index: idx }),
+    });
+    const item = Array.isArray(created) ? created[0] : created;
+    const room = rooms.find((r) => r.room.id === roomId);
+    if (room) room.items.push(item);
+    renderRooms();
+  }
+
+  async function deleteItem(itemId) {
+    await ELP.rest(`inventory_items?id=eq.${itemId}`, {
+      method: "DELETE",
+      headers: { Prefer: "return=minimal" },
+    }).catch((err) => ELP.toast(err.message || "Couldn't delete", "error"));
+    rooms.forEach((r) => { r.items = r.items.filter((i) => i.id !== itemId); });
+    renderRooms();
+  }
+
+  async function deleteRoom(roomId) {
+    if (!confirm("Delete this room and all its items?")) return;
+    await ELP.rest(`inventory_rooms?id=eq.${roomId}`, {
+      method: "DELETE",
+      headers: { Prefer: "return=minimal" },
+    }).catch((err) => ELP.toast(err.message || "Couldn't delete", "error"));
+    rooms = rooms.filter((r) => r.room.id !== roomId);
+    renderRooms();
+  }
+
+  $("addRoomBtn").addEventListener("click", async () => {
+    const name = prompt("Room name?");
+    if (!name) return;
+    const idx = rooms.length;
+    const created = await ELP.rest("inventory_rooms", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ inventory_id: id, name: name.trim(), order_index: idx }),
+    });
+    const room = Array.isArray(created) ? created[0] : created;
+    rooms.push({ room, items: [] });
+    renderRooms();
+  });
+
+  // ---- Save header / send / finalise -----------------------------------
+  $("invSaveBtn").addEventListener("click", async () => {
+    try {
+      await ELP.rest(`inventory_reports?id=eq.${id}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({
+          inventory_type: $("invType").value,
+          tenant_name: $("invTenantName").value.trim() || null,
+          tenant_email: $("invTenantEmail").value.trim() || null,
+          meter_readings_landlord: {
+            gas: $("meterGas").value.trim() || null,
+            electric: $("meterElectric").value.trim() || null,
+            water: $("meterWater").value.trim() || null,
+          },
+          landlord_notes: $("invLandlordNotes").value.trim() || null,
+        }),
+      });
+      ELP.toast("Saved", "success");
+    } catch (err) {
+      ELP.toast(err.message || "Could not save", "error");
+    }
+  });
+
+  $("invSendBtn").addEventListener("click", async () => {
+    if (!$("invTenantEmail").value.trim()) {
+      ELP.toast("Add a tenant email first", "error");
+      return;
+    }
+    if (!confirm("Send the inventory to the tenant for review? This locks editing of the rooms.")) return;
+    try {
+      const res = await ELP.callFn("inventory-workflow?action=send", { inventory_id: id });
+      if (!res.ok) throw new Error(res.data?.error || `failed (${res.status})`);
+      ELP.toast("Sent to tenant", "success");
+      window.location.reload();
+    } catch (err) {
+      ELP.toast(err.message || "Could not send", "error");
+    }
+  });
+
+  $("invFinaliseBtn").addEventListener("click", async () => {
+    if (!confirm("Finalise this inventory? It'll be archived to Documents and locked.")) return;
+    try {
+      const res = await ELP.callFn("inventory-workflow?action=finalise", { inventory_id: id });
+      if (!res.ok) throw new Error(res.data?.error || `failed (${res.status})`);
+      ELP.toast("Finalised", "success");
+      window.location.href = "/landlord/inventory/";
+    } catch (err) {
+      ELP.toast(err.message || "Could not finalise", "error");
+    }
+  });
+
+  function labelStatus(s) { return !s ? "—" : String(s).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()); }
+  function badge(s) {
+    const cls =
+      ["completed", "active", "live", "approved"].includes(s) ? "live" :
+      ["sent", "tenant_review", "draft", "pending"].includes(s) ? "pending" :
+      ["locked", "archived"].includes(s) ? "muted" : "warn";
+    return `<span class="elp-badge elp-badge-${cls}">${ELP.esc(labelStatus(s))}</span>`;
+  }
+</script>
+</body>
+</html>

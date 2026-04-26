@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
+  <title>Maintenance — easierLet</title>
+  <meta name="robots" content="noindex">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/assets/easierlet.css">
+  <link rel="stylesheet" href="/assets/portal.css">
+
+  <style>
+    .priority-low      { background: var(--el-green-pale); color: var(--el-green); }
+    .priority-medium   { background: #FFF4D6; color: #8A6000; }
+    .priority-high     { background: #FFE8DC; color: var(--el-danger); }
+    .priority-emergency{ background: var(--el-danger); color: #fff; }
+
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(15,46,40,0.45);
+      backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center;
+      padding: 24px; z-index: 100;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto;
+      background: #fff; border-radius: 16px; padding: 28px;
+    }
+    .modal h2 {
+      font-family: 'Fraunces', serif; font-weight: 400;
+      font-size: 22px; margin-bottom: 6px; letter-spacing: -0.4px;
+    }
+    .modal-sub { color: var(--el-muted); font-size: 13px; margin-bottom: 20px; }
+    .modal .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+
+    .req-detail {
+      display: grid; grid-template-columns: 140px 1fr;
+      gap: 8px 16px; font-size: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--el-line-soft);
+    }
+    .req-detail .label { color: var(--el-muted); }
+    .req-detail .value { color: var(--el-ink); }
+  </style>
+</head>
+<body class="elp-body">
+
+<div id="portal-shell" data-role="landlord" data-active="maintenance" data-title="Maintenance"></div>
+
+<main class="elp-main">
+  <div class="elp-main-inner">
+    <div class="elp-page-head" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+      <div>
+        <h1 class="elp-page-title">Maintenance</h1>
+        <p class="elp-page-sub">Requests raised by tenants and any you've logged yourself.</p>
+      </div>
+      <button class="el-btn el-btn-primary" id="newReqBtn">+ Log request</button>
+    </div>
+
+    <div class="elp-tabs">
+      <a href="#" class="elp-tab-link active" data-mr-filter="open">Open</a>
+      <a href="#" class="elp-tab-link" data-mr-filter="acknowledged">Acknowledged</a>
+      <a href="#" class="elp-tab-link" data-mr-filter="resolved">Resolved</a>
+      <a href="#" class="elp-tab-link" data-mr-filter="all">All</a>
+    </div>
+
+    <div id="reqList" class="elp-list">
+      <div class="elp-loading"><div class="elp-spinner"></div>Loading…</div>
+    </div>
+  </div>
+</main>
+
+<!-- New request modal -->
+<div class="modal-backdrop" id="newReqModal">
+  <div class="modal">
+    <h2>Log maintenance request</h2>
+    <p class="modal-sub">Track an issue you've spotted yourself or one a tenant raised offline.</p>
+    <form id="newReqForm">
+      <div class="el-field">
+        <label class="el-label">Property</label>
+        <select class="el-select" id="nrProperty" required></select>
+      </div>
+      <div class="el-field">
+        <label class="el-label">Title</label>
+        <input class="el-input" id="nrTitle" type="text" required placeholder="e.g. Leaking kitchen tap">
+      </div>
+      <div class="el-field">
+        <label class="el-label">Description</label>
+        <textarea class="el-textarea" id="nrDescription" rows="4"></textarea>
+      </div>
+      <div class="el-field-row">
+        <div class="el-field">
+          <label class="el-label">Priority</label>
+          <select class="el-select" id="nrPriority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+            <option value="emergency">Emergency</option>
+          </select>
+        </div>
+        <div class="el-field">
+          <label class="el-label">Category (optional)</label>
+          <input class="el-input" id="nrCategory" type="text" placeholder="Plumbing, Electrical…">
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" class="el-btn el-btn-ghost" id="nrCancel">Cancel</button>
+        <button type="submit" class="el-btn el-btn-primary">Save request</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Detail modal -->
+<div class="modal-backdrop" id="detailModal">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px">
+      <div>
+        <h2 id="dmTitle">—</h2>
+        <p class="modal-sub" id="dmSub">—</p>
+      </div>
+      <button class="el-btn el-btn-ghost" id="dmClose" type="button" style="padding:4px 10px;font-size:13px">Close</button>
+    </div>
+    <div id="dmBody"></div>
+  </div>
+</div>
+
+<script type="module" src="/assets/portal.js"></script>
+<script type="module">
+  while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
+  const ELP = window.ELP;
+  const session = await ELP.requireSession("/landlord/login/");
+  if (!session) throw new Error("redirecting");
+  ELP.mountShell({ user: session.user });
+  const user = session.user;
+
+  const $ = (id) => document.getElementById(id);
+
+  let allRequests = [];
+  let filter = "open";
+
+  async function load() {
+    allRequests = await ELP.rest(
+      `maintenance_requests?user_id=eq.${user.id}&select=id,title,description,priority,status,category,created_at,acknowledged_at,resolved_at,property_id,properties(address_line1,city,postcode),tenants(name,email)&order=created_at.desc&limit=200`
+    ).catch(() => []);
+    render();
+  }
+
+  function render() {
+    let rows = allRequests;
+    if (filter === "open")          rows = rows.filter((r) => ["new", "open"].includes(r.status));
+    else if (filter === "acknowledged") rows = rows.filter((r) => r.status === "acknowledged" || (r.acknowledged_at && !r.resolved_at));
+    else if (filter === "resolved") rows = rows.filter((r) => r.status === "resolved" || r.resolved_at);
+
+    if (!rows.length) {
+      $("reqList").innerHTML = `
+        <div class="elp-empty">
+          <h3>No ${filter === "all" ? "" : filter} requests</h3>
+          <p>Maintenance issues from tenants and any you log yourself appear here.</p>
+        </div>`;
+      return;
+    }
+
+    $("reqList").innerHTML = rows.map((r) => {
+      const addr = r.properties ? [r.properties.address_line1, r.properties.city].filter(Boolean).join(", ") : "—";
+      return `
+      <div class="elp-list-item" data-req-id="${r.id}" style="cursor:pointer">
+        <div class="elp-list-item-main">
+          <div class="elp-list-item-title">${ELP.esc(r.title || "Maintenance request")}</div>
+          <div class="elp-list-item-sub">${ELP.esc(addr)}${r.tenants?.name ? ` · ${ELP.esc(r.tenants.name)}` : ""} · ${ELP.fmtDate(r.created_at)}</div>
+        </div>
+        <div class="elp-list-item-end">
+          <span class="elp-badge priority-${r.priority || "medium"}">${ELP.esc(labelStatus(r.priority || "medium"))}</span>
+          ${badge(r.status)}
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  // Filter tabs
+  document.querySelectorAll("[data-mr-filter]").forEach((el) =>
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      document.querySelectorAll("[data-mr-filter]").forEach((x) => x.classList.remove("active"));
+      el.classList.add("active");
+      filter = el.dataset.mrFilter;
+      render();
+    })
+  );
+
+  // Click row → detail
+  $("reqList").addEventListener("click", (e) => {
+    const row = e.target.closest("[data-req-id]");
+    if (!row) return;
+    openDetail(row.dataset.reqId);
+  });
+
+  function openDetail(reqId) {
+    const r = allRequests.find((x) => x.id === reqId);
+    if (!r) return;
+    const addr = r.properties ? [r.properties.address_line1, r.properties.city, r.properties.postcode].filter(Boolean).join(", ") : "—";
+    $("dmTitle").textContent = r.title || "Request";
+    $("dmSub").textContent = `${addr} · Logged ${ELP.fmtDate(r.created_at)}`;
+    $("dmBody").innerHTML = `
+      <div class="req-detail"><div class="label">Status</div><div class="value">${badge(r.status)}</div></div>
+      <div class="req-detail"><div class="label">Priority</div><div class="value"><span class="elp-badge priority-${r.priority || "medium"}">${ELP.esc(labelStatus(r.priority || "medium"))}</span></div></div>
+      ${r.category ? `<div class="req-detail"><div class="label">Category</div><div class="value">${ELP.esc(r.category)}</div></div>` : ""}
+      ${r.tenants?.name ? `<div class="req-detail"><div class="label">Tenant</div><div class="value">${ELP.esc(r.tenants.name)} · ${ELP.esc(r.tenants.email || "")}</div></div>` : ""}
+      ${r.description ? `<div class="req-detail"><div class="label">Description</div><div class="value">${ELP.esc(r.description)}</div></div>` : ""}
+      <div class="req-detail"><div class="label">Logged</div><div class="value">${ELP.fmtDateTime(r.created_at)}</div></div>
+      ${r.acknowledged_at ? `<div class="req-detail"><div class="label">Acknowledged</div><div class="value">${ELP.fmtDateTime(r.acknowledged_at)}</div></div>` : ""}
+      ${r.resolved_at ? `<div class="req-detail"><div class="label">Resolved</div><div class="value">${ELP.fmtDateTime(r.resolved_at)}</div></div>` : ""}
+
+      <div style="margin-top:18px">
+        <label class="el-label">Landlord notes</label>
+        <textarea class="el-textarea" id="dmNotes" rows="3">${ELP.esc(r.landlord_notes || "")}</textarea>
+      </div>
+
+      <div class="actions" style="margin-top:18px">
+        ${!r.acknowledged_at ? `<button class="el-btn el-btn-secondary" data-mark="acknowledge">Acknowledge</button>` : ""}
+        ${!r.resolved_at ? `<button class="el-btn el-btn-primary" data-mark="resolve">Mark resolved</button>` : ""}
+        <button class="el-btn el-btn-ghost" data-mark="save">Save notes</button>
+      </div>
+    `;
+    $("dmBody").querySelectorAll("[data-mark]").forEach((b) =>
+      b.addEventListener("click", () => updateRequest(reqId, b.dataset.mark))
+    );
+    $("detailModal").classList.add("open");
+  }
+
+  async function updateRequest(reqId, action) {
+    const notes = $("dmNotes")?.value.trim() || null;
+    const body = { landlord_notes: notes };
+    if (action === "acknowledge") {
+      body.status = "acknowledged";
+      body.acknowledged_at = new Date().toISOString();
+    } else if (action === "resolve") {
+      body.status = "resolved";
+      body.resolved_at = new Date().toISOString();
+    }
+    try {
+      await ELP.rest(`maintenance_requests?id=eq.${reqId}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(body),
+      });
+      ELP.toast("Saved", "success");
+      $("detailModal").classList.remove("open");
+      load();
+    } catch (err) {
+      ELP.toast(err.message || "Could not update", "error");
+    }
+  }
+  $("dmClose").addEventListener("click", () => $("detailModal").classList.remove("open"));
+  $("detailModal").addEventListener("click", (e) => { if (e.target === $("detailModal")) $("detailModal").classList.remove("open"); });
+
+  // ---- New request modal -----------------------------------------------
+  $("newReqBtn").addEventListener("click", async () => {
+    const props = await ELP.rest(`properties?user_id=eq.${user.id}&archived=eq.false&select=id,address_line1,city,postcode&order=created_at.desc`).catch(() => []);
+    $("nrProperty").innerHTML = props.length
+      ? props.map((p) => `<option value="${p.id}">${ELP.esc([p.address_line1, p.city, p.postcode].filter(Boolean).join(", "))}</option>`).join("")
+      : '<option value="">No properties — add one first</option>';
+    $("newReqModal").classList.add("open");
+  });
+  $("nrCancel").addEventListener("click", () => $("newReqModal").classList.remove("open"));
+  $("newReqModal").addEventListener("click", (e) => { if (e.target === $("newReqModal")) $("newReqModal").classList.remove("open"); });
+
+  $("newReqForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      await ELP.rest("maintenance_requests", {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({
+          user_id: user.id,
+          property_id: $("nrProperty").value,
+          title: $("nrTitle").value.trim(),
+          description: $("nrDescription").value.trim() || null,
+          priority: $("nrPriority").value,
+          category: $("nrCategory").value.trim() || null,
+          status: "open",
+        }),
+      });
+      ELP.toast("Request logged", "success");
+      $("newReqModal").classList.remove("open");
+      $("newReqForm").reset();
+      load();
+    } catch (err) {
+      ELP.toast(err.message || "Could not save", "error");
+    }
+  });
+
+  function labelStatus(s) { return !s ? "—" : String(s).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()); }
+  function badge(s) {
+    const cls =
+      ["resolved", "completed"].includes(s) ? "live" :
+      ["acknowledged", "in_progress"].includes(s) ? "pending" :
+      ["new", "open"].includes(s) ? "warn" : "muted";
+    return `<span class="elp-badge elp-badge-${cls}">${ELP.esc(labelStatus(s))}</span>`;
+  }
+
+  load();
+</script>
+</body>
+</html>

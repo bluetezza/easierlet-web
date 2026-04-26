@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
+  <title>Edit listing — easierLet</title>
+  <meta name="robots" content="noindex">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/assets/easierlet.css">
+  <link rel="stylesheet" href="/assets/portal.css">
+
+  <style>
+    .ed-grid { display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: flex-start; }
+    @media (max-width: 900px) { .ed-grid { grid-template-columns: 1fr; } }
+    .ed-side .elp-card { position: sticky; top: 80px; }
+
+    .amenity-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px; margin-top: 8px;
+    }
+    .amenity {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 12px;
+      background: #fff;
+      border: 1px solid var(--el-line);
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .amenity input { accent-color: var(--el-green); }
+    .amenity.checked { background: var(--el-green-pale); border-color: var(--el-green-border); color: var(--el-green); }
+
+    .media-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px; margin-top: 12px;
+    }
+    .media-tile {
+      aspect-ratio: 4/3; border-radius: 8px; overflow: hidden;
+      background: var(--el-bg);
+      border: 1px solid var(--el-line-soft);
+      position: relative;
+    }
+    .media-tile img, .media-tile video { width: 100%; height: 100%; object-fit: cover; }
+    .media-tile .hero-pill {
+      position: absolute; top: 6px; left: 6px;
+      background: var(--el-green); color: #fff;
+      font-size: 10px; font-weight: 500;
+      padding: 3px 6px; border-radius: 4px;
+    }
+
+    .stat-row {
+      display: flex; justify-content: space-between; padding: 8px 0;
+      border-bottom: 1px solid var(--el-line-soft);
+      font-size: 13px;
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-row .label { color: var(--el-muted); }
+    .stat-row .value { color: var(--el-ink); font-weight: 500; }
+
+    .ed-bar {
+      position: sticky; top: 60px;
+      background: rgba(250,250,247,0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--el-line-soft);
+      padding: 14px 0; margin: -36px -32px 24px;
+      padding-left: 32px; padding-right: 32px;
+      z-index: 10;
+      display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+    }
+    .ed-bar h1 {
+      font-family: 'Fraunces', serif; font-weight: 400;
+      font-size: 22px; letter-spacing: -0.4px;
+    }
+    .ed-bar .right { display: flex; gap: 8px; }
+    @media (max-width: 600px) { .ed-bar { margin: -24px -18px 20px; padding-left: 18px; padding-right: 18px; } }
+  </style>
+</head>
+<body class="elp-body">
+
+<div id="portal-shell" data-role="landlord" data-active="listings" data-title="Edit listing"></div>
+
+<main class="elp-main">
+  <div class="elp-main-inner">
+
+    <div class="ed-bar">
+      <div>
+        <h1 id="edTitle">Edit listing</h1>
+        <div class="elp-page-sub" id="edSub">Loading…</div>
+      </div>
+      <div class="right">
+        <a href="/landlord/?tab=listings" class="el-btn el-btn-ghost">&larr; Back</a>
+        <button class="el-btn el-btn-primary" id="saveBtn" disabled>Save</button>
+      </div>
+    </div>
+
+    <div id="edError" class="elp-empty" style="display:none;border-color:var(--el-danger)">
+      <h3>Listing not found</h3>
+      <p id="edErrorMsg">Couldn't load this listing.</p>
+      <a href="/landlord/?tab=listings" class="el-btn el-btn-secondary">Back to listings</a>
+    </div>
+
+    <div class="ed-grid" id="edGrid" style="display:none">
+
+      <!-- Main editor -->
+      <div>
+        <div class="elp-card">
+          <div class="elp-card-head">
+            <div class="elp-card-title">Marketing copy</div>
+          </div>
+          <form id="edForm">
+            <div class="el-field">
+              <label class="el-label" for="headline">Headline</label>
+              <input class="el-input" id="headline" type="text" maxlength="120" placeholder="e.g. Bright two-bed flat with canal views">
+              <div class="el-hint">A 1-line hook. This is what tenants see in search results.</div>
+            </div>
+            <div class="el-field">
+              <label class="el-label" for="description">Description</label>
+              <textarea class="el-textarea" id="description" rows="8" placeholder="What makes this home stand out — the space, the location, the natural light…"></textarea>
+            </div>
+            <div class="el-field-row">
+              <div class="el-field">
+                <label class="el-label" for="rent">Advertised rent (£/mo)</label>
+                <input class="el-input" id="rent" type="number" min="0" step="50">
+              </div>
+              <div class="el-field">
+                <label class="el-label" for="deposit">Deposit (£)</label>
+                <input class="el-input" id="deposit" type="number" min="0" step="50">
+              </div>
+            </div>
+            <div class="el-field">
+              <label class="el-label" for="available">Available from</label>
+              <input class="el-input" id="available" type="date">
+            </div>
+
+            <div class="el-field">
+              <label class="el-label">Amenities</label>
+              <div class="amenity-grid" id="amenityGrid"></div>
+            </div>
+          </form>
+        </div>
+
+        <div class="elp-card">
+          <div class="elp-card-head">
+            <div>
+              <div class="elp-card-title">Media</div>
+              <div class="elp-card-sub">Photos, 360° tours, floorplans and videos.</div>
+            </div>
+            <a href="#" class="el-btn el-btn-secondary" id="manageMediaBtn">Manage media</a>
+          </div>
+          <div class="media-grid" id="mediaGrid"></div>
+          <div id="mediaEmpty" class="el-hint" style="display:none;margin-top:12px">No media yet — add photos so this listing is ready to publish.</div>
+        </div>
+      </div>
+
+      <!-- Sidebar: status + stats -->
+      <div class="ed-side">
+        <div class="elp-card">
+          <div class="elp-card-head">
+            <div class="elp-card-title">Status</div>
+          </div>
+          <select class="el-select" id="status" style="margin-bottom:14px">
+            <option value="draft">Draft</option>
+            <option value="live">Live</option>
+            <option value="let_agreed">Let agreed</option>
+            <option value="delisted">Delisted</option>
+          </select>
+          <div id="publishHint" class="el-hint" style="margin-bottom:10px"></div>
+          <a href="#" id="viewLive" class="el-btn el-btn-secondary el-btn-full" style="display:none">View live listing &rarr;</a>
+        </div>
+
+        <div class="elp-card">
+          <div class="elp-card-head">
+            <div class="elp-card-title">Performance</div>
+          </div>
+          <div class="stat-row"><span class="label">Views</span><span class="value" id="statViews">—</span></div>
+          <div class="stat-row"><span class="label">Leads</span><span class="value" id="statLeads">—</span></div>
+          <div class="stat-row"><span class="label">Viewings</span><span class="value" id="statViewings">—</span></div>
+          <div class="stat-row"><span class="label">Published</span><span class="value" id="statPublished">—</span></div>
+        </div>
+
+        <div class="elp-card">
+          <div class="elp-card-head">
+            <div class="elp-card-title">Property</div>
+          </div>
+          <div id="edProperty" class="el-body" style="font-size:14px">—</div>
+          <a id="edPropertyLink" href="/landlord/properties/" class="el-btn el-btn-ghost" style="margin-top:10px;font-size:13px">Edit property &rarr;</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script type="module" src="/assets/portal.js"></script>
+<script type="module">
+  while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
+  const ELP = window.ELP;
+  const session = await ELP.requireSession("/landlord/login/");
+  if (!session) throw new Error("redirecting");
+  ELP.mountShell({ user: session.user });
+  const user = session.user;
+
+  const $ = (id) => document.getElementById(id);
+  const id = new URL(window.location.href).searchParams.get("id");
+
+  if (!id) {
+    $("edError").style.display = "block";
+    $("edErrorMsg").textContent = "No listing id in the URL.";
+    throw new Error("no id");
+  }
+
+  const AMENITIES = [
+    "Garden","Patio","Balcony","Parking","Garage","Off-street parking",
+    "Furnished","Part-furnished","Unfurnished","Pets considered","Bills included",
+    "Washing machine","Dishwasher","Tumble dryer","Gas central heating",
+    "Fibre broadband","Underfloor heating","Wood floors","Open-plan",
+    "Communal garden","Lift","Concierge","Wheelchair accessible","Council tax included",
+  ];
+
+  let listing = null;
+  let property = null;
+  let media = [];
+
+  async function load() {
+    try {
+      const rows = await ELP.rest(
+        `property_listings?id=eq.${id}&select=*,properties(*)&limit=1`
+      );
+      listing = rows[0];
+      if (!listing) throw new Error("not_found");
+      if (listing.user_id !== user.id) throw new Error("forbidden");
+      property = listing.properties;
+      media = await ELP.rest(`listing_media?listing_id=eq.${id}&select=id,public_url,media_type,is_hero,sort_order&order=is_hero.desc.nullslast,sort_order.asc`).catch(() => []);
+    } catch (err) {
+      $("edError").style.display = "block";
+      $("edErrorMsg").textContent = err.message === "forbidden" ? "You don't have access to this listing." : "Couldn't load this listing.";
+      return;
+    }
+
+    $("edGrid").style.display = "grid";
+    $("saveBtn").disabled = false;
+    render();
+  }
+
+  function render() {
+    const addr = property ? [property.address_line1, property.city, property.postcode].filter(Boolean).join(", ") : "Property";
+    $("edTitle").textContent = listing.headline || addr;
+    $("edSub").textContent = `${addr}${listing.slug ? ` · /listings/?slug=${listing.slug}` : ""}`;
+
+    $("headline").value = listing.headline || "";
+    $("description").value = listing.description || "";
+    $("rent").value = listing.advertised_rent ?? "";
+    $("deposit").value = listing.advertised_deposit ?? "";
+    $("available").value = listing.available_from || "";
+    $("status").value = listing.status || "draft";
+
+    // Amenity grid (checkboxes)
+    const tags = new Set(listing.amenity_tags || []);
+    $("amenityGrid").innerHTML = AMENITIES.map((a) => {
+      const checked = tags.has(a) ? "checked" : "";
+      return `<label class="amenity ${checked ? "checked" : ""}"><input type="checkbox" value="${ELP.esc(a)}" ${checked}><span>${ELP.esc(a)}</span></label>`;
+    }).join("");
+    $("amenityGrid").querySelectorAll("input").forEach((cb) =>
+      cb.addEventListener("change", () => cb.parentElement.classList.toggle("checked", cb.checked))
+    );
+
+    // Media preview (read-only here; full management in /landlord/?tab=listings → Media)
+    const mg = $("mediaGrid");
+    if (!media.length) {
+      mg.innerHTML = "";
+      $("mediaEmpty").style.display = "block";
+    } else {
+      $("mediaEmpty").style.display = "none";
+      mg.innerHTML = media.slice(0, 8).map((m) => {
+        const inner = m.media_type === "video"
+          ? `<video src="${ELP.esc(m.public_url)}" muted></video>`
+          : `<img src="${ELP.esc(m.public_url)}" alt="" loading="lazy">`;
+        return `<div class="media-tile">${inner}${m.is_hero ? '<span class="hero-pill">Hero</span>' : ""}</div>`;
+      }).join("");
+    }
+
+    // Sidebar stats
+    $("statViews").textContent = listing.view_count ?? 0;
+    $("statLeads").textContent = listing.lead_count ?? 0;
+    $("statViewings").textContent = listing.viewing_count ?? 0;
+    $("statPublished").textContent = listing.published_at ? ELP.fmtDate(listing.published_at) : "—";
+
+    if (listing.status === "live" && listing.slug) {
+      const v = $("viewLive");
+      v.style.display = "";
+      v.href = `/listings/?slug=${encodeURIComponent(listing.slug)}`;
+    }
+
+    // Sidebar property card
+    $("edProperty").innerHTML = `
+      <div style="font-weight:500;color:var(--el-ink);margin-bottom:4px">${ELP.esc(addr)}</div>
+      <div>${property?.bedrooms != null ? `${property.bedrooms} bed${property.bedrooms === 1 ? "" : "s"}` : ""}${property?.bathrooms != null ? ` · ${property.bathrooms} bath${property.bathrooms === 1 ? "" : "s"}` : ""}${property?.furnished_status ? ` · ${labelStatus(property.furnished_status)}` : ""}</div>
+    `;
+
+    refreshPublishHint();
+  }
+
+  function refreshPublishHint() {
+    const h = $("publishHint");
+    const s = $("status").value;
+    if (s === "live" && !media.some((m) => m.media_type === "photo")) {
+      h.textContent = "Add at least one photo before going live — listings without photos won't appear in search.";
+      h.style.color = "var(--el-warn)";
+    } else if (s === "live") {
+      h.textContent = "Visible in search and shareable via the public URL.";
+      h.style.color = "";
+    } else if (s === "draft") {
+      h.textContent = "Hidden from the public site. Only you can see it.";
+      h.style.color = "";
+    } else if (s === "let_agreed") {
+      h.textContent = "Marked as let agreed — shown but not accepting new applications.";
+      h.style.color = "";
+    } else if (s === "delisted") {
+      h.textContent = "Removed from the public site. Re-list any time.";
+      h.style.color = "";
+    }
+  }
+  document.addEventListener("change", (e) => { if (e.target?.id === "status") refreshPublishHint(); });
+
+  function labelStatus(s) {
+    return String(s).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  // ---- Save -------------------------------------------------------------
+  $("saveBtn").addEventListener("click", save);
+  async function save() {
+    $("saveBtn").disabled = true;
+    const tags = Array.from($("amenityGrid").querySelectorAll("input:checked")).map((cb) => cb.value);
+    const body = {
+      headline: $("headline").value.trim() || null,
+      description: $("description").value.trim() || null,
+      advertised_rent: numOrNull($("rent").value),
+      advertised_deposit: numOrNull($("deposit").value),
+      available_from: $("available").value || null,
+      amenity_tags: tags,
+      status: $("status").value,
+    };
+    try {
+      await ELP.rest(`property_listings?id=eq.${id}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(body),
+      });
+      ELP.toast("Listing saved", "success");
+      Object.assign(listing, body);
+    } catch (err) {
+      ELP.toast(err.message || "Could not save", "error");
+    } finally {
+      $("saveBtn").disabled = false;
+    }
+  }
+
+  function numOrNull(v) {
+    if (v == null || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  // ---- Manage media link routes back to the landlord portal modal -------
+  $("manageMediaBtn").addEventListener("click", (e) => {
+    e.preventDefault();
+    // Simplest: open the listings tab and attach a hash for the row to flag
+    window.location.href = `/landlord/?tab=listings#media-${id}`;
+  });
+
+  load();
+</script>
+</body>
+</html>

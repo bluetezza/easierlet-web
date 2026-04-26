@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
+  <title>Director's loan — easierLet</title>
+  <meta name="robots" content="noindex">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/assets/easierlet.css">
+  <link rel="stylesheet" href="/assets/portal.css">
+</head>
+<body class="elp-body">
+
+<div id="portal-shell" data-role="landlord" data-active="loan" data-title="Director's loan"></div>
+
+<main class="elp-main">
+  <div class="elp-main-inner">
+    <div class="elp-page-head">
+      <h1 class="elp-page-title">Director's loan</h1>
+      <p class="elp-page-sub">Track money you've put into the company and repayments back to yourself.</p>
+    </div>
+
+    <div class="elp-empty">
+      <h3>Coming soon</h3>
+      <p>Director's loan tracking is on the roadmap. In the meantime, you can categorise these as transactions on the Transactions tab.</p>
+      <a href="/landlord/?tab=transactions" class="el-btn el-btn-primary">Open Transactions</a>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="/assets/portal.js"></script>
+<script type="module">
+  while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
+  const ELP = window.ELP;
+  const session = await ELP.requireSession("/landlord/login/");
+  if (!session) throw new Error("redirecting");
+  ELP.mountShell({ user: session.user });
+</script>
+</body>
+</html>
