@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
+  <title>Useful links — easierLet</title>
+  <meta name="robots" content="noindex">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/assets/easierlet.css">
+  <link rel="stylesheet" href="/assets/portal.css">
+
+  <style>
+    .link-section { margin-bottom: 28px; }
+    .link-section h2 {
+      font-family: 'Fraunces', serif; font-weight: 400;
+      font-size: 19px; letter-spacing: -0.3px;
+      color: var(--el-ink); margin-bottom: 4px;
+    }
+    .link-section p { font-size: 14px; color: var(--el-muted); margin-bottom: 14px; }
+    .link-row {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 14px 16px;
+      background: #fff;
+      border: 1px solid var(--el-line-soft);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      transition: transform 150ms ease, box-shadow 150ms ease;
+    }
+    .link-row:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(15,46,40,0.05); }
+    .link-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: var(--el-green-pale); color: var(--el-green);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .link-icon svg { width: 18px; height: 18px; }
+    .link-main { flex: 1; min-width: 0; }
+    .link-title { font-size: 15px; font-weight: 500; color: var(--el-ink); margin-bottom: 2px; }
+    .link-desc { font-size: 13px; color: var(--el-muted); line-height: 1.5; }
+    .link-row:after {
+      content: "↗";
+      color: var(--el-muted);
+      font-size: 16px;
+      margin-left: auto;
+      align-self: flex-start;
+      padding-top: 2px;
+    }
+
+    .alert {
+      padding: 16px 18px;
+      background: #FFF8EC;
+      border: 1px solid #F0D080;
+      border-radius: 12px;
+      margin-bottom: 22px;
+      font-size: 14px;
+      color: #8A6000;
+      line-height: 1.55;
+    }
+    .alert strong { font-weight: 500; }
+  </style>
+</head>
+<body class="elp-body">
+
+<div id="portal-shell" data-role="landlord" data-active="useful-links" data-title="Useful links"></div>
+
+<main class="elp-main">
+  <div class="elp-main-inner">
+    <div class="elp-page-head">
+      <h1 class="elp-page-title">Useful links</h1>
+      <p class="elp-page-sub">Approved schemes and government guidance every UK landlord needs.</p>
+    </div>
+
+    <div class="alert">
+      <strong>Reminder.</strong> Your tenant's deposit must be protected in a government-approved scheme within 30 days of the tenancy start date. Failure to comply can mean a penalty of 1–3× the deposit.
+    </div>
+
+    <div class="link-section">
+      <h2>Deposit protection schemes</h2>
+      <p>Custodial (free) and insured (paid) options. Pick whichever suits — all three are government-approved.</p>
+
+      <a class="link-row" href="https://www.depositprotection.com" target="_blank" rel="noopener">
+        <div class="link-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6z"/></svg></div>
+        <div class="link-main">
+          <div class="link-title">Deposit Protection Service (DPS)</div>
+          <div class="link-desc">Custodial and insured schemes. The most widely used DPS.</div>
+        </div>
+      </a>
+
+      <a class="link-row" href="https://www.mydeposits.co.uk" target="_blank" rel="noopener">
+        <div class="link-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6z"/></svg></div>
+        <div class="link-main">
+          <div class="link-title">mydeposits</div>
+          <div class="link-desc">Insured-only scheme — you keep the deposit and pay an insurance premium.</div>
+        </div>
+      </a>
+
+      <a class="link-row" href="https://www.tenancydepositscheme.com" target="_blank" rel="noopener">
+        <div class="link-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6z"/></svg></div>
+        <div class="link-main">
+          <div class="link-title">Tenancy Deposit Scheme (TDS)</div>
+          <div class="link-desc">Custodial and insured options with free dispute resolution.</div>
+        </div>
+      </a>
+    </div>
+
+    <div class="link-section">
+      <h2>Right to rent</h2>
+      <p>Every adult tenant must be checked before the tenancy starts.</p>
+
+      <a class="link-row" href="https://www.gov.uk/check-tenant-right-to-rent-documents" target="_blank" rel="noopener">
+        <div class="link-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <div class="link-main">
+          <div class="link-title">Right to rent — gov.uk</div>
+          <div class="link-desc">Acceptable documents and the digital share-code service.</div>
+        </div>
+      </a>
+
+      <a class="link-row" href="https://www.gov.uk/check-tenant-right-to-rent-share-code" target="_blank" rel="noopener">
+        <div class="link-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+        <div class="link-main">
+          <div class="link-title">Online share-code check</div>
+          <div class="link-desc">Verify a tenant's right-to-rent share code against the Home Office records.</div>
+        </div>
+      </a>
+    </div>
+
+    <div class="link-section">
+      <h2>Compliance &amp; safety</h2>
+      <p>Statutory checks every rental property in England needs.</p>
+
+      <a class="link-row" href="https://www.gov.uk/private-renting/your-landlords-safety-responsibilities" target="_blank" rel="noopener">
+        <div class="link-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-12V4l-8-2-8 2v6c0 8 8 12 8 12z"/></svg></div>
+        <div class="link-main">
+          <div class="link-title">Landlord safety responsibilities</div>
+          <div class="link-desc">Gas safety, electrical checks, smoke/CO alarms — official guidance.</div>
+        </div>
+      </a>
+
+      <a class="link-row" href="https://www.gov.uk/buy-sell-your-home/energy-performance-certificates" target="_blank" rel="noopener">
+        <div class="link-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg></div>
+        <div class="link-main">
+          <div class="link-title">EPC requirements</div>
+          <div class="link-desc">Minimum E rating to let. Find or order an Energy Performance Certificate.</div>
+        </div>
+      </a>
+
+      <a class="link-row" href="https://www.gov.uk/government/publications/how-to-rent" target="_blank" rel="noopener">
+        <div class="link-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg></div>
+        <div class="link-main">
+          <div class="link-title">'How to rent' guide</div>
+          <div class="link-desc">Mandatory info sheet you must give every tenant — easierLet attaches the latest version automatically.</div>
+        </div>
+      </a>
+    </div>
+
+    <div class="link-section">
+      <h2>Tax &amp; finance</h2>
+      <a class="link-row" href="https://www.gov.uk/renting-out-a-property/paying-tax" target="_blank" rel="noopener">
+        <div class="link-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9 9h6M9 12h6M9 15h4"/></svg></div>
+        <div class="link-main">
+          <div class="link-title">Paying tax on rental income</div>
+          <div class="link-desc">Self Assessment, allowable expenses, and Section 24 mortgage interest relief.</div>
+        </div>
+      </a>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="/assets/portal.js"></script>
+<script type="module">
+  while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
+  const ELP = window.ELP;
+  const session = await ELP.requireSession("/landlord/login/");
+  if (!session) throw new Error("redirecting");
+  ELP.mountShell({ user: session.user });
+</script>
+</body>
+</html>
