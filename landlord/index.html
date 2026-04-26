@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/assets/easierlet.css">
-  <link rel="stylesheet" href="/assets/portal.css">
+  <link rel="stylesheet" href="/assets/easierlet.css?v=20260426d">
+  <link rel="stylesheet" href="/assets/portal.css?v=20260426d">
 
   <style>
     /* Listing row table-style */
@@ -428,22 +428,37 @@
         <form id="settingsForm">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
             <div>
-              <label class="el-label">Director / contact name</label>
-              <input class="el-input" id="setDirector" type="text">
+              <label class="el-label">Company / Landlord name</label>
+              <input class="el-input" id="setCompany" type="text" placeholder="e.g. Oakrise Estates Ltd">
             </div>
             <div>
-              <label class="el-label">Company name</label>
-              <input class="el-input" id="setCompany" type="text">
+              <label class="el-label">Director / Contact name</label>
+              <input class="el-input" id="setDirector" type="text" placeholder="e.g. John Smith">
             </div>
+          </div>
+          <div style="margin-bottom:14px">
+            <label class="el-label">Contact address</label>
+            <textarea class="el-textarea" id="setAddress" rows="2" placeholder="Full address including postcode"></textarea>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
             <div>
-              <label class="el-label">Company number</label>
-              <input class="el-input" id="setCompanyNumber" type="text">
+              <label class="el-label">Contact email</label>
+              <input class="el-input" id="setEmail" type="email" placeholder="you@email.com">
             </div>
             <div>
-              <label class="el-label">Phone</label>
-              <input class="el-input" id="setPhone" type="tel">
+              <label class="el-label">Contact phone</label>
+              <input class="el-input" id="setPhone" type="tel" placeholder="+44 7700 000000">
+            </div>
+          </div>
+          <div style="margin:18px 0 8px;font-size:11px;font-weight:600;letter-spacing:0.5px;color:var(--el-muted)">DEPOSIT PROTECTION</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div>
+              <label class="el-label">DPS scheme</label>
+              <input class="el-input" id="setDpsScheme" type="text" placeholder="e.g. mydeposits, DPS, TDS">
+            </div>
+            <div>
+              <label class="el-label">Membership number</label>
+              <input class="el-input" id="setDpsMembership" type="text" placeholder="Optional">
             </div>
           </div>
           <button type="submit" class="el-btn el-btn-primary">Save profile</button>
@@ -758,7 +773,17 @@
 
   // ---- Dashboard --------------------------------------------------------
   async function loadDashboard() {
-    const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "there";
+    // Prefer the landlord_profiles director name (set in iOS Landlord
+    // Profile / web Account settings) over auth metadata, which often
+    // holds whatever the user typed at sign-up.
+    const profile = await ELP.rest(
+      `landlord_profiles?user_id=eq.${user.id}&select=director_name,company_name&limit=1`
+    ).catch(() => []);
+    const p = profile[0] || {};
+    const name = (p.director_name || "").trim()
+              || (p.company_name || "").trim()
+              || user.user_metadata?.full_name
+              || user.email?.split("@")[0] || "there";
     $("welcome").textContent = `Welcome back, ${ELP.esc(name)}`;
 
     // Fire all the queries in parallel — same data scope as the iOS DashboardViewModel.
@@ -768,7 +793,7 @@
     ] = await Promise.all([
       ELP.rest(`property_listings?user_id=eq.${user.id}&select=id,property_id,status`).catch(() => []),
       ELP.rest(`viewing_requests?user_id=eq.${user.id}&status=eq.pending&select=id`).catch(() => []),
-      ELP.rest(`properties?user_id=eq.${user.id}&archived=eq.false&select=id,address,address_line1,city,postcode,property_number&order=created_at.desc`).catch(() => []),
+      ELP.rest(`properties?user_id=eq.${user.id}&archived=eq.false&select=id,address,address_line1,city,postcode&order=created_at.desc`).catch(() => []),
       ELP.rest(`tenants?user_id=eq.${user.id}&status=neq.archived&select=id,name,full_name,property_id,status,role`).catch(() => []),
       ELP.rest(`documents?user_id=eq.${user.id}&select=id,name,category,property_id,expiry_date`).catch(() => []),
       ELP.rest(`maintenance_requests?user_id=eq.${user.id}&select=id,title,priority,status,property_id,created_at&order=created_at.desc&limit=50`).catch(() => []),
@@ -972,10 +997,9 @@
 
         const addr = [prop.address_line1, prop.city, prop.postcode].filter(Boolean).join(", ") || prop.address;
         const hero = heroByProperty[prop.id];
-        const numberPill = prop.property_number ? `<div class="pc-hero-pill">#${ELP.esc(prop.property_number)}</div>` : "";
         const heroBlock = hero
-          ? `<div class="pc-hero"><img src="${ELP.esc(hero)}" alt="">${numberPill}</div>`
-          : `<div class="pc-hero"><span class="pc-hero-fallback">🏠</span>${numberPill}</div>`;
+          ? `<div class="pc-hero"><img src="${ELP.esc(hero)}" alt=""></div>`
+          : `<div class="pc-hero"><span class="pc-hero-fallback">🏠</span></div>`;
 
         return `
           <a class="dash-property-card" href="/landlord/properties/">
@@ -1839,24 +1863,34 @@
   }
 
   // ---- Settings ---------------------------------------------------------
+  // Reads + writes the same columns as the iOS Landlord Profile screen
+  // (LandlordProfileSetupStandaloneView). Earlier versions used `phone` and
+  // `company_number` which don't exist on the table — that 400'd the request
+  // and the UI fell back to auth metadata, surfacing the wrong name.
   async function loadSettings() {
     const profile = await ELP.rest(
-      `landlord_profiles?user_id=eq.${user.id}&select=director_name,company_name,company_number,phone&limit=1`
+      `landlord_profiles?user_id=eq.${user.id}&select=company_name,director_name,contact_address,contact_email,contact_phone,dps_scheme,dps_membership&limit=1`
     ).catch(() => []);
     const p = profile[0] || {};
-    $("setDirector").value = p.director_name || user.user_metadata?.full_name || "";
-    $("setCompany").value = p.company_name || "";
-    $("setCompanyNumber").value = p.company_number || "";
-    $("setPhone").value = p.phone || user.user_metadata?.phone || "";
+    $("setCompany").value        = p.company_name || "";
+    $("setDirector").value       = p.director_name || "";
+    $("setAddress").value        = p.contact_address || "";
+    $("setEmail").value          = p.contact_email || user.email || "";
+    $("setPhone").value          = p.contact_phone || "";
+    $("setDpsScheme").value      = p.dps_scheme || "";
+    $("setDpsMembership").value  = p.dps_membership || "";
   }
   $("settingsForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const body = {
-      user_id: user.id,
-      director_name: $("setDirector").value.trim() || null,
-      company_name: $("setCompany").value.trim() || null,
-      company_number: $("setCompanyNumber").value.trim() || null,
-      phone: $("setPhone").value.trim() || null,
+      user_id:         user.id,
+      company_name:    $("setCompany").value.trim() || null,
+      director_name:   $("setDirector").value.trim() || null,
+      contact_address: $("setAddress").value.trim() || null,
+      contact_email:   $("setEmail").value.trim() || null,
+      contact_phone:   $("setPhone").value.trim() || null,
+      dps_scheme:      $("setDpsScheme").value.trim() || null,
+      dps_membership:  $("setDpsMembership").value.trim() || null,
     };
     try {
       await ELP.rest("landlord_profiles?on_conflict=user_id", {
