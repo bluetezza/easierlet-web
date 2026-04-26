@@ -660,7 +660,7 @@
   while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
   const ELP = window.ELP;
 
-  const session = await ELP.requireSession("/landlord/login/");
+  const session = await ELP.requireSession("/login/");
   if (!session) throw new Error("redirecting");
   const user = session.user;
   ELP.mountShell({ user });
