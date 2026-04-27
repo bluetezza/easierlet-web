@@ -146,6 +146,7 @@ const NAV = {
     { href: "/landlord/?tab=documents",    id: "documents",    label: "Documents",       icon: "doc" },
     { href: "/landlord/loan/",             id: "loan",         label: "Director's loan", icon: "coins" },
     { href: "/landlord/useful-links/",     id: "useful-links", label: "Useful links",    icon: "link" },
+    { href: "/billing/",                   id: "billing",      label: "Billing",         icon: "coins" },
   ],
 };
 

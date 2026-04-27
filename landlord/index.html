@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/assets/easierlet.css?v=20260426e">
-  <link rel="stylesheet" href="/assets/portal.css?v=20260426e">
+  <link rel="stylesheet" href="/assets/easierlet.css?v=20260427a">
+  <link rel="stylesheet" href="/assets/portal.css?v=20260427a">
 
   <style>
     /* Listing row table-style */
@@ -221,6 +221,19 @@
       <div class="dash-header">
         <h1 class="dash-title">Dashboard</h1>
         <p class="dash-sub" id="welcome">Welcome back</p>
+      </div>
+
+      <!-- Onboarding card (B2 mirror) — only renders while progress is incomplete and not dismissed -->
+      <div id="onboardingCard" class="onboarding-card" style="display:none">
+        <div class="onboarding-head">
+          <div class="onboarding-title">Getting Started</div>
+          <div class="onboarding-count" id="obCount">0 of 10</div>
+        </div>
+        <div class="onboarding-bar"><div class="onboarding-bar-fill" id="obFill"></div></div>
+        <div class="onboarding-pct" id="obPct">0%</div>
+        <ul class="onboarding-steps" id="obSteps"></ul>
+        <button type="button" class="onboarding-cta" id="obContinue">Continue</button>
+        <div style="text-align:center"><button type="button" class="onboarding-dismiss" id="obDismiss">I'll do this later</button></div>
       </div>
 
       <!-- Status strip: 3 tiles, iOS-style -->
@@ -804,6 +817,22 @@
       ELP.rest(`property_visits?user_id=eq.${user.id}&select=id,property_id,visit_type,title,scheduled_date,status&order=scheduled_date.asc&limit=50`).catch(() => []),
     ]);
 
+    // Filter out items tied to archived properties so the dashboard stays
+    // focussed. Items with no property_id (e.g. company-level expenses)
+    // remain visible.
+    const activePropIds = new Set(properties.map((p) => p.id));
+    const isLinked = (id) => !id || activePropIds.has(id);
+    const _maintenance = maintenance.filter((m) => isLinked(m.property_id));
+    const _transactions = transactions.filter((t) => isLinked(t.property_id));
+    const _docs = docs.filter((d) => isLinked(d.property_id));
+    const _inventories = inventories.filter((i) => isLinked(i.property_id));
+    const _visits = visits.filter((v) => isLinked(v.property_id));
+    maintenance.length = 0; maintenance.push(..._maintenance);
+    transactions.length = 0; transactions.push(..._transactions);
+    docs.length = 0; docs.push(..._docs);
+    inventories.length = 0; inventories.push(..._inventories);
+    visits.length = 0; visits.push(..._visits);
+
     // Hero images per property — via listing_media → listings → property_id
     const heroByProperty = {};
     if (listings.length) {
@@ -819,6 +848,14 @@
         }
       }
     }
+
+    // ── Onboarding card (B2 mirror) ─────────────────────────────────
+    // Pull onboarding_completed_at to know if the landlord has dismissed.
+    const profileRow = await ELP.rest(
+      `landlord_profiles?user_id=eq.${user.id}&select=onboarding_completed_at&limit=1`
+    ).catch(() => []);
+    const onboardingDismissed = !!(profileRow[0]?.onboarding_completed_at);
+    if (!onboardingDismissed) renderOnboardingCard({ properties, listings, tenants, docs, transactions });
 
     // ── Money strip ─────────────────────────────────────────────────
     const totalIncome = transactions.filter((t) => t.type === "income").reduce((s, t) => s + (t.amount || 0), 0);
@@ -1002,6 +1039,11 @@
           ? `<div class="pc-hero"><img src="${ELP.esc(hero)}" alt=""></div>`
           : `<div class="pc-hero"><span class="pc-hero-fallback">🏠</span></div>`;
 
+        const comp = complianceForProperty(prop.id, docs);
+        const compClass = comp.anyExpired ? "alert" : (comp.covered === comp.total ? "ok" : "warn");
+        const compIcon = comp.anyExpired ? "⚠️" : (comp.covered === comp.total ? "✅" : "⚠️");
+        const compLine = `<div><span class="pc-compliance ${compClass}">${compIcon} Compliance: ${comp.covered}/${comp.total}${comp.anyExpired ? " · expired" : ""}</span></div>`;
+
         return `
           <a class="dash-property-card" href="/landlord/properties/">
             ${heroBlock}
@@ -1011,6 +1053,7 @@
               ${docLine}
               ${maintLine}
               ${visitLine}
+              ${compLine}
               <div class="pc-foot">View details →</div>
             </div>
           </a>`;
@@ -1166,6 +1209,92 @@
     if (diff < 172800) return "Yesterday";
     if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
     return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  }
+
+  // ---- Onboarding (Part B mirror) -------------------------------------
+  function renderOnboardingCard(ctx) {
+    const STEPS = [
+      { id: "addProperty",       title: "Add your first property",       href: "/landlord/properties/" },
+      { id: "uploadGasSafety",   title: "Upload Gas Safety Certificate", href: "/landlord/?tab=documents" },
+      { id: "uploadEICR",        title: "Upload EICR",                   href: "/landlord/?tab=documents" },
+      { id: "uploadEPC",         title: "Upload EPC",                    href: "/landlord/?tab=documents" },
+      { id: "createListing",     title: "Create a listing or invite a tenant", href: "/landlord/?tab=listings" },
+      { id: "addTenant",         title: "Add a tenant",                  href: "/landlord/?tab=tenants" },
+      { id: "completeAgreement", title: "Complete tenancy agreement",    href: "/landlord/?tab=tenancies" },
+      { id: "completeInventory", title: "Complete inventory",            href: "/landlord/inventory/" },
+      { id: "addTransaction",    title: "Record your first transaction", href: "/landlord/?tab=transactions" },
+      { id: "reviewDocs",        title: "Review your documents",         href: "/landlord/?tab=documents" },
+    ];
+    const cats = new Set(ctx.docs.map((d) => (d.category || "").toLowerCase()));
+    const matches = (needle) => Array.from(cats).some((c) => c.includes(needle));
+    const checks = {
+      addProperty:        ctx.properties.length > 0,
+      uploadGasSafety:    matches("gas") && matches("safety"),
+      uploadEICR:         matches("eicr") || matches("electrical"),
+      uploadEPC:          cats.has("epc") || matches("energy performance"),
+      createListing:      ctx.listings.length > 0 || ctx.tenants.some((t) => !["draft","archived","rejected"].includes(t.status)),
+      addTenant:          ctx.tenants.some((t) => !["draft","archived","rejected"].includes(t.status)),
+      completeAgreement:  matches("tenancy") && matches("agreement"),
+      completeInventory:  matches("inventory"),
+      addTransaction:     ctx.transactions.length > 0,
+      reviewDocs:         ctx.docs.length >= 3,
+    };
+    const completed = STEPS.filter((s) => checks[s.id]).length;
+    const total = STEPS.length;
+    if (completed === total) return; // hide
+
+    const card = $("onboardingCard");
+    card.style.display = "";
+    $("obCount").textContent = `${completed} of ${total}`;
+    $("obFill").style.width = `${Math.round((completed/total)*100)}%`;
+    $("obPct").textContent = `${Math.round((completed/total)*100)}%`;
+
+    const next = STEPS.find((s) => !checks[s.id]);
+    $("obSteps").innerHTML = STEPS.map((s) => {
+      const done = checks[s.id];
+      const isNext = !done && s.id === next.id;
+      return `<li class="${done ? "done" : ""} ${isNext ? "next" : ""}">
+        <span class="dot">${done ? "✓" : ""}</span>
+        <span>${ELP.esc(s.title)}</span>
+        ${isNext ? '<span class="next-pill">Next</span>' : ""}
+      </li>`;
+    }).join("");
+
+    const cta = $("obContinue");
+    cta.textContent = `Continue: ${next.title}`;
+    cta.onclick = () => { window.location.href = next.href; };
+
+    $("obDismiss").onclick = async () => {
+      try {
+        await ELP.rest("landlord_profiles?on_conflict=user_id", {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+          body: JSON.stringify({ user_id: user.id, onboarding_completed_at: new Date().toISOString() }),
+        });
+        card.style.display = "none";
+      } catch (e) { ELP.toast("Couldn't save — try again", "error"); }
+    };
+  }
+
+  // ---- Per-property compliance helper (D4 mirror) ---------------------
+  // Mirrors MandatoryDocuments.complianceCount: counts the legal+essential
+  // mandatory categories and flags expired legal certs as red.
+  const COMPLIANCE_CATS = ["Gas Safety Certificate","Electrical Certificate (EICR)","EPC","Tenancy Agreement","Inventory","Buildings Insurance"];
+  const LEGAL_CATS = ["Gas Safety Certificate","Electrical Certificate (EICR)","EPC"];
+  function complianceForProperty(propertyId, allDocs) {
+    const propDocs = allDocs.filter((d) => d.property_id === propertyId);
+    let covered = 0; let anyExpired = false;
+    const today = new Date(); today.setHours(0,0,0,0);
+    for (const cat of COMPLIANCE_CATS) {
+      const doc = propDocs.find((d) => d.category === cat);
+      if (!doc) continue;
+      const expired = doc.expiry_date
+        ? (new Date(doc.expiry_date.length <= 10 ? doc.expiry_date + "T00:00:00" : doc.expiry_date) < today)
+        : false;
+      if (expired && LEGAL_CATS.includes(cat)) anyExpired = true;
+      if (!expired) covered += 1;
+    }
+    return { covered, total: COMPLIANCE_CATS.length, anyExpired };
   }
 
   function setStatusCell(valueId, subId, iconId, value, ctaText, zeroText, zeroIcon, normalIcon) {
@@ -1734,11 +1863,17 @@
   // The earlier select asked for `prequal_status` which doesn't exist on the
   // tenants table — PostgREST 400'd, the catch returned [], and the tab
   // showed the empty state. The tenants table also has both `name` and
-  // `full_name` (legacy + structured), so prefer either.
+  // `full_name` (legacy + structured), so prefer either. Embedded
+  // properties(...) returns null for archived parents, which we filter out.
   async function loadTenants() {
-    const rows = await ELP.rest(
-      `tenants?user_id=eq.${user.id}&select=id,name,full_name,email,phone,status,role,created_at,updated_at,property_id,properties(address_line1,city,postcode)&order=updated_at.desc.nullslast,created_at.desc`
-    ).catch(() => []);
+    const [allRows, activeProps] = await Promise.all([
+      ELP.rest(
+        `tenants?user_id=eq.${user.id}&select=id,name,full_name,email,phone,status,role,created_at,updated_at,property_id,properties(address_line1,city,postcode,archived)&order=updated_at.desc.nullslast,created_at.desc`
+      ).catch(() => []),
+      ELP.rest(`properties?user_id=eq.${user.id}&archived=eq.false&select=id`).catch(() => []),
+    ]);
+    const activeIds = new Set(activeProps.map((p) => p.id));
+    const rows = allRows.filter((t) => !t.property_id || activeIds.has(t.property_id));
     if (!rows.length) {
       $("tenantsList").innerHTML = `
         <div class="elp-empty">
@@ -1771,9 +1906,14 @@
   // Both fields were used in the original loader, so the catch returned []
   // and the tab always showed "No tenancies yet".
   async function loadTenancies() {
-    const rows = await ELP.rest(
-      `tenancy_agreements?user_id=eq.${user.id}&select=id,status,start_date,monthly_rent,deposit,property_id,tenant_id,properties(address_line1,city,postcode),tenants(name,full_name,email)&order=start_date.desc.nullslast`
-    ).catch(() => []);
+    const [allRows, activeProps] = await Promise.all([
+      ELP.rest(
+        `tenancy_agreements?user_id=eq.${user.id}&select=id,status,start_date,monthly_rent,deposit,property_id,tenant_id,properties(address_line1,city,postcode),tenants(name,full_name,email)&order=start_date.desc.nullslast`
+      ).catch(() => []),
+      ELP.rest(`properties?user_id=eq.${user.id}&archived=eq.false&select=id`).catch(() => []),
+    ]);
+    const activeIds = new Set(activeProps.map((p) => p.id));
+    const rows = allRows.filter((r) => !r.property_id || activeIds.has(r.property_id));
 
     if (!rows.length) {
       $("tenanciesList").innerHTML = `
@@ -1805,9 +1945,15 @@
   // Real column is `type` (income/expense), not `kind`. Earlier select with
   // `kind` 400'd and the tab showed empty.
   async function loadTransactions() {
-    const rows = await ELP.rest(
-      `transactions?user_id=eq.${user.id}&select=id,date,amount,type,category,note,property_id,properties(address_line1,city)&order=date.desc&limit=200`
-    ).catch(() => []);
+    const [allTx, activeProps] = await Promise.all([
+      ELP.rest(
+        `transactions?user_id=eq.${user.id}&select=id,date,amount,type,category,note,property_id,properties(address_line1,city)&order=date.desc&limit=200`
+      ).catch(() => []),
+      ELP.rest(`properties?user_id=eq.${user.id}&archived=eq.false&select=id`).catch(() => []),
+    ]);
+    // Hide tx tied to archived properties; un-attached tx stay visible.
+    const activeIds = new Set(activeProps.map((p) => p.id));
+    const rows = allTx.filter((t) => !t.property_id || activeIds.has(t.property_id));
     if (!rows.length) {
       $("transactionsList").innerHTML = `
         <div class="elp-empty">
@@ -1845,7 +1991,7 @@
   let _docsProperties = [];
   let _docsPropertyFilter = "all";
   async function loadDocuments() {
-    const [docs, props] = await Promise.all([
+    const [allDocs, props] = await Promise.all([
       ELP.rest(
         `documents?user_id=eq.${user.id}&select=id,name,category,type,expiry_date,created_at,property_id,properties(address_line1,city)&order=expiry_date.asc.nullslast,created_at.desc&limit=200`
       ).catch(() => []),
@@ -1853,7 +1999,9 @@
         `properties?user_id=eq.${user.id}&archived=eq.false&select=id,address_line1,city&order=created_at.desc`
       ).catch(() => []),
     ]);
-    _docsAll = docs;
+    // Hide docs tied to archived properties (un-attached docs stay visible).
+    const activeIds = new Set(props.map((p) => p.id));
+    _docsAll = allDocs.filter((d) => !d.property_id || activeIds.has(d.property_id));
     _docsProperties = props;
 
     // Build the property filter pills (only when 2+ properties exist)

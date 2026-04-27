@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
+  <title>Billing — easierLet</title>
+  <meta name="robots" content="noindex">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/assets/easierlet.css?v=20260427a">
+  <link rel="stylesheet" href="/assets/portal.css?v=20260427a">
+
+  <style>
+    .plan-summary {
+      background: linear-gradient(135deg, #1A6B55 0%, #2A8A6E 100%);
+      color: #fff; border-radius: 16px;
+      padding: 24px; margin-bottom: 20px;
+    }
+    .plan-summary .plan-name {
+      font-family: 'Fraunces', serif; font-weight: 400;
+      font-size: 28px; letter-spacing: -0.4px; margin-bottom: 4px;
+    }
+    .plan-summary .plan-status { font-size: 13px; color: rgba(255,255,255,0.85); }
+    .plan-summary .plan-meta {
+      display: flex; gap: 24px; flex-wrap: wrap; margin-top: 18px;
+    }
+    .plan-summary .meta-cell .label {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+      color: rgba(255,255,255,0.65); margin-bottom: 2px;
+    }
+    .plan-summary .meta-cell .value { font-size: 16px; font-weight: 600; }
+
+    .pricing-grid {
+      display: grid; gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-bottom: 20px;
+    }
+    .price-tile {
+      background: #fff; border: 1px solid var(--el-line-soft);
+      border-radius: 14px; padding: 20px;
+      display: flex; flex-direction: column;
+    }
+    .price-tile.is-current { border-color: var(--el-green); border-width: 2px; }
+    .price-tile h3 { font-size: 13px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--el-muted); margin: 0 0 8px; }
+    .price-tile .amount { font-family: 'Fraunces', serif; font-size: 26px; color: var(--el-ink); margin: 0 0 4px; }
+    .price-tile .amount small { font-size: 13px; color: var(--el-muted); font-family: inherit; }
+    .price-tile .scope { font-size: 13px; color: var(--el-ink-soft); margin: 0 0 14px; }
+    .price-tile .upgrade-btn { margin-top: auto; }
+    .badge-current {
+      display: inline-block; background: var(--el-green-pale); color: var(--el-green);
+      font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px;
+      margin-bottom: 8px;
+    }
+
+    .alert {
+      padding: 12px 14px; border-radius: 10px; font-size: 14px; margin-bottom: 14px;
+    }
+    .alert.warn { background: #FFF8EC; color: #8A6000; border: 1px solid #F0D080; }
+    .alert.error { background: #FBE0E0; color: #B23434; border: 1px solid #F0C8C8; }
+  </style>
+</head>
+<body class="elp-body">
+
+<div id="portal-shell" data-role="landlord" data-active="settings" data-title="Billing"></div>
+
+<main class="elp-main">
+  <div class="elp-main-inner">
+    <div class="elp-page-head">
+      <h1 class="elp-page-title">Billing</h1>
+      <p class="elp-page-sub">Your easierLet plan, usage and payment method.</p>
+    </div>
+
+    <div id="loadingBox" class="elp-loading"><div class="elp-spinner"></div>Loading your subscription…</div>
+    <div id="contentBox" style="display:none">
+
+      <div id="alertBox"></div>
+
+      <div class="plan-summary">
+        <div class="plan-name" id="planName">—</div>
+        <div class="plan-status" id="planStatus">—</div>
+        <div class="plan-meta">
+          <div class="meta-cell">
+            <div class="label">Properties</div>
+            <div class="value" id="propUsage">—</div>
+          </div>
+          <div class="meta-cell" id="trialCell" style="display:none">
+            <div class="label">Trial ends</div>
+            <div class="value" id="trialEnds">—</div>
+          </div>
+          <div class="meta-cell" id="renewCell" style="display:none">
+            <div class="label">Next renewal</div>
+            <div class="value" id="renewDate">—</div>
+          </div>
+        </div>
+        <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="el-btn el-btn-secondary" id="manageBtn" style="background:#fff;color:#1A6B55">Manage billing</button>
+        </div>
+      </div>
+
+      <h2 style="font-family:'Fraunces',serif;font-weight:400;font-size:22px;margin:0 0 14px">Available plans</h2>
+      <div class="pricing-grid">
+        <div class="price-tile" data-plan-tile="starter">
+          <span class="badge-current" style="display:none">Current plan</span>
+          <h3>Starter</h3>
+          <div class="amount">£9.99 <small>/ month</small></div>
+          <p class="scope">Up to 3 properties</p>
+          <button class="el-btn el-btn-primary upgrade-btn" data-checkout="starter">Choose Starter</button>
+        </div>
+        <div class="price-tile" data-plan-tile="growth">
+          <span class="badge-current" style="display:none">Current plan</span>
+          <h3>Growth</h3>
+          <div class="amount">£24.99 <small>/ month</small></div>
+          <p class="scope">Up to 10 properties</p>
+          <button class="el-btn el-btn-primary upgrade-btn" data-checkout="growth">Choose Growth</button>
+        </div>
+        <div class="price-tile" data-plan-tile="professional">
+          <span class="badge-current" style="display:none">Current plan</span>
+          <h3>Professional</h3>
+          <div class="amount">£49.99 <small>/ month</small></div>
+          <p class="scope">Up to 25 properties · priority support</p>
+          <button class="el-btn el-btn-primary upgrade-btn" data-checkout="professional">Choose Professional</button>
+        </div>
+      </div>
+
+      <p style="font-size:13px;color:var(--el-muted);text-align:center;margin-top:20px">
+        Need more than 25 properties? <a href="mailto:hello@easierlet.com" style="color:var(--el-green)">Get in touch</a>.
+      </p>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="/assets/portal.js"></script>
+<script type="module">
+  while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
+  const ELP = window.ELP;
+  const session = await ELP.requireSession("/login/");
+  if (!session) throw new Error("redirecting");
+  ELP.mountShell({ user: session.user });
+  const user = session.user;
+  const $ = (id) => document.getElementById(id);
+
+  const PLAN_LIMITS = { trial: 2, starter: 3, growth: 10, professional: 25 };
+  const PLAN_LABELS = { trial: "Free trial", starter: "Starter", growth: "Growth", professional: "Professional" };
+
+  function alertBox(kind, msg) {
+    $("alertBox").innerHTML = `<div class="alert ${kind}">${ELP.esc(msg)}</div>`;
+  }
+
+  async function load() {
+    const [subs, props] = await Promise.all([
+      ELP.rest(`landlord_subscriptions?user_id=eq.${user.id}&select=plan,status,trial_ends_at,current_period_end,property_limit&limit=1`).catch(() => []),
+      ELP.rest(`properties?user_id=eq.${user.id}&archived=eq.false&select=id`).catch(() => []),
+    ]);
+    const sub = subs[0] || { plan: "trial", status: "trialing", property_limit: 2 };
+    const propCount = props.length;
+
+    $("planName").textContent = PLAN_LABELS[sub.plan] || sub.plan;
+    const statusLabels = {
+      trialing: "On a free trial",
+      active: "Active subscription",
+      past_due: "⚠️ Payment past due",
+      cancelled: "Cancelled",
+      expired: "Expired — upgrade to continue",
+    };
+    $("planStatus").textContent = statusLabels[sub.status] || sub.status;
+
+    $("propUsage").textContent = `${propCount} of ${sub.property_limit}`;
+
+    if (sub.trial_ends_at) {
+      const days = Math.max(0, Math.round((new Date(sub.trial_ends_at) - new Date()) / 86400000));
+      $("trialEnds").textContent = days === 0 ? "Today" : `${days} day${days === 1 ? "" : "s"}`;
+      $("trialCell").style.display = "";
+    }
+    if (sub.current_period_end) {
+      $("renewDate").textContent = new Date(sub.current_period_end).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      $("renewCell").style.display = "";
+    }
+
+    if (sub.status === "past_due") {
+      alertBox("warn", "Your last payment was declined. Update your card via Manage billing to keep your account active.");
+    } else if (sub.status === "expired" || sub.status === "cancelled") {
+      alertBox("warn", "Your subscription is no longer active. Pick a plan below to keep using easierLet.");
+    } else if (sub.status === "trialing" && sub.trial_ends_at) {
+      const days = Math.max(0, Math.round((new Date(sub.trial_ends_at) - new Date()) / 86400000));
+      if (days <= 3) alertBox("warn", `Your trial ends in ${days} day${days === 1 ? "" : "s"}. Pick a plan to keep going.`);
+    }
+
+    // Highlight current plan tile
+    document.querySelectorAll("[data-plan-tile]").forEach((t) => {
+      const isCurrent = t.dataset.planTile === sub.plan;
+      t.classList.toggle("is-current", isCurrent);
+      t.querySelector(".badge-current").style.display = isCurrent && (sub.status === "active" || sub.status === "past_due") ? "" : "none";
+      const btn = t.querySelector("[data-checkout]");
+      if (isCurrent && (sub.status === "active" || sub.status === "trialing")) {
+        btn.textContent = sub.status === "trialing" ? "Upgrade to this plan" : "Current plan";
+        btn.disabled = sub.status === "active";
+      }
+    });
+
+    document.querySelectorAll("[data-checkout]").forEach((b) =>
+      b.addEventListener("click", () => startCheckout(b.dataset.checkout, b))
+    );
+    $("manageBtn").addEventListener("click", openPortal);
+
+    $("loadingBox").style.display = "none";
+    $("contentBox").style.display = "";
+  }
+
+  async function startCheckout(plan, btn) {
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = "Opening checkout…";
+    try {
+      const res = await ELP.callFn("create-checkout-session", {
+        method: "POST",
+        body: JSON.stringify({ plan }),
+      });
+      if (res?.checkout_url) {
+        window.location.href = res.checkout_url;
+        return;
+      }
+      throw new Error(res?.message || "Could not start checkout");
+    } catch (e) {
+      const msg = e.message || "Couldn't open checkout.";
+      if (msg.includes("stripe_not_configured") || msg.includes("not set yet")) {
+        alertBox("warn", "Billing setup is still pending — Stripe keys haven't been configured. The signup + portal will switch on once that's done.");
+      } else {
+        alertBox("error", msg);
+      }
+      btn.disabled = false; btn.textContent = orig;
+    }
+  }
+
+  async function openPortal() {
+    const btn = $("manageBtn");
+    btn.disabled = true; btn.textContent = "Opening…";
+    try {
+      const res = await ELP.callFn("billing-portal", { method: "POST", body: "{}" });
+      if (res?.portal_url) {
+        window.location.href = res.portal_url;
+        return;
+      }
+      throw new Error(res?.message || "Could not open billing portal");
+    } catch (e) {
+      const msg = e.message || "Couldn't open billing.";
+      if (msg.includes("stripe_not_configured")) {
+        alertBox("warn", "Billing portal isn't configured yet.");
+      } else if (msg.includes("no_customer")) {
+        alertBox("warn", "No active billing record yet — pick a plan below to subscribe first.");
+      } else {
+        alertBox("error", msg);
+      }
+      btn.disabled = false; btn.textContent = "Manage billing";
+    }
+  }
+
+  load();
+</script>
+</body>
+</html>

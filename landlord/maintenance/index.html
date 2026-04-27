@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/assets/easierlet.css?v=20260426e">
-  <link rel="stylesheet" href="/assets/portal.css?v=20260426e">
+  <link rel="stylesheet" href="/assets/easierlet.css?v=20260427a">
+  <link rel="stylesheet" href="/assets/portal.css?v=20260427a">
 
   <style>
     .priority-low      { background: var(--el-green-pale); color: var(--el-green); }
@@ -244,7 +244,9 @@
         `properties?user_id=eq.${user.id}&archived=eq.false&select=id,address_line1,city&order=created_at.desc`
       ).catch(() => []),
     ]);
-    allRequests = requests;
+    // Hide requests tied to archived properties.
+    const activeIds = new Set(props.map((p) => p.id));
+    allRequests = requests.filter((r) => !r.property_id || activeIds.has(r.property_id));
     allProperties = props;
     renderPropertyFilter();
     render();

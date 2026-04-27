@@ -50,6 +50,7 @@ Newest entries at the top of each section.
 4. **Inventory** — `inventory_reports`/`inventory_rooms`/`inventory_items` tables. Excellent/Good/Fair/Poor/Damaged scale. Web form for landlord ratings, tenant adds own. `inventory-workflow` Edge Function. Digital signature: tenant via `signature_pad`, landlord via native `LandlordSignatureView`. Meter readings at move-in and move-out.
 5. **Public website + portals on easierlet.com** ✅ (2026-04-26) — Homepage with hero search, `/properties/` searchable index (area / beds / max rent / available-by / furnishing), unified `/login/` that routes by `profiles.role`, full landlord portal with iOS parity (Properties CRUD with postcode lookup, full Listing editor, Inventory create+send+finalise, Tenancy agreement create+sign with canvas signature, Maintenance triage, Useful links, Director's loan placeholder), tenant portal with Applications/Viewings/Tenancy/Documents/Settings. Listing media upload manager (R2 presigned PUT). All RLS-scoped — same auth as iOS.
 6. **Maintenance overhaul + Property visits** ✅ (2026-04-26) — Full triage workflow (Acknowledge / Reject / Request more info), 13-trade picker + group-by-trade list, 8-status flow (`new → acknowledged → awaiting_info → scheduled → in_progress → completed → closed` + `rejected`), structured rejection reasons, contractor + scheduled-date fields, transaction linking, vertical timeline. Tenant portal handles awaiting-info reply + post-completion confirm. Three new Edge Functions (`maintenance-notify`, `visit-notify`, `visit-response`) wired through Resend. Unified property visits table with 24hr UK notice enforcement, tenant accept/reschedule via tokenised `/visit-response/` web form. Visits surfaced on dashboard activity feed, summary actions, and per-property cards. Certificate-renewal action items prompt scheduling when gas/EICR/EPC expire within 60 days with no matching visit booked.
+7. **Onboarding + Billing + Documents compliance** ✅ (2026-04-27) — Public `/signup/` landing page with hero / features / 4-tier pricing / Turnstile-protected form. New `landlord-signup` EF creates auth user + landlord_profile + 14-day trialing landlord_subscriptions row + Resend welcome email. New Stripe-backed `create-checkout-session` / `stripe-webhook` / `billing-portal` EFs (deployed; gracefully fail with `stripe_not_configured` until Stripe keys are added). Per-property billing limits enforced in iOS at `+ Add property` with upgrade alert. Dashboard onboarding card (10 derived steps), better empty states across Dashboard / Transactions / Maintenance / Tenants, first-visit intro banners on Documents / Maintenance / Transactions. Tenant Portal Guide rewritten as 5 collapsible sections + status-aware home guide card. `MandatoryDocuments` constants drive a new compliance UI in DocumentsView (per-property, 3 urgency tiers, placeholder cards for missing items with Upload Now). Per-property compliance pill on dashboard cards + COMPLIANCE section on PropertySummarySheet + Actions Needed list flags missing/expired legal docs. All items linked to archived properties are now hidden from the active dashboard / lists / activity feed (iOS + web).
 
 ### In progress 🟡
 
@@ -117,6 +118,10 @@ Newest entries at the top of each section.
 | `maintenance-notify` | **NEW (2026-04-26)** | Yes | Resend wrapper. Actions: `new_request` (emails landlord with priority callout), `status_changed` (emails tenant per status: acknowledged / rejected / awaiting_info / scheduled / completed). Skips silently if no email on file. |
 | `visit-notify` | **NEW (2026-04-26)** | Yes | Resend wrapper for property visits. Actions: `send_notice` (validates ≥24h notice, emails active tenants with tokenised confirm link, sets visit→`notice_sent`), `send_update` (re-sends with "Updated" subject), `send_cancellation` (emails + sets visit→`cancelled`). |
 | `visit-response` | **NEW (2026-04-26)** | No (token-auth) | Tenant accepts or requests reschedule via per-row `access_token`. GET returns visit+property+landlord snapshot for the web form; POST `accept` flips `tenant_response=accepted` + status→`confirmed` + emails landlord; POST `request_reschedule` stores note + emails landlord. |
+| `landlord-signup` | **NEW (2026-04-27)** | No (Turnstile) | Public landlord registration. Verifies Turnstile, creates auth user (`email_confirm=true`), upserts `landlord_profiles` + trialing `landlord_subscriptions` (14 days, 2-property limit), upserts `profiles.role='landlord'` for routing, sends Resend welcome email. Returns `{ok, user_id}`. |
+| `create-checkout-session` | **NEW (2026-04-27)** | Yes | Reads `STRIPE_SECRET_KEY` + `STRIPE_PRICE_{STARTER,GROWTH,PROFESSIONAL}`. Finds-or-creates the Stripe customer for the user, creates a Checkout session in subscription mode, returns `checkout_url`. Returns 503 `stripe_not_configured` until secrets are set. |
+| `stripe-webhook` | **NEW (2026-04-27)** | No (signed) | Verifies Stripe HMAC signature with `STRIPE_WEBHOOK_SECRET`. Handles `checkout.session.completed`, `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.deleted`, `customer.subscription.updated` — syncs `landlord_subscriptions` (plan / status / property_limit / current_period_end). Emails landlord on payment failure. |
+| `billing-portal` | **NEW (2026-04-27)** | Yes | Returns Stripe Customer Portal URL for the user's customer. 404 `no_customer` if they haven't started a subscription yet. |
 
 #### Key Edge Function behaviours
 
@@ -150,6 +155,10 @@ Newest entries at the top of each section.
 | `/book-viewing/` | `viewing-request` | Standalone book-a-viewing page (same modal also lives in-page on /listings/). |
 | `/viewing-response/?token=…` | `viewing-response` | Viewer accepts or declines a proposed viewing time. |
 | `/visit-response/?token=…` | `visit-response` | **NEW (2026-04-26)** Tenant confirms a landlord property visit or requests a reschedule with optional note. Branded teal layout matching `/viewing-response/`. |
+| `/signup/` | `landlord-signup` | **NEW (2026-04-27)** Public landlord registration with hero, feature grid, 4-tier pricing table, Turnstile-protected signup form. On success, signs the user in and redirects to `/landlord/`. |
+| `/billing/` | `create-checkout-session` + `billing-portal` | **NEW (2026-04-27)** Authenticated billing dashboard — current plan, property usage, trial countdown, upgrade buttons (Stripe Checkout), Manage billing button (Stripe Customer Portal). Shows `Billing setup pending` graceful state until Stripe keys are configured. |
+| `/billing/success/` | — | **NEW (2026-04-27)** Stripe Checkout `success_url` — confirms subscription is active. |
+| `/billing/cancel/` | — | **NEW (2026-04-27)** Stripe Checkout `cancel_url` — explains nothing was charged, links back to `/billing/`. |
 | `/sign-tenancy/?token=…` | `tenancy-workflow` | Per-signer tenancy agreement signing. `signature_pad` canvas. |
 | `/inventory/?token=…` | `inventory-workflow` | Tenant-side inventory web form. |
 | `/privacy/` | — | Privacy policy. |
@@ -311,6 +320,35 @@ PRIMARY KEY (visit_id, maintenance_id)
 ```
 
 RLS: row visible/manageable iff caller owns the visit. Used by Create-visit form to attach in-flight maintenance requests; iOS also back-fills `maintenance_requests.linked_visit_id` for fast lookup from the maintenance side.
+
+### Database (`landlord_subscriptions` table) — new 2026-04-27
+
+```
+id, user_id (UNIQUE FK auth.users), stripe_customer_id (UNIQUE),
+stripe_subscription_id (UNIQUE), plan (default 'trial'), status (default 'trialing'),
+trial_ends_at, current_period_end, property_limit (default 1),
+created_at, updated_at
+```
+
+CHECK constraints:
+- `plan` ∈ `trial`, `starter`, `growth`, `professional`
+- `status` ∈ `trialing`, `active`, `past_due`, `cancelled`, `expired`
+
+RLS: `Users can read own subscription` — `auth.uid() = user_id` (SELECT only; writes happen via service role from `landlord-signup` and `stripe-webhook`).
+
+Pricing tiers + property limits:
+| Plan | Properties | Monthly |
+|---|---|---|
+| Trial | 2 | Free 14d |
+| Starter | 3 | £9.99 |
+| Growth | 10 | £24.99 |
+| Professional | 25 | £49.99 |
+
+Migration backfilled an existing trialing row for every legacy `landlord_profiles.user_id` so nobody is locked out of new property creation.
+
+### Database (`landlord_profiles` table) — onboarding column added 2026-04-27
+
+`onboarding_completed_at timestamptz` (nullable). Set to `now()` when the landlord taps "I'll do this later" on the dashboard onboarding card; the card hides permanently once set.
 
 ### Database (`viewing_requests` table)
 
@@ -504,6 +542,47 @@ Status flow: `pending → proposed → (viewer-accepts) → confirmed → comple
 ---
 
 ## Session history (newest first)
+
+### 2026-04-27 — Onboarding, Billing (Stripe placeholder), Compliance & Documents guidance
+
+End-to-end build of roadmap item 7. Four parts: automated landlord signup + billing scaffolding, in-app guided onboarding, tenant portal guidance, and Documents-section mandatory-document compliance UI. Stripe is wired but failing-closed until keys are set.
+
+**Database**
+- `landlord_subscriptions` table created (RLS-scoped, user_id UNIQUE, plan + status CHECKs, property_limit). Existing landlords back-filled with a 14-day trialing row.
+- `landlord_profiles.onboarding_completed_at` added (nullable, sets when landlord dismisses dashboard onboarding card).
+
+**Edge Functions (live, deployed via terminal)**
+- `landlord-signup` (no-JWT, Turnstile-protected) — creates auth user, profile, trialing subscription, profiles.role='landlord', sends Resend welcome email.
+- `create-checkout-session` (JWT) — Stripe Checkout subscription mode. Returns 503 `stripe_not_configured` until secrets are set.
+- `stripe-webhook` (no-JWT, signed) — verifies HMAC signature, syncs `landlord_subscriptions` from `checkout.session.completed`, `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.deleted`, `customer.subscription.updated`. Emails landlord on payment failure.
+- `billing-portal` (JWT) — Stripe Customer Portal session for plan changes / card update / cancel.
+
+**Web (`bluetezza/easierlet-web`)**
+- New `/signup/` landing page — hero + feature grid + 4-tier pricing + Turnstile-protected signup form. On success signs in and redirects to `/landlord/`.
+- New `/billing/` dashboard — shows plan, usage, trial countdown, upgrade buttons, Manage billing button. Gracefully shows "Billing setup pending" while Stripe keys are absent.
+- `/billing/success/` and `/billing/cancel/` confirmation pages.
+- Sidebar gains "Billing" entry on every landlord page.
+- Landlord dashboard now mirrors the iOS onboarding card (10 derived steps, progress bar, Continue / I'll do this later) and shows a per-property compliance pill on each property card (Compliance: X/Y · expired flag in red).
+- All dashboard / tab queries (maintenance, transactions, documents, tenancies, tenants, visits) filter out items linked to archived properties so the active surfaces stay clean.
+
+**iOS (`bluetezza/easierlet-swift`)**
+- `SubscriptionManager.shared` singleton — caches subscription, exposes `atPropertyLimit` + `canAddProperty`, opens Checkout / Customer Portal in Safari, auto-refreshes every 30 minutes.
+- `SubscriptionView` in More tab → Account section. `TrialStatusBanner` on DashboardView for past-due / expired / trial-ending-soon cases.
+- `+ Add property` toolbar button gated: shows "Plan limit reached" alert with Upgrade CTA when at the property limit.
+- New `OnboardingProgress` struct + `OnboardingCard` view — derives 10 steps from existing data (no new tables), renders dashboard card with progress bar + tappable continue. Dismiss writes `onboarding_completed_at` and hides the card permanently.
+- `ContextualPromptBanner` + `FirstVisitBanner` shared components. First-visit banners on Documents / Maintenance / Transactions tabs (UserDefaults-keyed, "Got it" dismisses).
+- Better empty states on Dashboard (Welcome → Add Your First Property), Transactions, Maintenance (with how-it-works steps), Tenants (two paths explained).
+- Tenant portal Guide rewritten as 5 collapsible sections (Your responsibilities, How maintenance works, Understanding your documents, Moving out, Your rights) with concrete 999 / 0800 emergency contacts. Tenant home gains a status-aware `TenantStatusGuide` card explaining what each pipeline step means.
+- New `MandatoryDocuments` constants (7 items across Legal / Essential / Recommended urgency tiers). DocumentsView restructured to show per-property compliance bar + grouped mandatory cards; missing items render placeholder cards with `Upload Now →` (opens AddDocumentView pre-selected to that category and property). `OTHER DOCUMENTS` section preserves the existing categorised list.
+- `AddDocumentView` accepts `initialCategory` for pre-selection.
+- Dashboard `PropertyCard` shows compliance pill; `PropertySummarySheet` shows COMPLIANCE section. Actions Needed list now includes missing legal docs and expired certs at the top.
+- All view models (Dashboard / Tenants / Transactions / Inventory / PropertyVisits) filter items linked to archived properties so the main surfaces stay focussed.
+
+**Stripe activation steps** (when keys are ready):
+1. `supabase secrets set STRIPE_SECRET_KEY=sk_… STRIPE_WEBHOOK_SECRET=whsec_… STRIPE_PRICE_STARTER=price_… STRIPE_PRICE_GROWTH=price_… STRIPE_PRICE_PROFESSIONAL=price_…`
+2. In Stripe Dashboard → Webhooks: add endpoint `https://ffzknvcptqjlkxmkdxuk.supabase.co/functions/v1/stripe-webhook`, subscribe to the five event types listed in the EFs table above.
+3. Stripe Dashboard → Settings → Customer Portal: enable + configure plan-switching and cancellation rules.
+No further code changes required — the EFs flip from 503 `stripe_not_configured` to live behaviour as soon as the env vars are present.
 
 ### 2026-04-26 — Maintenance overhaul + Property visits shipped (Claude Code build)
 
