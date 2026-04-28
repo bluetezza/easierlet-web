@@ -655,6 +655,11 @@ End-to-end build of roadmap item 8. Five parts shipped together: append-only aud
 
 **Audit catalogue** — full list of action strings is in `docs/internal/admin-operations-manual.md` Section 10 and reflected in the admin app's audit-filter dropdown.
 
+**Post-build smoke test (verification pass)**
+- All 13 new EFs curl-tested at the gateway. `admin-auth` returns `invalid_credentials` for bogus creds ✅, `admin-api/whoami` returns `UNAUTHORIZED_NO_AUTH_HEADER` ✅, `seed-admin` returns `not_configured` (expected — `SEED_SECRET` unset) ✅, `security-check` and `generate-dsar` reject calls with no auth ✅.
+- **Found:** `retention-enforce` was missing from the deployed function list — the original background deploy job did not commit. **Fixed:** redeployed via Supabase MCP with `verify_jwt=false`. Now responds `{"ok":false,"error":"unauthorized"}` to no-auth POST ✅.
+- All 28 EFs (15 pre-existing + 13 new) now ACTIVE in the project. `retention-enforce` reaches the gateway and applies its own bearer-token check.
+
 ### 2026-04-27 — Onboarding, Billing (Stripe placeholder), Compliance & Documents guidance
 
 End-to-end build of roadmap item 7. Four parts: automated landlord signup + billing scaffolding, in-app guided onboarding, tenant portal guidance, and Documents-section mandatory-document compliance UI. Stripe is wired but failing-closed until keys are set.
