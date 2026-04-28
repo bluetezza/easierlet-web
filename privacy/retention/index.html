@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data retention · easierLet</title>
+<meta name="description" content="How long EasierLet keeps your data, and why.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/easierlet.css?v=20260428a">
+
+<style>
+  :root { --font-serif: "Fraunces", Georgia, serif; }
+  body { background: #fff; font-family: 'Inter', -apple-system, sans-serif; }
+  .page { max-width: 720px; margin: 0 auto; padding: 32px 24px 80px; }
+  .crumb { font-size: 13px; color: var(--el-muted); margin-bottom: 18px; }
+  .crumb a { color: var(--el-green); text-decoration: none; }
+  .page-title {
+    font-family: var(--font-serif); font-weight: 400; font-size: 36px;
+    line-height: 1.1; color: var(--el-ink); margin: 0 0 6px; letter-spacing: -0.5px;
+  }
+  .page-sub { font-size: 13px; color: var(--el-muted); margin: 0 0 36px; }
+  h2 {
+    font-family: var(--font-serif); font-weight: 400; font-size: 22px;
+    color: var(--el-ink); margin: 36px 0 12px;
+  }
+  p, li { font-size: 15px; line-height: 1.65; color: var(--el-ink-soft); }
+  p { margin: 0 0 14px; }
+  ul { padding-left: 22px; margin: 0 0 14px; }
+  li { margin-bottom: 6px; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  th { text-align: left; padding: 10px; background: #F5F7F5; font-weight: 600; color: var(--el-ink); border-bottom: 1px solid var(--el-line); font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase; }
+  td { padding: 10px; border-bottom: 1px solid var(--el-line-soft); vertical-align: top; }
+  td.cat { font-weight: 600; color: var(--el-ink); }
+  td.period { font-weight: 600; color: var(--el-green); white-space: nowrap; }
+  a { color: var(--el-green); }
+  .meta { font-size: 12px; color: var(--el-muted); margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--el-line-soft); }
+  .callout { background: #F0F9F5; border-left: 3px solid var(--el-green); padding: 14px 18px; border-radius: 8px; margin: 18px 0; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="crumb"><a href="/">easierLet</a> · <a href="/privacy/">Privacy policy</a> · Data retention</div>
+
+  <h1 class="page-title">Data retention</h1>
+  <p class="page-sub">How long we keep your data, and why. Last updated 28 April 2026.</p>
+
+  <p>UK GDPR requires us to keep personal data only as long as we genuinely need it. Some categories — like tax records — have minimum retention periods set by law. Others — like rejected applications — are kept for a deliberately short window, then anonymised.</p>
+
+  <p>Anonymising means we clear the personal identifiers (name, email, phone, DoB, financial details) but keep structural records (tenancy dates, rent, deposit) for tax and audit purposes. Once anonymised, the record can no longer be tied to you.</p>
+
+  <h2>Retention periods</h2>
+
+  <table>
+    <thead><tr><th>Data</th><th>Period</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="cat">Active tenant records</td>
+        <td class="period">6 years after tenancy ends</td>
+        <td>HMRC tax-record retention + 6-year limitation period for civil claims (Limitation Act 1980). After this, personal identifiers are anonymised; tenancy dates and amounts are kept for tax compliance.</td>
+      </tr>
+      <tr>
+        <td class="cat">Rejected applicants</td>
+        <td class="period">6 months</td>
+        <td>Allows you to re-apply if circumstances change. After 6 months we have no ongoing legitimate interest, so the record is fully deleted.</td>
+      </tr>
+      <tr>
+        <td class="cat">Tenant references</td>
+        <td class="period">Same as tenant record</td>
+        <td>Kept alongside the tenant they relate to. Anonymised at the same time.</td>
+      </tr>
+      <tr>
+        <td class="cat">Financial records (rent, expenses)</td>
+        <td class="period">7 years</td>
+        <td>HMRC requires 6 years from the end of the accounting period; we keep 7 to cover edge cases.</td>
+      </tr>
+      <tr>
+        <td class="cat">Gas Safety certificates (CP12)</td>
+        <td class="period">2 years</td>
+        <td>The current certificate plus the previous one — covers any gap in successor inspections.</td>
+      </tr>
+      <tr>
+        <td class="cat">EICR (Electrical Installation Condition Report)</td>
+        <td class="period">6 years</td>
+        <td>Five-year inspection cycle plus one year after replacement.</td>
+      </tr>
+      <tr>
+        <td class="cat">EPC (Energy Performance Certificate)</td>
+        <td class="period">10 years</td>
+        <td>An EPC is statutorily valid for 10 years. We keep it for that period.</td>
+      </tr>
+      <tr>
+        <td class="cat">Viewing requests</td>
+        <td class="period">12 months</td>
+        <td>After a year there's no operational need for prospect contact details. Names, emails, phone numbers and messages are anonymised; the booking record itself stays for analytics.</td>
+      </tr>
+      <tr>
+        <td class="cat">Audit logs</td>
+        <td class="period">7 years</td>
+        <td>Regulatory compliance and dispute evidence.</td>
+      </tr>
+      <tr>
+        <td class="cat">Maintenance + tenancy + inventory records</td>
+        <td class="period">Tied to the tenant record</td>
+        <td>If the underlying tenant data is anonymised, the personal references in these records are too.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <strong>30-day notice.</strong> Before we anonymise active tenant data, we email the landlord 30 days in advance. They can defer with a documented reason (e.g. unresolved dispute, ongoing claim) — otherwise the anonymisation happens automatically on the deadline.
+  </div>
+
+  <h2>Earlier deletion on request</h2>
+  <p>You can ask us to anonymise or delete your data sooner — we'll do it unless we have a legal obligation to keep it (e.g. tax records). Use the "Download My Data" / "Delete My Account" controls in the tenant portal, or email <a href="mailto:privacy@easierlet.com">privacy@easierlet.com</a>.</p>
+
+  <h2>Backups</h2>
+  <p>Our database provider (Supabase) keeps automated backups for 7 days. Anonymisation propagates to those backups within that window. We don't take additional offsite backups of personal data.</p>
+
+  <div class="meta">
+    Last updated 28 April 2026. See the <a href="/privacy/">full privacy policy</a> · <a href="/terms/">Terms of service</a> · <a href="/">easierLet home</a>.
+  </div>
+</div>
+
+</body>
+</html>

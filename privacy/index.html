@@ -3,170 +3,200 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Privacy notice · easierLet</title>
+<title>Privacy policy · easierLet</title>
+<meta name="description" content="How EasierLet collects, uses, and protects personal data.">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/easierlet.css">
+<link rel="stylesheet" href="../assets/easierlet.css?v=20260428a">
 
 <style>
   :root { --font-serif: "Fraunces", Georgia, serif; }
-  body { background: #fff; }
-  .page {
-    max-width: 680px;
-    margin: 0 auto;
-    padding: 32px 24px 80px;
-  }
-  .page-header { margin-bottom: 36px; }
+  body { background: #fff; font-family: 'Inter', -apple-system, sans-serif; }
+  .page { max-width: 720px; margin: 0 auto; padding: 32px 24px 80px; }
+  .crumb { font-size: 13px; color: var(--el-muted); margin-bottom: 18px; }
+  .crumb a { color: var(--el-green); text-decoration: none; }
   .page-title {
-    font-family: var(--font-serif);
-    font-weight: 400;
-    font-size: 36px;
-    line-height: 1.1;
-    color: var(--el-ink);
-    margin-bottom: 8px;
-    letter-spacing: -0.5px;
+    font-family: var(--font-serif); font-weight: 400; font-size: 36px;
+    line-height: 1.1; color: var(--el-ink); margin: 0 0 6px; letter-spacing: -0.5px;
   }
-  .page-sub {
-    font-size: 14px;
-    color: var(--el-muted);
-  }
+  .page-sub { font-size: 13px; color: var(--el-muted); margin: 0 0 36px; }
   h2 {
-    font-family: var(--font-serif);
-    font-weight: 400;
-    font-size: 22px;
-    color: var(--el-ink);
-    margin: 32px 0 12px;
-    letter-spacing: -0.2px;
+    font-family: var(--font-serif); font-weight: 400; font-size: 22px;
+    color: var(--el-ink); margin: 36px 0 12px; letter-spacing: -0.2px;
   }
-  p {
-    font-size: 15px;
-    line-height: 1.65;
-    color: var(--el-ink-soft);
-    margin-bottom: 14px;
-  }
-  ul {
-    font-size: 15px;
-    line-height: 1.65;
-    color: var(--el-ink-soft);
-    margin: 0 0 14px;
-    padding-left: 20px;
-  }
+  h3 { font-size: 16px; color: var(--el-ink); margin: 24px 0 8px; }
+  p, li { font-size: 15px; line-height: 1.65; color: var(--el-ink-soft); }
+  p { margin: 0 0 14px; }
+  ul, ol { padding-left: 22px; margin: 0 0 14px; }
   li { margin-bottom: 6px; }
-  .back-link {
-    display: inline-flex; align-items: center; gap: 6px;
-    color: var(--el-muted); font-size: 13px; margin-bottom: 18px;
-  }
-  .divider {
-    height: 1px;
-    background: var(--el-line);
-    margin: 40px 0;
-  }
-  .footer {
-    padding-top: 32px;
-    border-top: 1px solid var(--el-line);
-    color: var(--el-muted);
-    font-size: 12px;
-    line-height: 1.6;
-  }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  th { text-align: left; padding: 8px 10px; background: #F5F7F5; font-weight: 600; color: var(--el-ink); border-bottom: 1px solid var(--el-line); font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase; }
+  td { padding: 10px; border-bottom: 1px solid var(--el-line-soft); vertical-align: top; }
+  a { color: var(--el-green); }
+  .toc { background: #F5F7F5; padding: 18px 22px; border-radius: 10px; margin-bottom: 28px; }
+  .toc ol { padding-left: 22px; margin: 0; }
+  .toc li { font-size: 14px; padding: 2px 0; margin: 0; }
+  .toc a { text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .meta { font-size: 12px; color: var(--el-muted); margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--el-line-soft); }
 </style>
 </head>
 <body>
 
 <div class="page">
-  <a class="back-link" href="javascript:history.back()">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-    Back
-  </a>
 
-  <div class="page-header">
-    <div class="el-logo" style="font-size: 18px; margin-bottom: 20px;">
-      <span class="mark-easier">easier</span><span class="mark-let">Let</span>
-    </div>
-    <h1 class="page-title">Privacy notice</h1>
-    <div class="page-sub">Last updated 17 April 2026</div>
+  <div class="crumb"><a href="/">easierLet</a> · Privacy policy</div>
+
+  <h1 class="page-title">Privacy policy</h1>
+  <p class="page-sub">Last updated 28 April 2026</p>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#who">Who we are</a></li>
+      <li><a href="#what">What data we collect</a></li>
+      <li><a href="#why">Why we use it</a></li>
+      <li><a href="#legal-basis">Legal basis</a></li>
+      <li><a href="#how-long">How long we keep it</a></li>
+      <li><a href="#share">Who we share it with</a></li>
+      <li><a href="#rights">Your rights</a></li>
+      <li><a href="#dsar">How to make a request</a></li>
+      <li><a href="#cookies">Cookies</a></li>
+      <li><a href="#changes">Changes to this policy</a></li>
+      <li><a href="#contact">Contact us</a></li>
+    </ol>
   </div>
 
+  <h2 id="who">1. Who we are</h2>
   <p>
-    This notice explains how <strong>Oakrise Estates Ltd</strong> ("we", "us"), trading as easierLet, handles the personal information you provide when applying for a rental property through this service. It's written in plain English — the short version is: we only use your information for the rental application you've started, we don't sell it, and you can ask us to delete it at any time.
+    easierLet is a property-management service operated by <strong>Oakrise Estates Ltd</strong> (Company No. 16852456),
+    a UK-registered company. We're the data controller for the personal data described in this policy.
+  </p>
+  <p>
+    For data-protection queries: <a href="mailto:privacy@easierlet.com">privacy@easierlet.com</a>.
   </p>
 
-  <h2>Who's the data controller?</h2>
-  <p>
-    For applications to properties owned by Oakrise Estates Ltd, we are the data controller. For applications to properties owned by other landlords using easierLet, the landlord is the data controller and we act as their data processor — we provide the tools but they decide what's done with your information.
-  </p>
+  <h2 id="what">2. What data we collect</h2>
 
-  <h2>What we collect</h2>
-  <p>When you submit a pre-application, we collect:</p>
+  <h3>If you're a landlord using easierLet</h3>
   <ul>
-    <li>Contact details — name, email, phone, date of birth, nationality</li>
-    <li>Household details — who's moving in, pets, smoking, guarantor availability</li>
-    <li>Right to Rent information — your status in the UK (we don't need to see documents at this stage)</li>
-    <li>Employment and income — employer, job title, gross income</li>
-    <li>Self-declared history — any adverse credit, evictions, or rent arrears</li>
-    <li>Tenancy preferences — move-in date, length, reason for moving</li>
+    <li>Your name, email, phone, contact address, company name and number</li>
+    <li>The properties you manage (addresses, photos, certificates)</li>
+    <li>Records you create about your tenants, transactions, maintenance, listings, viewings</li>
+    <li>Subscription and billing details (handled by Stripe — we receive metadata, not card numbers)</li>
+    <li>Audit data: which actions you took, when, and from which IP / device</li>
   </ul>
 
-  <h2>Why we collect it</h2>
-  <p>
-    To let the landlord decide whether to shortlist your application and invite you to the next stage (formal referencing). Without this information, we can't process a rental application — it's the minimum needed for the landlord to make an informed decision.
-  </p>
-  <p>
-    The legal basis is your consent (which you give by submitting the form) and legitimate interest (the landlord needs to assess suitability for tenancy).
-  </p>
-
-  <h2>Who sees it</h2>
-  <p>Your application is seen by:</p>
+  <h3>If you're a tenant or applicant</h3>
   <ul>
-    <li>The landlord of the property you're applying to</li>
-    <li>Our platform (Supabase, based in the EU) to store the data securely</li>
-    <li>If you're shortlisted and consent to referencing: the referencing provider the landlord uses</li>
-  </ul>
-  <p>
-    We don't share your application with other landlords. We don't sell your data. We don't use it for advertising.
-  </p>
-
-  <h2>How long we keep it</h2>
-  <p>
-    If your application is unsuccessful, we keep it for up to 12 months in case you apply for another property and want to reuse the data. If it's successful and you move in, we keep it for the duration of the tenancy plus 7 years, as required for tax and regulatory purposes.
-  </p>
-  <p>
-    You can request deletion at any time by emailing the address below — we'll remove what we can, keeping only what we're legally required to retain.
-  </p>
-
-  <h2>Your rights</h2>
-  <p>Under UK data protection law, you have the right to:</p>
-  <ul>
-    <li>Request a copy of the information we hold about you</li>
-    <li>Ask us to correct anything that's wrong</li>
-    <li>Ask us to delete your data (subject to legal retention)</li>
-    <li>Withdraw consent for future processing</li>
-    <li>Complain to the Information Commissioner's Office (ICO) — ico.org.uk</li>
+    <li>Your name, email, phone, date of birth, nationality</li>
+    <li>Right-to-Rent information (visa type and expiry, if applicable)</li>
+    <li>Employment and income details for affordability and referencing</li>
+    <li>Rental history declarations (previous addresses, previous landlords, arrears, evictions, adverse credit)</li>
+    <li>Maintenance issues you report, replies you send, photos you upload</li>
+    <li>Documents shared with you for your tenancy (agreements, inventories, certificates)</li>
+    <li>Audit data: which actions you took, when, and from which IP / device</li>
   </ul>
 
-  <h2>Security</h2>
+  <h3>If you're a referee (employer, previous landlord, guarantor)</h3>
+  <ul>
+    <li>Your name, email, phone, address (for guarantors), relationship to the applicant</li>
+    <li>Your responses to a reference form</li>
+  </ul>
+
+  <h3>If you visit our website without signing in</h3>
+  <ul>
+    <li>Standard server logs (IP, browser, referring page) for security and abuse prevention</li>
+    <li>If you submit a viewing request or apply for a property, the data on that form</li>
+    <li>We don't currently use analytics cookies or tracking pixels. See <a href="#cookies">cookies</a>.</li>
+  </ul>
+
+  <h2 id="why">3. Why we use it</h2>
+  <ul>
+    <li><strong>Run the service.</strong> Show your data to you; let landlords and tenants do their work.</li>
+    <li><strong>Tenant referencing.</strong> Verify income, employment, rental history.</li>
+    <li><strong>Right-to-Rent compliance.</strong> Tenants' nationality and visa info is required by the Immigration Act 2014.</li>
+    <li><strong>Legal record-keeping.</strong> Tax records (HMRC), gas safety certificates, deposit-protection records, dispute evidence.</li>
+    <li><strong>Communication.</strong> Send maintenance notices, viewing confirmations, agreement signing links, password resets, billing receipts.</li>
+    <li><strong>Security.</strong> Detect and prevent fraud or abuse via the audit log.</li>
+    <li><strong>We do not sell personal data.</strong> We don't use it for advertising. We don't share it with marketing partners.</li>
+  </ul>
+
+  <h2 id="legal-basis">4. Legal basis</h2>
+  <table>
+    <thead><tr><th>Activity</th><th>Lawful basis (UK GDPR)</th></tr></thead>
+    <tbody>
+      <tr><td>Running your tenancy / account</td><td>Contract (Art. 6(1)(b))</td></tr>
+      <tr><td>Tenant referencing</td><td>Legitimate interest + Consent</td></tr>
+      <tr><td>Right-to-Rent checks</td><td>Legal obligation (Art. 6(1)(c))</td></tr>
+      <tr><td>Tax / financial record retention</td><td>Legal obligation</td></tr>
+      <tr><td>Gas safety / EICR / EPC retention</td><td>Legal obligation</td></tr>
+      <tr><td>Operational emails (visit notices, etc.)</td><td>Contract</td></tr>
+      <tr><td>Audit logging</td><td>Legitimate interest + Legal obligation</td></tr>
+      <tr><td>Subscription billing</td><td>Contract</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="how-long">5. How long we keep it</h2>
+  <p>The full schedule lives at <a href="/privacy/retention/">Data retention periods</a>. Summary:</p>
+  <ul>
+    <li>Active tenant data — 6 years after tenancy ends, then anonymised.</li>
+    <li>Rejected applicant data — 6 months, then deleted.</li>
+    <li>Financial records — 7 years (HMRC requirement).</li>
+    <li>Gas safety certificates — 2 years; EICR — 6 years; EPC — 10 years.</li>
+    <li>Viewing requests — 12 months, then anonymised.</li>
+    <li>Audit logs — 7 years.</li>
+  </ul>
+
+  <h2 id="share">6. Who we share it with</h2>
+  <p>We use these processors to deliver the service. Each has a Data Processing Agreement and processes data only on our instructions.</p>
+  <table>
+    <thead><tr><th>Provider</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase</a></td><td>Auth, database, storage, edge compute (eu-west-2)</td></tr>
+      <tr><td><a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare</a></td><td>R2 file storage, CDN</td></tr>
+      <tr><td><a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener">Resend</a></td><td>Transactional email delivery</td></tr>
+      <tr><td><a href="https://stripe.com/gb/privacy" target="_blank" rel="noopener">Stripe</a></td><td>Subscription billing</td></tr>
+      <tr><td>Vorensys (referencing partner)</td><td>Tenant referencing checks</td></tr>
+    </tbody>
+  </table>
+  <p>We don't share your data with anyone else without your consent, unless required by law (e.g. response to a court order or police request).</p>
+
+  <h2 id="rights">7. Your rights</h2>
+  <p>Under UK GDPR you have the right to:</p>
+  <ul>
+    <li><strong>Access</strong> the personal data we hold about you</li>
+    <li><strong>Rectification</strong> — ask us to correct inaccurate data</li>
+    <li><strong>Erasure</strong> — ask us to delete your data (subject to legal retention obligations)</li>
+    <li><strong>Portability</strong> — receive your data in a structured, machine-readable format</li>
+    <li><strong>Object</strong> to certain processing</li>
+    <li><strong>Restrict</strong> processing while a dispute is resolved</li>
+    <li><strong>Complain to the ICO</strong> (Information Commissioner's Office) at <a href="https://ico.org.uk" target="_blank" rel="noopener">ico.org.uk</a></li>
+  </ul>
+
+  <h2 id="dsar">8. How to make a request</h2>
+  <p><strong>Tenants:</strong> open the easierLet portal, tap the profile menu, and use "Download My Data" to generate an instant export, or "Delete My Account" to request erasure.</p>
+  <p><strong>Landlords and everyone else:</strong> email <a href="mailto:privacy@easierlet.com">privacy@easierlet.com</a> with your request. We'll verify your identity and respond within 30 days (usually within a week).</p>
+
+  <h2 id="cookies">9. Cookies</h2>
+  <p>easierLet uses only the cookies necessary to keep you signed in (Supabase auth tokens stored in your browser's localStorage). We don't use analytics, advertising, or tracking cookies. We don't have a cookie consent banner because nothing we set is non-essential.</p>
+
+  <h2 id="changes">10. Changes to this policy</h2>
+  <p>We'll update this page when our processing changes. Material changes will be notified by email to active users at least 14 days before they take effect. The "Last updated" date at the top of this page always reflects the current version.</p>
+
+  <h2 id="contact">11. Contact us</h2>
   <p>
-    All data is encrypted in transit (HTTPS) and at rest. Access is limited to the landlord handling your application and their authorised staff. We use reputable, ISO-27001-certified infrastructure providers.
+    Oakrise Estates Ltd<br>
+    Company Number: 16852456<br>
+    Registered in England and Wales<br>
+    Email: <a href="mailto:privacy@easierlet.com">privacy@easierlet.com</a>
   </p>
+  <p>For ICO complaints: <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener">ico.org.uk/make-a-complaint</a> · Helpline 0303 123 1113.</p>
 
-  <h2>Cookies</h2>
-  <p>
-    This site uses a small number of essential cookies needed for the application form to work. We don't use tracking cookies or third-party advertising cookies.
-  </p>
-
-  <h2>Contact</h2>
-  <p>
-    For any data protection question, email <strong>privacy@easierlet.com</strong>. We aim to respond within 5 working days.
-  </p>
-
-  <div class="divider"></div>
-
-  <div class="footer">
-    <div style="margin-bottom: 8px;">
-      <span class="el-logo" style="font-size: 14px;"><span class="mark-easier">easier</span><span class="mark-let">Let</span></span>
-    </div>
-    Oakrise Estates Ltd · Registered in England &amp; Wales
+  <div class="meta">
+    Version 2.0 · Last updated 28 April 2026. <a href="/privacy/retention/">Retention details</a> · <a href="/terms/">Terms of service</a> · <a href="/">easierLet home</a>.
   </div>
 </div>
 

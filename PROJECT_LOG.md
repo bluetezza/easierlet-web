@@ -51,6 +51,7 @@ Newest entries at the top of each section.
 5. **Public website + portals on easierlet.com** ✅ (2026-04-26) — Homepage with hero search, `/properties/` searchable index (area / beds / max rent / available-by / furnishing), unified `/login/` that routes by `profiles.role`, full landlord portal with iOS parity (Properties CRUD with postcode lookup, full Listing editor, Inventory create+send+finalise, Tenancy agreement create+sign with canvas signature, Maintenance triage, Useful links, Director's loan placeholder), tenant portal with Applications/Viewings/Tenancy/Documents/Settings. Listing media upload manager (R2 presigned PUT). All RLS-scoped — same auth as iOS.
 6. **Maintenance overhaul + Property visits** ✅ (2026-04-26) — Full triage workflow (Acknowledge / Reject / Request more info), 13-trade picker + group-by-trade list, 8-status flow (`new → acknowledged → awaiting_info → scheduled → in_progress → completed → closed` + `rejected`), structured rejection reasons, contractor + scheduled-date fields, transaction linking, vertical timeline. Tenant portal handles awaiting-info reply + post-completion confirm. Three new Edge Functions (`maintenance-notify`, `visit-notify`, `visit-response`) wired through Resend. Unified property visits table with 24hr UK notice enforcement, tenant accept/reschedule via tokenised `/visit-response/` web form. Visits surfaced on dashboard activity feed, summary actions, and per-property cards. Certificate-renewal action items prompt scheduling when gas/EICR/EPC expire within 60 days with no matching visit booked.
 7. **Onboarding + Billing + Documents compliance** ✅ (2026-04-27) — Public `/signup/` landing page with hero / features / 4-tier pricing / Turnstile-protected form. New `landlord-signup` EF creates auth user + landlord_profile + 14-day trialing landlord_subscriptions row + Resend welcome email. New Stripe-backed `create-checkout-session` / `stripe-webhook` / `billing-portal` EFs (deployed; gracefully fail with `stripe_not_configured` until Stripe keys are added). Per-property billing limits enforced in iOS at `+ Add property` with upgrade alert. Dashboard onboarding card (10 derived steps), better empty states across Dashboard / Transactions / Maintenance / Tenants, first-visit intro banners on Documents / Maintenance / Transactions. Tenant Portal Guide rewritten as 5 collapsible sections + status-aware home guide card. `MandatoryDocuments` constants drive a new compliance UI in DocumentsView (per-property, 3 urgency tiers, placeholder cards for missing items with Upload Now). Per-property compliance pill on dashboard cards + COMPLIANCE section on PropertySummarySheet + Actions Needed list flags missing/expired legal docs. All items linked to archived properties are now hidden from the active dashboard / lists / activity feed (iOS + web).
+8. **Admin, Audit, Privacy, Retention & DSAR** ✅ (2026-04-28) — Append-only `audit_log` table + `log_audit()` helper with `RULE … DO INSTEAD NOTHING` to block update/delete from any role. 11 existing Edge Functions instrumented + iOS `AuditLogger` for direct-DB writes (documents, properties, transactions, maintenance). `admin_users` table + mandatory-TOTP admin auth via new `admin-auth` and `admin-api` Edge Functions. New repo `bluetezza/easierlet-admin` deployed at `admin.easierlet.com` — login + dashboard + landlord detail + audit explorer + retention queue + DSAR generator + settings. Sensitive-column inventory via Postgres `COMMENT ON COLUMN PII:…`. `security-check` EF for system health. `retention_rules` table + retention-tracking columns on tenants/viewing_requests + nightly `retention-enforce` EF + `pg_cron` schedule. `generate-dsar` EF generates branded HTML exports (printable to PDF) for admins and tenant self-serve. `tenant-delete-account` EF for tenant erasure. Public privacy + retention + terms pages on easierlet.com. Three internal policy docs in admin repo. iOS adds Privacy / Terms / Retention links + tenant Download My Data + Delete My Account.
 
 ### In progress 🟡
 
@@ -122,6 +123,13 @@ Newest entries at the top of each section.
 | `create-checkout-session` | **NEW (2026-04-27)** | Yes | Reads `STRIPE_SECRET_KEY` + `STRIPE_PRICE_{STARTER,GROWTH,PROFESSIONAL}`. Finds-or-creates the Stripe customer for the user, creates a Checkout session in subscription mode, returns `checkout_url`. Returns 503 `stripe_not_configured` until secrets are set. |
 | `stripe-webhook` | **NEW (2026-04-27)** | No (signed) | Verifies Stripe HMAC signature with `STRIPE_WEBHOOK_SECRET`. Handles `checkout.session.completed`, `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.deleted`, `customer.subscription.updated` — syncs `landlord_subscriptions` (plan / status / property_limit / current_period_end). Emails landlord on payment failure. |
 | `billing-portal` | **NEW (2026-04-27)** | Yes | Returns Stripe Customer Portal URL for the user's customer. 404 `no_customer` if they haven't started a subscription yet. |
+| `admin-auth` | **NEW (2026-04-28)** | No (handles auth itself) | Admin login flow — password sign-in, admin_users gate, MFA challenge / verify / enrol. Issues an aal2 session for admin-api. |
+| `admin-api` | **NEW (2026-04-28)** | Yes (aal2 enforced) | All admin operations: dashboard_stats, list_landlords, view_landlord, view_tenant, extend_trial, view_audit_log, list_retention_pending, override_retention, generate_dsar (proxy), whoami. Every read of landlord/tenant data audited. |
+| `seed-admin` | **NEW (2026-04-28)** | No (SEED_SECRET) | One-time bootstrap: creates the first admin auth user + admin_users row. Idempotent. |
+| `security-check` | **NEW (2026-04-28)** | Yes (admin) | Returns a structured health report: RLS, policy coverage, orphaned data, retention queue, audit recent writes, service-role-in-URL sanity. |
+| `retention-enforce` | **NEW (2026-04-28)** | No (RETENTION_CRON_SECRET) | Nightly job (03:00 UTC via pg_cron) — Pass 1 sends 30-day warnings, Pass 2 anonymises records past their retention deadline. Handles tenants + viewing_requests. |
+| `generate-dsar` | **NEW (2026-04-28)** | Yes | Builds a branded HTML export of all data we hold for a user. Two modes: `admin` (proxied via admin-api with service-role) and `self` (tenant JWT). Filters out landlord-only fields when self-serve. Returns a 24-hour signed URL. |
+| `tenant-delete-account` | **NEW (2026-04-28)** | Yes (tenant JWT) | Tenant-initiated erasure — anonymises tenant + tenant_references rows, deletes auth account, emails landlord. |
 
 #### Key Edge Function behaviours
 
@@ -159,6 +167,9 @@ Newest entries at the top of each section.
 | `/billing/` | `create-checkout-session` + `billing-portal` | **NEW (2026-04-27)** Authenticated billing dashboard — current plan, property usage, trial countdown, upgrade buttons (Stripe Checkout), Manage billing button (Stripe Customer Portal). Shows `Billing setup pending` graceful state until Stripe keys are configured. |
 | `/billing/success/` | — | **NEW (2026-04-27)** Stripe Checkout `success_url` — confirms subscription is active. |
 | `/billing/cancel/` | — | **NEW (2026-04-27)** Stripe Checkout `cancel_url` — explains nothing was charged, links back to `/billing/`. |
+| `/privacy/` | — | **REWRITTEN (2026-04-28)** Full UK GDPR privacy policy v2 with table of contents, retention summary, processor list. |
+| `/privacy/retention/` | — | **NEW (2026-04-28)** Plain-English retention summary table with periods + legal basis per data category. |
+| `/terms/` | — | **NEW (2026-04-28)** Landlord Terms of Service: account, billing, acceptable use, data-controller/processor split, liability, governing law (England & Wales). |
 | `/sign-tenancy/?token=…` | `tenancy-workflow` | Per-signer tenancy agreement signing. `signature_pad` canvas. |
 | `/inventory/?token=…` | `inventory-workflow` | Tenant-side inventory web form. |
 | `/privacy/` | — | Privacy policy. |
@@ -349,6 +360,59 @@ Migration backfilled an existing trialing row for every legacy `landlord_profile
 ### Database (`landlord_profiles` table) — onboarding column added 2026-04-27
 
 `onboarding_completed_at timestamptz` (nullable). Set to `now()` when the landlord taps "I'll do this later" on the dashboard onboarding card; the card hides permanently once set.
+
+### Database (`audit_log` table) — new 2026-04-28
+
+```
+id, actor_id, actor_type CHECK ∈ {landlord,tenant,admin,system},
+action, resource_type, resource_id, metadata jsonb,
+ip_address, user_agent, created_at
+```
+
+Indexes: `(actor_id, created_at DESC)`, `(resource_type, resource_id, created_at DESC)`, `(action, created_at DESC)`, `(created_at DESC)`.
+
+RLS enabled; **no user-facing policies** — service-role only. `RULE audit_no_update DO INSTEAD NOTHING` and `RULE audit_no_delete DO INSTEAD NOTHING` enforce true append-only semantics from any role including service_role.
+
+`log_audit(...)` helper function (SECURITY DEFINER) is the canonical writer — granted EXECUTE to `authenticated` and `service_role`. iOS calls it via `supabase.rpc("log_audit", …)`; Edge Functions call it via the same RPC (fire-and-forget pattern with `.then(() => {}, console.error)`).
+
+### Database (`admin_users` table) — new 2026-04-28
+
+```
+id, auth_id (FK auth.users UNIQUE), name, email UNIQUE, role CHECK ∈ {owner,support},
+mfa_verified, is_active, created_at, last_login_at
+```
+
+RLS enabled; **no user-facing policies** — admin-api service-role only.
+
+### Database (`retention_rules` table) — new 2026-04-28
+
+```
+id, resource_type UNIQUE, retention_period_months,
+retention_basis (text — legal justification),
+anonymise_fields text[], delete_after_anonymise, created_at
+```
+
+Seeded with 8 rules: `tenant_active` (72mo), `tenant_rejected` (6mo, delete), `tenant_reference` (72mo), `document_gas_safety` (24mo), `document_eicr` (72mo), `viewing_request` (12mo, anonymise), `transaction` (84mo), `audit_log` (84mo).
+
+### Tenants retention columns — added 2026-04-28
+
+`retention_expires_at`, `retention_warning_sent_at`, `anonymised_at`, `retention_deferred_until`. Computed via `BEFORE UPDATE` trigger `compute_tenant_retention()` on status transitions to `archived` or `rejected`. Backfilled for existing archived/rejected tenants.
+
+### Viewing requests retention columns — added 2026-04-28
+
+`retention_expires_at`, `anonymised_at`. Computed via `BEFORE INSERT` trigger.
+
+### Sensitive data inventory — column comments
+
+Every PII column tagged with one of `PII:personal`, `PII:financial`, `PII:employment`, `PII:sensitive`, `PRIVATE:landlord`, `AUDIT:consent` via `COMMENT ON COLUMN`. Run this to list:
+
+```sql
+SELECT c.table_name, c.column_name, pgd.description
+FROM information_schema.columns c
+JOIN pg_catalog.pg_statio_all_tables st ON st.schemaname = c.table_schema AND st.relname = c.table_name
+LEFT JOIN pg_catalog.pg_description pgd ON pgd.objoid = st.relid AND pgd.objsubid = c.ordinal_position
+WHERE c.table_schema = 'public' AND pgd.description LIKE 'PII%' ORDER BY c.table_name, c.column_name;
+```
 
 ### Database (`viewing_requests` table)
 
@@ -542,6 +606,54 @@ Status flow: `pending → proposed → (viewer-accepts) → confirmed → comple
 ---
 
 ## Session history (newest first)
+
+### 2026-04-28 — Admin, Audit, Privacy, Retention & DSAR
+
+End-to-end build of roadmap item 8. Five parts shipped together: append-only audit log, separate admin domain with mandatory MFA, RLS audit + sensitive-data inventory + automated security check, GDPR-compliant retention with nightly enforcement, and DSAR export (admin + tenant self-serve). Plus public privacy/terms/retention pages on easierlet.com and three internal policy documents in the new admin repo.
+
+**Database (live)**
+- New `audit_log` table with append-only `RULE … DO INSTEAD NOTHING` and a `log_audit()` SECURITY DEFINER helper. RLS enabled with no user-facing policies — service-role only from Edge Functions, but `authenticated` can call the helper RPC.
+- New `admin_users` table (RLS, no user-facing policies) — bridges Supabase auth → admin role.
+- New `retention_rules` table (8 seeded rules) + retention-tracking columns on `tenants` (`retention_expires_at`, `retention_warning_sent_at`, `anonymised_at`, `retention_deferred_until`) and `viewing_requests`.
+- BEFORE-UPDATE trigger `compute_tenant_retention()` sets retention deadlines on status transitions to `archived` (72mo) or `rejected` (6mo). Backfilled for existing terminal-status rows.
+- BEFORE-INSERT trigger on `viewing_requests` sets a 12mo deadline.
+- Sensitive PII columns annotated with `PII:personal | PII:financial | PII:employment | PII:sensitive | PRIVATE:landlord | AUDIT:consent` via `COMMENT ON COLUMN`.
+- `pg_cron` + `pg_net` extensions enabled. `retention-enforce-nightly` cron at `0 3 * * *` UTC, calling the EF with a `RETENTION_CRON_SECRET` bearer (read from Vault).
+
+**Edge Functions (deployed)**
+- 11 existing EFs **instrumented** with `log_audit()` calls (invite-tenant, listing-apply, viewing-request, viewing-response, send-viewing-confirmation, landlord-signup, stripe-webhook, maintenance-notify, visit-notify, visit-response, tenant-workflow, tenancy-workflow, inventory-workflow). All audit calls fire-and-forget with `.then(() => {}, console.error)` so they never block the primary action. IP + user-agent captured per request.
+- `admin-auth` — password sign-in + admin_users gate + TOTP MFA (challenge / verify / first-time enrol).
+- `admin-api` — every action verifies AAL2, admin_users.is_active, then runs with service-role and writes to audit. 11 actions implemented.
+- `seed-admin` — one-time bootstrap (SEED_SECRET-gated), idempotent.
+- `security-check` — admin-only health report (RLS, orphaned data, retention queue, audit recent writes, service-role-in-URL sanity).
+- `retention-enforce` — nightly job, two passes (warnings + anonymisation), shared-secret authenticated.
+- `generate-dsar` — branded HTML export, 24-hour signed URL, admin + self-serve modes with self-serve filter excluding landlord-only fields.
+- `tenant-delete-account` — tenant-initiated erasure (anonymise + auth.admin.deleteUser + landlord email + audit).
+
+**iOS (`bluetezza/easierlet-swift`)**
+- New `AuditLogger.shared.log(...)` helper. Wired into `DocumentsView` (uploaded/viewed/deleted), `PropertyViewModel` (created/updated/archived), `TransactionsViewModel` (created), `TenantsViewModel.updateMaintenanceRequest` (status_changed).
+- Tenant portal Profile menu: Download My Data, Delete My Account, Privacy Policy, Terms of Service. New `TenantStatusGuide` already present from item 7.
+- Tenant Guide tab adds a sixth section: "Your data & privacy" — what we hold, why, how long, your rights, contacts.
+- More tab → new "LEGAL" section linking to /privacy/, /privacy/retention/, /terms/.
+
+**Web (`bluetezza/easierlet-web`)**
+- Privacy policy at /privacy/ rewritten to v2 — 11 sections, ToC, processor list, ICO contact.
+- New /privacy/retention/ — plain-English retention summary table.
+- New /terms/ — landlord Terms of Service: account, billing, acceptable use, data-controller/processor split (this is the load-bearing legal note), liability cap, governing law.
+
+**New repo (`bluetezza/easierlet-admin`)**
+- Pure static site at `admin.easierlet.com`. 7 pages: index (login + MFA flow), dashboard, landlord, audit, retention, dsar, settings. Shared `assets/admin.css` (dark teal admin header) and `assets/admin.js` (auth helpers + admin-api wrapper).
+- Three internal policy docs at `docs/internal/`: data-protection-policy.md, admin-operations-manual.md, security-policy.md.
+- DNS pending: add `admin CNAME bluetezza.github.io.` at the easierlet.com host.
+
+**Activation steps remaining**
+1. Set `SEED_SECRET` and `RETENTION_CRON_SECRET` in Supabase secrets.
+2. Add the cron secret to Vault: `SELECT vault.create_secret('retention_cron_secret', '<value>');` then re-run the `retention_cron_schedule` migration so pg_cron picks it up.
+3. Bootstrap the admin: `curl -X POST 'https://ffzknvcptqjlkxmkdxuk.supabase.co/functions/v1/seed-admin' -H 'Authorization: Bearer <SEED_SECRET>' -H 'Content-Type: application/json' -d '{"email":"admin@easierlet.com","password":"<strong-12+>","name":"Terry Baldwin","role":"owner"}'`. Then unset `SEED_SECRET`.
+4. Add `admin CNAME bluetezza.github.io.` at the DNS host.
+5. Sign in at admin.easierlet.com — first login prompts QR enrolment in Microsoft Authenticator.
+
+**Audit catalogue** — full list of action strings is in `docs/internal/admin-operations-manual.md` Section 10 and reflected in the admin app's audit-filter dropdown.
 
 ### 2026-04-27 — Onboarding, Billing (Stripe placeholder), Compliance & Documents guidance
 
