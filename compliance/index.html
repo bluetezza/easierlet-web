@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1A6B55">
+<title>Compliance — easierLet</title>
+<meta name="robots" content="noindex">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/easierlet.css?v=20260428a">
+
+<style>
+  body { font-family: 'DM Sans', sans-serif; background: var(--el-bg, #F5F7F5); margin: 0; color: var(--el-ink, #1A2E28); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 24px 20px 80px; }
+  .topbar { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: white; border-bottom: 1px solid #E0E8E4; }
+  .topbar .brand { font-size: 18px; }
+  .topbar .brand .l { font-weight: 700; color: var(--el-green, #1A6B55); }
+  .topbar a { color: var(--el-green, #1A6B55); text-decoration: none; font-weight: 500; font-size: 14px; }
+  .topbar .right { margin-left: auto; display: flex; gap: 12px; align-items: center; }
+
+  h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 28px; margin: 0 0 6px; }
+  .sub { color: #6B8278; margin: 0 0 24px; font-size: 14px; }
+
+  .card { background: white; border: 1px solid #E0E8E4; border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  .card-sub { font-size: 13px; color: #6B8278; }
+
+  .property-row { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid #E5EAE7; }
+  .property-row:last-child { border-bottom: none; }
+  .property-name { flex: 1; font-size: 15px; }
+  .stat-pills { display: flex; gap: 6px; }
+  .pill { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; color: white; }
+  .pill.compliant { background: #1A6B55; }
+  .pill.due_soon  { background: #E08F3D; }
+  .pill.overdue   { background: #C44545; }
+  .pill.pending   { background: #6B8278; }
+  .pill.exempt    { background: #B0BAB6; }
+
+  .row-link { color: var(--el-green, #1A6B55); font-size: 13px; text-decoration: none; }
+
+  .req-grid { display: grid; gap: 8px; }
+  .req-row { background: #F5F7F5; padding: 14px; border-radius: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  .req-row:hover { background: #EDF1ED; }
+  .req-name { flex: 1; font-weight: 500; font-size: 14px; }
+  .req-meta { font-size: 12px; color: #6B8278; }
+  .req-status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .summary .tile { background: white; border: 1px solid #E0E8E4; padding: 12px 16px; border-radius: 10px; min-width: 110px; }
+  .summary .tile .v { font-size: 22px; font-weight: 600; font-family: 'Fraunces', serif; }
+  .summary .tile .l { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #6B8278; }
+  .summary .tile.compliant .v { color: #1A6B55; }
+  .summary .tile.due_soon  .v { color: #E08F3D; }
+  .summary .tile.overdue   .v { color: #C44545; }
+  .summary .tile.pending   .v { color: #1A6B55; }
+
+  .btn { display: inline-block; padding: 10px 16px; border-radius: 10px; border: none; cursor: pointer; font-family: inherit; font-size: 14px; text-decoration: none; }
+  .btn-primary { background: #1A6B55; color: white; }
+  .btn-primary:hover { background: #155544; }
+  .btn-primary:disabled { background: #B0BAB6; cursor: not-allowed; }
+  .btn-secondary { background: #E5EAE7; color: var(--el-ink, #1A2E28); }
+  .empty { padding: 40px 20px; text-align: center; color: #6B8278; }
+  .alert { padding: 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
+  .alert.error { background: #FBE6E6; color: #8A2A2A; }
+  .alert.success { background: #E5F1EC; color: #155544; }
+  .progress { height: 6px; background: #E5EAE7; border-radius: 3px; overflow: hidden; margin: 8px 0; }
+  .progress-bar { height: 100%; background: #1A6B55; transition: width 0.2s; }
+
+  /* Detail modal */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: flex-start; justify-content: center; padding: 60px 20px; overflow-y: auto; }
+  .modal-bg.show { display: flex; }
+  .modal { background: white; border-radius: 14px; max-width: 600px; width: 100%; padding: 24px; max-height: 80vh; overflow-y: auto; }
+  .modal h2 { font-family: 'Fraunces', serif; font-weight: 400; margin: 0 0 6px; font-size: 22px; }
+  .field { margin: 14px 0; }
+  .field label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: #6B8278; margin-bottom: 6px; }
+  .field input, .field textarea { width: 100%; padding: 10px 12px; border: 1px solid #E0E8E4; border-radius: 8px; font-family: inherit; font-size: 14px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span>easier</span><span class="l">Let</span></div>
+  <a href="/landlord/">← Portal</a>
+  <div class="right">
+    <a href="/compliance/guide/">Guide</a>
+  </div>
+</div>
+
+<div class="wrap" id="wrap">
+  <h1 id="pageTitle">Compliance & Certificates</h1>
+  <p class="sub" id="pageSub">Track every UK landlord compliance check across your portfolio.</p>
+
+  <div id="content">
+    <div class="empty">Loading…</div>
+  </div>
+</div>
+
+<!-- Detail modal -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal" id="modal">
+    <h2 id="mTitle">—</h2>
+    <p class="card-sub" id="mFrequency"></p>
+    <div id="mAlert"></div>
+    <div class="card" style="margin-top:14px">
+      <div class="card-sub">Last completed: <strong id="mLast">—</strong></div>
+      <div class="card-sub">Next due: <strong id="mNext">—</strong></div>
+      <div class="card-sub">Status: <span id="mStatus" class="pill"></span></div>
+    </div>
+
+    <div class="field">
+      <label>Mark complete (date)</label>
+      <input type="date" id="mDate">
+    </div>
+    <button class="btn btn-primary" id="mMarkBtn">Save as completed</button>
+
+    <div class="field">
+      <label>Certificate</label>
+      <div id="mFileInfo" class="card-sub" style="margin-bottom:8px">No certificate uploaded.</div>
+      <input type="file" id="mFile" accept="application/pdf">
+    </div>
+
+    <div class="field">
+      <label>Notes</label>
+      <textarea id="mNotes" rows="3"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="mCloseBtn">Close</button>
+      <button class="btn btn-primary" id="mSaveBtn">Save notes</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL  = "https://ffzknvcptqjlkxmkdxuk.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmemtudmNwdHFqbGt4bWtkeHVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNTQ0ODQsImV4cCI6MjA5MDgzMDQ4NH0.YRdkBgoVm7cpUJlsK8T4nP6iNE3vgfOmODImiAkPhr4";
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// Routing via query params: ?id=<propertyId>
+const params = new URLSearchParams(location.search);
+const propertyId = params.get("id");
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s == null ? "" : String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+const STATUS_LABEL = {
+  compliant: "Compliant", due_soon: "Due soon", overdue: "Overdue",
+  pending: "Pending", exempt: "Doesn't apply"
+};
+
+function fmtDate(s) {
+  if (!s) return "—";
+  const d = new Date(s.length <= 10 ? s + "T00:00:00Z" : s);
+  if (isNaN(d.getTime())) return s;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function statusLabel(item) {
+  if (item.computed_status === "due_soon" && item.days_until_due != null) return `Due in ${item.days_until_due}d`;
+  if (item.computed_status === "overdue" && item.days_until_due != null) return `${-item.days_until_due}d overdue`;
+  return STATUS_LABEL[item.computed_status] || item.computed_status;
+}
+
+async function ensureSession() {
+  const { data } = await sb.auth.getSession();
+  if (!data?.session) {
+    location.href = "/landlord/login/?next=" + encodeURIComponent(location.pathname + location.search);
+    return null;
+  }
+  return data.session;
+}
+
+// ── List view: properties with health summary ─────────────────────────────
+
+async function renderList() {
+  $("pageTitle").textContent = "Compliance & Certificates";
+  $("pageSub").textContent = "Track every UK landlord compliance check across your portfolio.";
+
+  const session = await ensureSession();
+  if (!session) return;
+  const userId = session.user.id;
+
+  // Properties + their compliance items
+  const [{ data: props }, { data: items }] = await Promise.all([
+    sb.from("properties")
+      .select("id, address, address_line1, city, postcode, country, archived")
+      .eq("user_id", userId).eq("archived", false)
+      .order("created_at", { ascending: false }),
+    sb.from("v_compliance_status")
+      .select("property_id, computed_status")
+  ]);
+
+  if (!props || props.length === 0) {
+    $("content").innerHTML = `<div class="card"><div class="empty">No properties yet. Add one in your <a class="row-link" href="/landlord/properties/">portal</a>.</div></div>`;
+    return;
+  }
+
+  // Group items by property + status
+  const counts = {};
+  for (const it of (items || [])) {
+    const id = it.property_id;
+    if (!counts[id]) counts[id] = { compliant: 0, due_soon: 0, overdue: 0, pending: 0, exempt: 0 };
+    counts[id][it.computed_status] = (counts[id][it.computed_status] || 0) + 1;
+  }
+
+  const rows = props.map(p => {
+    const c = counts[p.id] || {};
+    const addr = [p.address_line1, p.city, p.postcode].filter(Boolean).join(", ") || p.address || "—";
+    return `
+      <div class="property-row">
+        <div class="property-name">
+          <div>${esc(addr)}</div>
+          <div class="card-sub" style="font-size:11px;margin-top:2px">${esc((p.country || "england").charAt(0).toUpperCase() + (p.country || "england").slice(1))}</div>
+        </div>
+        <div class="stat-pills">
+          ${(c.overdue||0)   ? `<span class="pill overdue">${c.overdue} overdue</span>` : ""}
+          ${(c.due_soon||0)  ? `<span class="pill due_soon">${c.due_soon} due soon</span>` : ""}
+          ${(c.compliant||0) ? `<span class="pill compliant">${c.compliant} ✓</span>` : ""}
+          ${(c.pending||0)   ? `<span class="pill pending">${c.pending} pending</span>` : ""}
+        </div>
+        <a class="row-link" href="?id=${encodeURIComponent(p.id)}">Open →</a>
+      </div>
+    `;
+  }).join("");
+
+  $("content").innerHTML = `<div class="card">${rows}</div>`;
+}
+
+// ── Per-property view ─────────────────────────────────────────────────────
+
+let propertyForExport = null;
+let allItems = [];
+
+async function renderProperty() {
+  const session = await ensureSession();
+  if (!session) return;
+
+  const [{ data: prop }, { data: items }] = await Promise.all([
+    sb.from("properties")
+      .select("id, address, address_line1, city, postcode, country, prs_property_id")
+      .eq("id", propertyId).maybeSingle(),
+    sb.from("v_compliance_status")
+      .select("*").eq("property_id", propertyId)
+      .order("requirement_name", { ascending: true })
+  ]);
+
+  if (!prop) {
+    $("content").innerHTML = `<div class="card"><div class="empty">Property not found or you don't have access.</div></div>`;
+    return;
+  }
+
+  propertyForExport = prop;
+  allItems = items || [];
+
+  const addr = [prop.address_line1, prop.city, prop.postcode].filter(Boolean).join(", ") || prop.address || "—";
+  $("pageTitle").textContent = "Compliance — " + addr;
+  $("pageSub").textContent = (prop.country || "england").charAt(0).toUpperCase() + (prop.country || "england").slice(1)
+    + (prop.prs_property_id ? `  ·  PRS ${prop.prs_property_id}` : "");
+
+  const counts = { compliant: 0, due_soon: 0, overdue: 0, pending: 0, exempt: 0 };
+  for (const it of allItems) counts[it.computed_status] = (counts[it.computed_status] || 0) + 1;
+
+  const summaryHtml = ["compliant","due_soon","overdue","pending"].map(s => `
+    <div class="tile ${s}">
+      <div class="v">${counts[s] || 0}</div>
+      <div class="l">${STATUS_LABEL[s]}</div>
+    </div>`).join("");
+
+  const reqHtml = allItems.map(it => `
+    <div class="req-row" data-id="${esc(it.id)}">
+      <div class="req-status-dot" style="background:${dotColor(it.computed_status)}"></div>
+      <div>
+        <div class="req-name">${esc(it.requirement_name)}</div>
+        <div class="req-meta">${esc(statusLabel(it))} · ${esc(it.frequency_type)} · last ${fmtDate(it.last_completed_date)}</div>
+      </div>
+    </div>`).join("");
+
+  $("content").innerHTML = `
+    <div class="summary">${summaryHtml}</div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div>
+          <div class="card-title">Requirements</div>
+          <div class="card-sub">Tap a row to mark complete or upload a certificate.</div>
+        </div>
+        <button class="btn btn-primary" id="exportBtn">⬇ Export Compliance Pack</button>
+      </div>
+      <div id="exportProgress" style="display:none">
+        <div class="progress"><div class="progress-bar" id="exportBar" style="width:0%"></div></div>
+        <div class="card-sub" id="exportLabel">Preparing…</div>
+      </div>
+      <div id="exportError"></div>
+      <div class="req-grid" style="margin-top:12px">${reqHtml || '<div class="empty">No compliance items yet.</div>'}</div>
+    </div>
+
+    <div style="margin-top:16px"><a href="/compliance/" class="row-link">← All properties</a></div>
+  `;
+
+  document.querySelectorAll(".req-row").forEach(el => {
+    el.addEventListener("click", () => openDetail(el.dataset.id));
+  });
+  $("exportBtn").addEventListener("click", exportPack);
+}
+
+function dotColor(s) {
+  return ({compliant:"#1A6B55", due_soon:"#E08F3D", overdue:"#C44545", pending:"#1A6B55", exempt:"#B0BAB6"})[s] || "#6B8278";
+}
+
+// ── Detail modal ──────────────────────────────────────────────────────────
+
+let activeItem = null;
+
+function openDetail(itemId) {
+  activeItem = allItems.find(it => it.id === itemId);
+  if (!activeItem) return;
+  $("mTitle").textContent = activeItem.requirement_name;
+  $("mFrequency").textContent = `${activeItem.frequency_type}${activeItem.frequency_value ? ` (every ${activeItem.frequency_value})` : ""} · ${activeItem.legal_basis || ""}`;
+  $("mLast").textContent = fmtDate(activeItem.last_completed_date);
+  $("mNext").textContent = fmtDate(activeItem.next_due_date);
+  const sp = $("mStatus"); sp.className = `pill ${activeItem.computed_status}`; sp.textContent = statusLabel(activeItem);
+  $("mFileInfo").textContent = activeItem.document_url ? "Certificate on file." : "No certificate uploaded.";
+  $("mNotes").value = activeItem.notes || "";
+  $("mDate").value = activeItem.last_completed_date || new Date().toISOString().slice(0,10);
+  $("mAlert").innerHTML = "";
+  $("modalBg").classList.add("show");
+}
+
+$("mCloseBtn").addEventListener("click", () => $("modalBg").classList.remove("show"));
+$("modalBg").addEventListener("click", (e) => { if (e.target.id === "modalBg") $("modalBg").classList.remove("show"); });
+
+$("mMarkBtn").addEventListener("click", async () => {
+  if (!activeItem) return;
+  const date = $("mDate").value;
+  if (!date) return;
+  const next = computeNextDue(activeItem.frequency_type, activeItem.frequency_value, new Date(date));
+  await sb.from("property_compliance").update({
+    last_completed_date: date,
+    next_due_date: next,
+    status: "compliant",
+    updated_at: new Date().toISOString()
+  }).eq("id", activeItem.id);
+  $("modalBg").classList.remove("show");
+  renderProperty();
+});
+
+$("mSaveBtn").addEventListener("click", async () => {
+  if (!activeItem) return;
+  await sb.from("property_compliance").update({
+    notes: $("mNotes").value || null,
+    updated_at: new Date().toISOString()
+  }).eq("id", activeItem.id);
+  $("modalBg").classList.remove("show");
+  renderProperty();
+});
+
+$("mFile").addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file || !activeItem || !propertyForExport) return;
+  const session = (await sb.auth.getSession()).data?.session;
+  if (!session) return;
+  const path = `${session.user.id.toLowerCase()}/${propertyForExport.id.toLowerCase()}/compliance-${activeItem.code}-${crypto.randomUUID().slice(0,8)}.pdf`;
+  const { error } = await sb.storage.from("documents").upload(path, file, {
+    contentType: "application/pdf", upsert: false
+  });
+  if (error) { $("mAlert").innerHTML = `<div class="alert error">Upload failed: ${esc(error.message)}</div>`; return; }
+  await sb.from("property_compliance").update({
+    document_url: path, updated_at: new Date().toISOString()
+  }).eq("id", activeItem.id);
+  $("mAlert").innerHTML = `<div class="alert success">Certificate uploaded.</div>`;
+  $("mFileInfo").textContent = "Certificate on file.";
+});
+
+function computeNextDue(freqType, freqValue, base) {
+  const d = new Date(base);
+  switch (freqType) {
+    case "annual":  d.setFullYear(d.getFullYear() + 1); return d.toISOString().slice(0,10);
+    case "years":   d.setFullYear(d.getFullYear() + (freqValue || 1)); return d.toISOString().slice(0,10);
+    case "monthly": d.setMonth(d.getMonth() + (freqValue || 1)); return d.toISOString().slice(0,10);
+    default: return null;  // once / event / ongoing — no recurring due
+  }
+}
+
+// ── Export Compliance Pack (streaming) ────────────────────────────────────
+
+async function exportPack() {
+  if (!propertyForExport) return;
+  const session = await ensureSession();
+  if (!session) return;
+
+  const btn = $("exportBtn");
+  btn.disabled = true;
+  $("exportProgress").style.display = "block";
+  $("exportError").innerHTML = "";
+  $("exportBar").style.width = "0%";
+  $("exportLabel").textContent = "Building pack…";
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/compliance-export`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON,
+        "Authorization": `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ property_id: propertyForExport.id })
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      $("exportError").innerHTML = `<div class="alert error">Export failed: ${esc(t)}</div>`;
+      return;
+    }
+
+    // Stream into chunks via getReader — NOT response.blob() which buffers
+    // the whole response in memory.
+    const total = Number(res.headers.get("Content-Length") || 0);
+    const reader = res.body.getReader();
+    const chunks = [];
+    let received = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      if (total > 0) {
+        $("exportBar").style.width = `${Math.min(100, (received / total) * 100)}%`;
+        $("exportLabel").textContent = `${(received / 1024).toFixed(0)} KB of ${(total / 1024).toFixed(0)} KB`;
+      } else {
+        $("exportLabel").textContent = `${(received / 1024).toFixed(0)} KB downloaded…`;
+      }
+    }
+
+    const blob = new Blob(chunks, { type: "application/zip" });
+    const cd = res.headers.get("Content-Disposition") || "";
+    const m = cd.match(/filename="?([^";]+)"?/);
+    const filename = m?.[1] || `easierlet_compliance_${Date.now()}.zip`;
+
+    // Trigger save via anchor click. Modern browsers will use the filename.
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+
+    $("exportLabel").textContent = `Done — ${(blob.size / 1024).toFixed(0)} KB.`;
+    $("exportBar").style.width = "100%";
+  } catch (e) {
+    $("exportError").innerHTML = `<div class="alert error">Export failed: ${esc(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+
+if (propertyId) {
+  renderProperty();
+} else {
+  renderList();
+}
+</script>
+</body>
+</html>

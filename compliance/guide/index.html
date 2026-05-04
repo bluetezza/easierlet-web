@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1A6B55">
+<title>UK Landlord Compliance Guide — easierLet</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/easierlet.css?v=20260428a">
+
+<style>
+  body { font-family: 'DM Sans', sans-serif; background: #F5F7F5; margin: 0; color: #1A2E28; line-height: 1.6; }
+  .topbar { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: white; border-bottom: 1px solid #E0E8E4; }
+  .topbar .brand { font-size: 18px; }
+  .topbar .brand .l { font-weight: 700; color: #1A6B55; }
+  .topbar a { color: #1A6B55; text-decoration: none; font-weight: 500; font-size: 14px; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 30px; margin: 0 0 6px; }
+  .sub { color: #6B8278; margin: 0 0 18px; font-size: 14px; }
+
+  .seg { display: inline-flex; background: #E5EAE7; padding: 4px; border-radius: 999px; gap: 4px; margin-bottom: 28px; }
+  .seg button { background: transparent; border: none; padding: 8px 16px; border-radius: 999px; font-family: inherit; cursor: pointer; font-size: 14px; color: #6B8278; }
+  .seg button.active { background: white; color: #1A6B55; font-weight: 600; }
+
+  .content h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 28px; margin: 32px 0 12px; }
+  .content h2 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 22px; margin: 28px 0 10px; color: #1A2E28; }
+  .content h3 { font-size: 16px; font-weight: 600; margin: 20px 0 8px; }
+  .content p, .content li { font-size: 15px; }
+  .content ul { padding-left: 22px; }
+  .content blockquote { border-left: 3px solid #1A6B55; padding: 12px 16px; background: rgba(26,107,85,0.08); margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .content hr { border: none; border-top: 1px solid #E0E8E4; margin: 32px 0; }
+  .content strong { color: #1A2E28; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span>easier</span><span class="l">Let</span></div>
+  <a href="/compliance/">← Compliance</a>
+</div>
+
+<div class="wrap">
+  <h1>UK Landlord Compliance Guide</h1>
+  <p class="sub">A practical walkthrough of what's required of you, by jurisdiction. Not legal advice — confirm specifics with your council or a solicitor for borderline cases.</p>
+
+  <div class="seg" role="tablist">
+    <button data-j="england"  class="active">England</button>
+    <button data-j="scotland">Scotland</button>
+    <button data-j="wales">Wales</button>
+  </div>
+
+  <div class="content" id="content"></div>
+</div>
+
+<script type="module">
+import { marked } from "https://esm.sh/marked@9.1.6";
+
+// Sections ported from iOS ComplianceGuideContent.swift — kept inline so the
+// page is self-contained and doesn't need a separate fetch.
+
+const PRS_SECTION = `
+## The Private Rented Sector Database (England, late 2026)
+
+Under the Renters' Rights Act 2025, every English landlord and every let property must be registered on a new national Private Rented Sector Database. Phase 2 of the Act, expected late 2026, brings the database live.
+
+**What you'll need to do:**
+- Register yourself as a landlord (you'll be issued a landlord ID)
+- Register each property (you'll be issued a property unique number, expected to be linked to the property's UPRN)
+- Display the property unique number on every rental advertisement
+- Pay an annual fee per property (amount not yet confirmed)
+- Keep details and compliance evidence up to date
+
+**Why it matters:**
+- Marketing or letting a property without registration will be illegal
+- You won't be able to obtain a possession order (except for serious antisocial behaviour) without a registered, up-to-date entry
+- The database will be publicly searchable — tenants can verify your registration before signing
+- Civil penalties: up to £7,000 first offence, up to £40,000 for serious or repeated breaches
+
+**How EasierLet helps:**
+- Capture your UPRN and PRS Property ID in property details
+- Display the PRS ID on your public listings automatically
+- Export a Compliance Pack ZIP containing all current certificates plus a manifest, ready to upload during registration
+- Track annual renewal dates with reminders
+`;
+
+const CONTENT = {
+england: `
+# England — Landlord Compliance
+
+## Gas Safety (CP12)
+Annual inspection by a Gas Safe registered engineer is mandatory for any property with gas appliances. The certificate must be given to the tenant within 28 days of the check, and a copy supplied to new tenants before move-in.
+
+**Penalties:** unlimited fines and prosecution under the Gas Safety (Installation and Use) Regulations 1998. Loss of landlord insurance cover.
+
+## Electrical Safety (EICR)
+Mandatory since April 2021 under the Electrical Safety Standards Regulations 2020. Five-yearly EICR by a qualified electrician. Tenants get a copy within 28 days of inspection. Any C1 / C2 / FI faults must be fixed within 28 days (or sooner if the report says so).
+
+## Energy Performance Certificate
+Required before the property is marketed and renewed every ten years. Currently the minimum acceptable rating is **E** for new tenancies. The government has consulted on a **C minimum from 2028** for new tenancies and 2030 for all tenancies — keep an eye on the timeline.
+
+## Smoke and CO Alarms
+Under the 2022 amendment regulations:
+- At least one smoke alarm on every storey
+- A CO alarm in every room with a fixed combustion appliance (not gas cookers)
+- Tested at the start of every new tenancy
+- Repaired or replaced within "as soon as reasonably practicable" after any tenant report
+
+## Legionella
+A risk assessment should be carried out and reviewed every two years (HSE ACOP L8). For most domestic lets a simple visual check is enough — full sampling is rarely needed.
+
+## Right to Rent
+Before a tenancy starts, you must check every adult occupier's right to rent in the UK and keep dated copies of evidence. Recheck dates apply to tenants with time-limited status.
+
+## Tenancy Deposit Protection
+Deposits must be protected in an authorised scheme (DPS, MyDeposits, TDS) within **30 days** of receipt, and prescribed information served on the tenant in the same window.
+
+## Other things to plan for
+- **HMO licensing** if 5+ unrelated tenants in 2+ households — and additional / selective licensing in many local authorities
+- **Anti-money laundering** checks if you're a letting agent
+- **Repairing standard** under the Landlord and Tenant Act 1985, section 11
+
+---
+${PRS_SECTION}
+`,
+
+scotland: `
+# Scotland — Landlord Compliance
+
+## Landlord Registration
+You must register with your local council under the Antisocial Behaviour etc. (Scotland) Act 2004 before letting. Registration lasts **three years**. Letting without registration is a criminal offence with fines up to £50,000.
+
+## Gas Safety (CP12)
+Annual inspection by a Gas Safe registered engineer for any property with gas appliances. Tenants get a copy within 28 days.
+
+## Electrical Safety (EICR + PAT element)
+Five-yearly EICR by a registered electrician under the Repairing Standard (Housing (Scotland) Act 2006). The EICR must include a PAT-style check on any **landlord-supplied appliances**.
+
+## Energy Performance Certificate
+Required before marketing, renewed every ten years.
+
+## Interlinked Smoke and Heat Alarms
+Since **February 2022** Scotland requires interlinked alarms in every Scottish home (rented or owner-occupied):
+- One smoke alarm in the principal living room
+- A smoke alarm in every circulation space (hallways, landings)
+- A heat alarm in the kitchen
+- All interlinked, mains-wired or sealed long-life lithium battery
+- **CO alarm** in every room with a fixed combustion appliance
+
+## Legionella
+Two-yearly risk assessment, same HSE guidance as the rest of the UK.
+
+## Tolerable Standard
+Every let property must meet the Tolerable Standard under the Housing (Scotland) Act 1987 (as amended). This covers structure, ventilation, water supply, sanitation, drainage, escape from fire, insulation, electrical, and heating.
+
+## Tenancy Deposits
+Protect within **30 working days** of receipt in an approved scheme (SafeDeposits Scotland, Letting Protection Service Scotland, MyDeposits Scotland).
+
+## Private Residential Tenancy (PRT)
+Since December 2017 most new tenancies are PRTs — open-ended, with statutory grounds only for ending. The PRT model agreement is the easiest path to a compliant lease.
+
+---
+${PRS_SECTION}
+
+> **Note:** the PRS Database under the Renters' Rights Act 2025 applies to **England only**. Scotland's separate landlord registration scheme has been in place since 2006 and continues to apply.
+`,
+
+wales: `
+# Wales — Landlord Compliance
+
+## Rent Smart Wales Registration & Licensing
+Under the Housing (Wales) Act 2014, **all** landlords must register with Rent Smart Wales. If you self-manage (rather than using a managing agent) you also need a **licence**, which requires completing approved training. Renewal every five years.
+
+## Gas Safety (CP12)
+Annual inspection by a Gas Safe registered engineer if gas appliances are present. Tenants receive a copy within 28 days.
+
+## Electrical Safety (EICR)
+Five-yearly EICR under the Renting Homes (Wales) Act 2016 — Fitness for Human Habitation regulations.
+
+## Energy Performance Certificate
+Required before marketing, renewed every ten years.
+
+## Mains-wired Interlinked Smoke Alarms
+Under the FFHH Regulations 2022:
+- Mains-wired interlinked smoke alarms on every storey
+- CO alarms in every room with a gas, oil, or solid-fuel appliance
+- Tested at the start of every contract
+
+## Legionella
+Two-yearly risk assessment.
+
+## Renting Homes (Wales) Act 2016
+Replaced the old assured shorthold tenancy with two "occupation contracts" (standard and secure). You must issue a **Written Statement** of the contract within 14 days of occupation, and provide an **electronic check-in inventory**.
+
+## Tenancy Deposits
+Protect within 30 days of receipt in an approved scheme.
+
+---
+${PRS_SECTION}
+
+> **Note:** the PRS Database under the Renters' Rights Act 2025 applies to **England only**. Welsh landlords continue under Rent Smart Wales.
+`,
+};
+
+const $ = (id) => document.getElementById(id);
+
+function render(j) {
+  document.querySelectorAll(".seg button").forEach(b => b.classList.toggle("active", b.dataset.j === j));
+  $("content").innerHTML = marked.parse(CONTENT[j] || CONTENT.england);
+  history.replaceState({}, "", `?j=${j}`);
+}
+
+document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => render(b.dataset.j)));
+
+const initial = new URLSearchParams(location.search).get("j") || "england";
+render(initial);
+</script>
+</body>
+</html>

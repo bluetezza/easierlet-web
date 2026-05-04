@@ -701,6 +701,9 @@
       <div class="foot">
         <div>Listed on <strong>easierLet</strong></div>
         <div style="margin-top:4px;">Viewings handled directly by the landlord.</div>
+        <div id="prsFoot" style="margin-top:8px;display:none;font-size:11px;color:var(--text-quiet);">
+          PRS Database ID: <strong id="prsId"></strong>
+        </div>
       </div>
     </div>
   </div>
@@ -885,6 +888,20 @@
 
       const heroPhoto = media.find(m => m.is_hero) || media.find(m => m.media_type === 'photo') || media[0];
       if (heroPhoto) setMeta('og:image', heroPhoto.public_url, 'property');
+
+      // PRS Database ID — surface in footer + meta tag for crawlers/regulators.
+      // From late 2026 the Renters' Rights Act requires this on every English advert.
+      if (property.prs_property_id) {
+        const prsFoot = document.getElementById('prsFoot');
+        const prsId   = document.getElementById('prsId');
+        if (prsFoot && prsId) {
+          prsId.textContent = property.prs_property_id;
+          prsFoot.style.display = '';
+        }
+        let m = document.querySelector('meta[name="prs-property-id"]');
+        if (!m) { m = document.createElement('meta'); m.setAttribute('name', 'prs-property-id'); document.head.appendChild(m); }
+        m.setAttribute('content', property.prs_property_id);
+      }
 
       // -- Verified badge ------------------------------------------------------
       if (landlord && landlord.verified) {
