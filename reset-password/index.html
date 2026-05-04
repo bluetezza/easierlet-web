@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
+  <title>Set a new password — easierLet</title>
+  <meta name="robots" content="noindex">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/assets/easierlet.css">
+
+  <style>
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh; display: flex; flex-direction: column;
+      background:
+        radial-gradient(ellipse at 80% 0%, rgba(29, 158, 117, 0.06), transparent 60%),
+        radial-gradient(ellipse at 0% 100%, rgba(26, 107, 85, 0.04), transparent 50%),
+        var(--el-bg);
+    }
+    .top { padding: 22px 24px; }
+    .brand { font-size: 20px; color: var(--el-ink); }
+    .brand .e { font-family: 'Fraunces', serif; font-weight: 400; }
+    .brand .l { font-weight: 500; }
+
+    main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
+    .card { width: 100%; max-width: 420px; background: #fff; border: 1px solid var(--el-line); border-radius: 18px; padding: 36px; box-shadow: 0 8px 40px rgba(15, 46, 40, 0.06); }
+    .card h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 24px; color: var(--el-ink); margin: 0 0 8px; }
+    .card .lead { color: var(--el-muted); font-size: 14px; margin-bottom: 22px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; color: var(--el-muted); margin-bottom: 6px; }
+    .field input { width: 100%; padding: 12px 14px; background: #fff; border: 1px solid var(--el-line); border-radius: 10px; font-size: 15px; color: var(--el-ink); font-family: inherit; outline: none; }
+    .field input:focus { border-color: var(--el-green); box-shadow: 0 0 0 3px rgba(26,107,85,0.12); }
+    .submit { width: 100%; margin-top: 6px; padding: 14px; background: var(--el-green); color: #fff; border-radius: 10px; font-size: 15px; font-weight: 500; cursor: pointer; border: none; font-family: inherit; }
+    .submit:disabled { opacity: 0.7; cursor: not-allowed; }
+    .alert { padding: 12px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .alert.show { display: block; }
+    .alert-error   { background: #FFE8DC; color: var(--el-danger); border: 1px solid #F5C5B0; }
+    .alert-success { background: var(--el-green-pale); color: var(--el-green); border: 1px solid var(--el-green-border); }
+    .micro { font-size: 12px; color: var(--el-muted); text-align: center; margin-top: 14px; }
+    .micro a { color: var(--el-green); }
+  </style>
+</head>
+<body>
+
+<div class="top">
+  <a href="/" class="brand"><span class="e">easier</span><span class="l">Let</span></a>
+</div>
+
+<main>
+  <div class="card">
+    <h1>Set a new password</h1>
+    <p class="lead">Enter a new password for your easierLet account. We'll sign you in once it's saved.</p>
+
+    <div class="alert alert-error" id="errorAlert"></div>
+    <div class="alert alert-success" id="successAlert"></div>
+
+    <form id="resetForm" autocomplete="on">
+      <div class="field">
+        <label for="password">New password</label>
+        <input id="password" type="password" autocomplete="new-password" minlength="8" required>
+      </div>
+      <div class="field">
+        <label for="confirm">Confirm password</label>
+        <input id="confirm" type="password" autocomplete="new-password" minlength="8" required>
+      </div>
+      <button type="submit" class="submit" id="submitBtn">Save new password</button>
+    </form>
+    <div class="micro"><a href="/login/">Back to sign in</a></div>
+  </div>
+</main>
+
+<script type="module">
+  import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+
+  const SUPABASE_URL  = "https://ffzknvcptqjlkxmkdxuk.supabase.co";
+  const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmemtudmNwdHFqbGt4bWtkeHVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNTQ0ODQsImV4cCI6MjA5MDgzMDQ4NH0.YRdkBgoVm7cpUJlsK8T4nP6iNE3vgfOmODImiAkPhr4";
+
+  // Use a fresh storage key so we don't pollute the portal session
+  // before the password is set.
+  const client = createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: "el-reset-session" }
+  });
+
+  const $ = (id) => document.getElementById(id);
+  const showError   = (m) => { const a = $("errorAlert");   a.textContent = m; a.classList.add("show"); $("successAlert").classList.remove("show"); };
+  const showSuccess = (m) => { const a = $("successAlert"); a.textContent = m; a.classList.add("show"); $("errorAlert").classList.remove("show"); };
+
+  // Supabase puts the recovery tokens in the URL hash. supabase-js with
+  // detectSessionInUrl picks them up automatically and turns them into a
+  // session — but only if the page loads with the hash present.
+  // Wait briefly so the listener fires before we let the user submit.
+  let ready = false;
+  client.auth.onAuthStateChange((event) => {
+    if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") ready = true;
+  });
+  // Fallback — if the URL has no hash at all, alert and offer to retry.
+  setTimeout(async () => {
+    const { data } = await client.auth.getSession();
+    if (!ready && !data?.session) {
+      showError("This reset link is invalid or has expired. Request a new one from the sign-in page.");
+    } else {
+      ready = true;
+    }
+  }, 1200);
+
+  $("resetForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const pw = $("password").value;
+    const confirm = $("confirm").value;
+    if (pw !== confirm) { showError("Passwords don't match."); return; }
+    if (pw.length < 8)  { showError("Use at least 8 characters."); return; }
+
+    const btn = $("submitBtn");
+    btn.disabled = true; btn.textContent = "Saving…";
+
+    try {
+      const { error } = await client.auth.updateUser({ password: pw });
+      if (error) throw error;
+      showSuccess("Password updated. Redirecting you to sign in…");
+      // Sign out the recovery session and bounce to /login/ so the
+      // user signs in fresh.
+      await client.auth.signOut();
+      setTimeout(() => { window.location.href = "/login/"; }, 1500);
+    } catch (err) {
+      showError(err?.message || "Couldn't save the password — try the link again or request a new one.");
+      btn.disabled = false; btn.textContent = "Save new password";
+    }
+  });
+</script>
+</body>
+</html>
