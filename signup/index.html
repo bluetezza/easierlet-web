@@ -291,10 +291,9 @@
           <label for="suCompany">Company name (optional)</label>
           <input type="text" id="suCompany" autocomplete="organization">
         </div>
-        <div class="field">
-          <label for="suPassword">Password (min 8 characters)</label>
-          <input type="password" id="suPassword" required minlength="8" autocomplete="new-password">
-        </div>
+        <p style="font-size:13px;color:var(--el-muted);margin:0 0 6px;line-height:1.5">
+          We'll send you an email to confirm your address — you'll set your password from that link. No card needed for the 14-day trial.
+        </p>
 
         <div class="turnstile-wrap">
           <div class="cf-turnstile" data-sitekey="0x4AAAAAAC_qyS_vO4XbyHFw"></div>
@@ -339,13 +338,11 @@
     const email = $('suEmail').value.trim();
     const phone = $('suPhone').value.trim();
     const company = $('suCompany').value.trim();
-    const password = $('suPassword').value;
     const agreed = $('suAgree').checked;
     const turnstileToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
 
     if (!name) return showAlert('error', 'Please enter your name.');
     if (!email || !/.+@.+\..+/.test(email)) return showAlert('error', 'Please enter a valid email address.');
-    if (!password || password.length < 8) return showAlert('error', 'Password must be at least 8 characters.');
     if (!agreed) return showAlert('error', 'Please agree to the privacy policy and terms.');
     if (!turnstileToken) return showAlert('error', 'Please complete the captcha above.');
 
@@ -361,7 +358,7 @@
           'apikey': ANON_KEY,
         },
         body: JSON.stringify({
-          name, email, password,
+          name, email,
           company_name: company || null,
           phone: phone || null,
           turnstile_token: turnstileToken,
@@ -371,7 +368,7 @@
       if (!res.ok || data.ok === false) {
         const map = {
           email_exists: 'An account with this email already exists. Try signing in instead.',
-          weak_password: 'Password must be at least 8 characters.',
+          bad_email: 'Please enter a valid email address.',
           bot_check_failed: 'Captcha check failed — please try again.',
         };
         showAlert('error', map[data.error] || data.message || 'Something went wrong. Please try again.');
@@ -380,26 +377,12 @@
         if (window.turnstile) window.turnstile.reset();
         return;
       }
-      showAlert('success', 'Account created — redirecting to your dashboard…');
-      // Sign the user in straight away with the password they just set
-      try {
-        const signinRes = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY },
-          body: JSON.stringify({ email, password }),
-        });
-        const session = await signinRes.json();
-        if (session?.access_token) {
-          // Store the session under the same key the portal expects
-          localStorage.setItem(`sb-${SUPABASE_URL.split('//')[1].split('.')[0]}-auth-token`, JSON.stringify({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-            user: session.user,
-            expires_at: session.expires_at,
-          }));
-        }
-      } catch (_) { /* fall through to login */ }
-      setTimeout(() => { window.location.href = '/landlord/'; }, 1200);
+      // Account created — but they need to verify their email and set
+      // a password before signing in. Show a clear success state and
+      // don't try to sign them in client-side.
+      const form = document.getElementById('signupForm');
+      if (form) form.style.display = 'none';
+      showAlert('success', `Almost there — we've sent a verification link to ${email}. Click it to set your password and sign in. (Check your spam folder if you don't see it within a minute.)`);
     } catch (err) {
       console.error(err);
       showAlert('error', err.message || 'Network error. Please try again.');
