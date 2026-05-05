@@ -214,15 +214,14 @@
     const orig = btn.textContent;
     btn.disabled = true; btn.textContent = "Opening checkout…";
     try {
-      const res = await ELP.callFn("create-checkout-session", {
-        method: "POST",
-        body: JSON.stringify({ plan }),
-      });
-      if (res?.checkout_url) {
-        window.location.href = res.checkout_url;
+      // ELP.callFn(name, body) — second arg is the JSON-encodable body.
+      // Returns { ok, status, data }, where `data` is the parsed JSON.
+      const res = await ELP.callFn("create-checkout-session", { plan });
+      if (res.ok && res.data?.checkout_url) {
+        window.location.href = res.data.checkout_url;
         return;
       }
-      throw new Error(res?.message || "Could not start checkout");
+      throw new Error(res.data?.message || res.data?.error || "Could not start checkout");
     } catch (e) {
       const msg = e.message || "Couldn't open checkout.";
       if (msg.includes("stripe_not_configured") || msg.includes("not set yet")) {
@@ -238,12 +237,13 @@
     const btn = $("manageBtn");
     btn.disabled = true; btn.textContent = "Opening…";
     try {
-      const res = await ELP.callFn("billing-portal", { method: "POST", body: "{}" });
-      if (res?.portal_url) {
-        window.location.href = res.portal_url;
+      // No body needed — billing-portal looks the customer up by JWT.
+      const res = await ELP.callFn("billing-portal", {});
+      if (res.ok && res.data?.portal_url) {
+        window.location.href = res.data.portal_url;
         return;
       }
-      throw new Error(res?.message || "Could not open billing portal");
+      throw new Error(res.data?.message || res.data?.error || "Could not open billing portal");
     } catch (e) {
       const msg = e.message || "Couldn't open billing.";
       if (msg.includes("stripe_not_configured")) {
