@@ -165,7 +165,7 @@ const ICONS = {
   link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7"/></svg>',
 };
 
-function mountShell({ user } = {}) {
+function mountShell({ user, displayName } = {}) {
   const root = document.getElementById("portal-shell");
   if (!root) return;
   const role = root.dataset.role;
@@ -173,7 +173,15 @@ function mountShell({ user } = {}) {
   const title = root.dataset.title || "";
   const items = NAV[role] || [];
 
-  const userLabel = user?.email || user?.user_metadata?.name || "Account";
+  // Prefer the display name passed in by the caller (resolved from
+  // landlord_profiles.director_name / company_name or tenants.full_name),
+  // then auth user_metadata, then the email local-part as a last resort.
+  // Always avoid showing the bare email — it's noisy chrome.
+  const fromMeta = (user?.user_metadata?.full_name || user?.user_metadata?.name || "").trim();
+  const fromLocal = (user?.email || "").split("@")[0]
+    .replace(/[._-]+/g, " ")
+    .replace(/\b\w/g, c => c.toUpperCase());
+  const userLabel = (displayName || "").trim() || fromMeta || fromLocal || "Account";
 
   root.innerHTML = `
     <header class="elp-topbar">

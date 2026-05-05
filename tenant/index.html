@@ -145,7 +145,16 @@
   if (!session) throw new Error("redirecting");
 
   const user = session.user;
-  ELP.mountShell({ user });
+
+  // Resolve a friendly display name from the tenants row (full_name preferred).
+  let displayName = "";
+  try {
+    const t = await ELP.rest(`tenants?tenant_auth_id=eq.${user.id}&select=full_name,name&limit=1`);
+    const row = (t && t[0]) || {};
+    displayName = (row.full_name || row.name || "").trim();
+  } catch (_) {}
+
+  ELP.mountShell({ user, displayName });
   ELP.initTabs("home");
 
   // --- Lazy-load data per tab on first activation -------------------------

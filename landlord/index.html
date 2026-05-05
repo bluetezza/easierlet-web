@@ -758,7 +758,18 @@
   const session = await ELP.requireSession("/login/");
   if (!session) throw new Error("redirecting");
   const user = session.user;
-  ELP.mountShell({ user });
+
+  // Resolve a friendly display name (director_name → company_name) so the
+  // top bar shows "Jane Smith" rather than "jane@example.com". Best-effort
+  // — falls back to user metadata / email local-part inside mountShell.
+  let displayName = "";
+  try {
+    const profile = await ELP.rest(`landlord_profiles?user_id=eq.${user.id}&select=director_name,company_name&limit=1`);
+    const p = (profile && profile[0]) || {};
+    displayName = (p.director_name || p.company_name || "").trim();
+  } catch (_) {}
+
+  ELP.mountShell({ user, displayName });
   ELP.initTabs("home");
 
   const $ = (id) => document.getElementById(id);
