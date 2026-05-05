@@ -277,6 +277,14 @@
         window.location.href = res.data.checkout_url;
         return;
       }
+      // Existing-subscription plan-change path (no checkout, direct API).
+      if (res.ok && res.data?.plan_changed) {
+        alertBox("success", res.data.message || "Plan updated.");
+        // Give the webhook a beat to land, then reload the page to show
+        // the new plan state.
+        setTimeout(() => { window.location.reload(); }, 1500);
+        return;
+      }
       throw new Error(res.data?.message || res.data?.error || "Could not start checkout");
     } catch (e) {
       const msg = e.message || "Couldn't open checkout.";
