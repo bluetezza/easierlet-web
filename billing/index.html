@@ -96,7 +96,7 @@
             <div class="value" id="renewDate">—</div>
           </div>
         </div>
-        <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+        <div id="manageWrap" style="margin-top:18px;display:none;gap:10px;flex-wrap:wrap">
           <button class="el-btn el-btn-secondary" id="manageBtn" style="background:#fff;color:#1A6B55">Manage billing</button>
         </div>
       </div>
@@ -152,7 +152,7 @@
 
   async function load() {
     const [subs, props] = await Promise.all([
-      ELP.rest(`landlord_subscriptions?user_id=eq.${user.id}&select=plan,status,trial_ends_at,current_period_end,property_limit&limit=1`).catch(() => []),
+      ELP.rest(`landlord_subscriptions?user_id=eq.${user.id}&select=plan,status,trial_ends_at,current_period_end,property_limit,stripe_customer_id&limit=1`).catch(() => []),
       ELP.rest(`properties?user_id=eq.${user.id}&archived=eq.false&select=id`).catch(() => []),
     ]);
     const sub = subs[0] || { plan: "trial", status: "trialing", property_limit: 2 };
@@ -201,10 +201,17 @@
       }
     });
 
+    // Only show "Manage billing" once a Stripe customer exists (i.e. they've
+    // completed at least one checkout). Otherwise the portal call would
+    // 404 with no_customer.
+    if (sub.stripe_customer_id) {
+      $("manageWrap").style.display = "flex";
+      $("manageBtn").addEventListener("click", openPortal);
+    }
+
     document.querySelectorAll("[data-checkout]").forEach((b) =>
       b.addEventListener("click", () => startCheckout(b.dataset.checkout, b))
     );
-    $("manageBtn").addEventListener("click", openPortal);
 
     $("loadingBox").style.display = "none";
     $("contentBox").style.display = "";
