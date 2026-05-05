@@ -101,30 +101,8 @@
         </div>
       </div>
 
-      <h2 style="font-family:'Fraunces',serif;font-weight:400;font-size:22px;margin:0 0 14px">Available plans</h2>
-      <div class="pricing-grid">
-        <div class="price-tile" data-plan-tile="starter">
-          <span class="badge-current" style="display:none">Current plan</span>
-          <h3>Starter</h3>
-          <div class="amount">£9.99 <small>/ month</small></div>
-          <p class="scope">Up to 3 properties</p>
-          <button class="el-btn el-btn-primary upgrade-btn" data-checkout="starter">Choose Starter</button>
-        </div>
-        <div class="price-tile" data-plan-tile="growth">
-          <span class="badge-current" style="display:none">Current plan</span>
-          <h3>Growth</h3>
-          <div class="amount">£24.99 <small>/ month</small></div>
-          <p class="scope">Up to 10 properties</p>
-          <button class="el-btn el-btn-primary upgrade-btn" data-checkout="growth">Choose Growth</button>
-        </div>
-        <div class="price-tile" data-plan-tile="professional">
-          <span class="badge-current" style="display:none">Current plan</span>
-          <h3>Professional</h3>
-          <div class="amount">£49.99 <small>/ month</small></div>
-          <p class="scope">Up to 25 properties · priority support</p>
-          <button class="el-btn el-btn-primary upgrade-btn" data-checkout="professional">Choose Professional</button>
-        </div>
-      </div>
+      <h2 id="plansHeading" style="font-family:'Fraunces',serif;font-weight:400;font-size:22px;margin:0 0 14px">Available plans</h2>
+      <div class="pricing-grid" id="plansGrid"></div>
 
       <p style="font-size:13px;color:var(--el-muted);text-align:center;margin-top:20px">
         Need more than 25 properties? <a href="mailto:hello@easierlet.com" style="color:var(--el-green)">Get in touch</a>.
@@ -145,9 +123,83 @@
 
   const PLAN_LIMITS = { trial: 2, starter: 3, growth: 10, professional: 25 };
   const PLAN_LABELS = { trial: "Free trial", starter: "Starter", growth: "Growth", professional: "Professional" };
+  const PLAN_PRICES = { starter: 9.99, growth: 24.99, professional: 49.99 };
+  // Plain-English subtitle per plan, shown in the price tile.
+  const PLAN_SCOPE = {
+    starter:      "Up to 3 properties",
+    growth:       "Up to 10 properties",
+    professional: "Up to 25 properties · priority support",
+  };
+  // Display order — also used to determine "upgrade" vs "downgrade".
+  const PLAN_ORDER = ["trial", "starter", "growth", "professional"];
+
+  const fmtMoney = (n) => "£" + n.toFixed(2);
 
   function alertBox(kind, msg) {
     $("alertBox").innerHTML = `<div class="alert ${kind}">${ELP.esc(msg)}</div>`;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Render plan tiles tailored to the landlord's current state.
+  //
+  // - Trialing / no plan: show all 3 plans as "Choose Starter / Growth /
+  //   Professional" with absolute prices.
+  // - Active subscription: their tile shows "Current plan", higher tiers
+  //   show the delta ("+£15/mo for 7 more properties") with "Upgrade" CTA,
+  //   lower tiers show as "Downgrade".
+  // - Expired / cancelled: same as trialing — pick any plan to resume.
+  //
+  // Section heading swaps between "Available plans" and "Upgrade options"
+  // depending on whether they're on a paid plan.
+  function renderPlans(sub) {
+    const grid = $("plansGrid");
+    const isPaidActive = (sub.status === "active" || sub.status === "past_due");
+    $("plansHeading").textContent = isPaidActive ? "Change plan" : "Available plans";
+
+    const currentIdx = PLAN_ORDER.indexOf(sub.plan);
+    const tiles = ["starter", "growth", "professional"].map((plan) => {
+      const price = PLAN_PRICES[plan];
+      const limit = PLAN_LIMITS[plan];
+      const idx = PLAN_ORDER.indexOf(plan);
+
+      // Decide what this tile means relative to the user's current plan.
+      // For trialing landlords (currentIdx = trial = 0), every paid tile
+      // is an "upgrade" but we just say "Choose <name>" which feels more
+      // welcoming than "+£X / month".
+      let amountHtml, ctaLabel, ctaDisabled = false, badge = "", isCurrent = false;
+      if (isPaidActive && plan === sub.plan) {
+        isCurrent = true;
+        badge = `<span class="badge-current">Current plan</span>`;
+        amountHtml = `${fmtMoney(price)} <small>/ month</small>`;
+        ctaLabel = "Current plan";
+        ctaDisabled = true;
+      } else if (isPaidActive && idx > currentIdx) {
+        const delta = price - (PLAN_PRICES[sub.plan] || 0);
+        const extraProps = limit - (PLAN_LIMITS[sub.plan] || 0);
+        amountHtml = `+${fmtMoney(delta)} <small>/ month</small><br><span style="font-size:13px;color:var(--el-muted);font-family:'DM Sans',sans-serif">${extraProps > 0 ? `${extraProps} more properties` : ""}</span>`;
+        ctaLabel = `Upgrade to ${PLAN_LABELS[plan]}`;
+      } else if (isPaidActive && idx < currentIdx) {
+        const delta = (PLAN_PRICES[sub.plan] || 0) - price;
+        amountHtml = `Save ${fmtMoney(delta)} <small>/ month</small><br><span style="font-size:13px;color:var(--el-muted);font-family:'DM Sans',sans-serif">Drops to ${limit} properties</span>`;
+        ctaLabel = `Downgrade to ${PLAN_LABELS[plan]}`;
+      } else {
+        // Trial / expired / cancelled — show absolute prices, "Choose X"
+        amountHtml = `${fmtMoney(price)} <small>/ month</small>`;
+        ctaLabel = `Choose ${PLAN_LABELS[plan]}`;
+      }
+
+      return `
+        <div class="price-tile${isCurrent ? " is-current" : ""}" data-plan-tile="${plan}">
+          ${badge}
+          <h3>${PLAN_LABELS[plan]}</h3>
+          <div class="amount">${amountHtml}</div>
+          <p class="scope">${PLAN_SCOPE[plan]}</p>
+          <button class="el-btn ${isCurrent ? "el-btn-secondary" : "el-btn-primary"} upgrade-btn"
+                  data-checkout="${plan}" ${ctaDisabled ? "disabled" : ""}>${ctaLabel}</button>
+        </div>
+      `;
+    }).join("");
+    grid.innerHTML = tiles;
   }
 
   async function load() {
@@ -158,13 +210,20 @@
     const sub = subs[0] || { plan: "trial", status: "trialing", property_limit: 2 };
     const propCount = props.length;
 
-    $("planName").textContent = PLAN_LABELS[sub.plan] || sub.plan;
+    // Plan name on the hero shows the price in subtle next to the name when
+    // they're on a paid plan — feels less generic than just "Starter".
+    const planLabel = PLAN_LABELS[sub.plan] || sub.plan;
+    const planPrice = PLAN_PRICES[sub.plan];
+    $("planName").textContent = planPrice
+      ? `${planLabel} · ${fmtMoney(planPrice)}/month`
+      : planLabel;
+
     const statusLabels = {
       trialing: "On a free trial",
-      active: "Active subscription",
+      active:   "Active subscription",
       past_due: "⚠️ Payment past due",
-      cancelled: "Cancelled",
-      expired: "Expired — upgrade to continue",
+      cancelled:"Cancelled",
+      expired:  "Expired — upgrade to continue",
     };
     $("planStatus").textContent = statusLabels[sub.status] || sub.status;
 
@@ -189,17 +248,7 @@
       if (days <= 3) alertBox("warn", `Your trial ends in ${days} day${days === 1 ? "" : "s"}. Pick a plan to keep going.`);
     }
 
-    // Highlight current plan tile
-    document.querySelectorAll("[data-plan-tile]").forEach((t) => {
-      const isCurrent = t.dataset.planTile === sub.plan;
-      t.classList.toggle("is-current", isCurrent);
-      t.querySelector(".badge-current").style.display = isCurrent && (sub.status === "active" || sub.status === "past_due") ? "" : "none";
-      const btn = t.querySelector("[data-checkout]");
-      if (isCurrent && (sub.status === "active" || sub.status === "trialing")) {
-        btn.textContent = sub.status === "trialing" ? "Upgrade to this plan" : "Current plan";
-        btn.disabled = sub.status === "active";
-      }
-    });
+    renderPlans(sub);
 
     // Only show "Manage billing" once a Stripe customer exists (i.e. they've
     // completed at least one checkout). Otherwise the portal call would
