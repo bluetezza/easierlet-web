@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
+  <title>Support — easierLet</title>
+  <meta name="robots" content="noindex">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/easierlet.css?v=20260428a">
+  <link rel="stylesheet" href="/assets/portal.css?v=20260428a">
+
+  <style>
+    .ticket-row { display:flex; gap:14px; align-items:center; padding:14px; background:#fff; border:1px solid var(--el-line); border-radius:10px; margin-bottom:10px; cursor:pointer; transition:border-color 0.12s; }
+    .ticket-row:hover { border-color: var(--el-green); }
+    .ticket-row .meta { flex:1; }
+    .ticket-row .subj { font-weight:600; color:var(--el-ink); margin-bottom:2px; }
+    .ticket-row .sub  { font-size:12px; color:var(--el-muted); }
+    .pill { font-size:11px; font-weight:600; padding:3px 8px; border-radius:999px; }
+    .pill-open { background:#FFF8EC; color:#8A6000; }
+    .pill-awaiting { background:#E5F1EC; color:#1A6B55; }
+    .pill-closed { background:#E5EAE7; color:#6B8278; }
+    .pill-progress { background:#DCEEFA; color:#22577A; }
+
+    .msg { background:#fff; border:1px solid var(--el-line); border-radius:10px; padding:14px; margin-bottom:10px; }
+    .msg.from-admin { border-left:3px solid var(--el-green); }
+    .msg-head { display:flex; gap:10px; align-items:center; font-size:12px; color:var(--el-muted); margin-bottom:6px; }
+    .msg-body { white-space:pre-wrap; color:var(--el-ink); line-height:1.5; }
+
+    .alert { padding:10px 14px; border-radius:10px; font-size:13px; margin-bottom:14px; }
+    .alert.success { background:var(--el-green-pale); color:var(--el-green); }
+    .alert.error { background:#FFE8DC; color:var(--el-danger); }
+
+    textarea.tic { width:100%; padding:12px; border:1px solid var(--el-line); border-radius:10px; min-height:120px; font-family:inherit; font-size:14px; }
+    .tic-input { width:100%; padding:12px; border:1px solid var(--el-line); border-radius:10px; font-family:inherit; font-size:14px; margin-bottom:10px; }
+  </style>
+</head>
+<body class="elp-body">
+
+<div id="portal-shell" data-role="landlord" data-active="support" data-title="Support"></div>
+
+<main class="elp-main">
+  <div class="elp-main-inner">
+    <div class="elp-page-head">
+      <h1 class="elp-page-title">Support</h1>
+      <p class="elp-page-sub">Open a ticket and track replies in one place.</p>
+    </div>
+
+    <div id="alertBox"></div>
+
+    <div id="listView">
+      <div class="elp-card" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div>
+          <div style="font-weight:600;color:var(--el-ink)">Need help?</div>
+          <div style="font-size:13px;color:var(--el-muted)">We aim to reply within 1 business day.</div>
+        </div>
+        <button class="el-btn el-btn-primary" id="newBtn">+ New ticket</button>
+      </div>
+      <div id="ticketList"></div>
+    </div>
+
+    <div id="newView" style="display:none">
+      <a href="#" id="backToList" class="el-link" style="display:inline-block;margin-bottom:14px">← Back to tickets</a>
+      <div class="elp-card">
+        <h2 style="font-family:'Fraunces',serif;font-weight:400;font-size:22px;margin:0 0 14px">Open a new ticket</h2>
+        <label class="elp-label">Subject</label>
+        <input class="tic-input" type="text" id="newSubject" maxlength="200" placeholder="Short summary of the issue">
+        <label class="elp-label">Category</label>
+        <select class="tic-input" id="newCategory">
+          <option value="technical">Something's broken / not working</option>
+          <option value="billing">Billing question</option>
+          <option value="tenancy">Tenancy / agreement help</option>
+          <option value="other">Other</option>
+        </select>
+        <label class="elp-label">Message</label>
+        <textarea class="tic" id="newBody" placeholder="What's going on? Include any property names or dates that would help."></textarea>
+        <div style="margin-top:14px;text-align:right">
+          <button class="el-btn el-btn-secondary" id="newCancelBtn">Cancel</button>
+          <button class="el-btn el-btn-primary" id="newSubmitBtn">Send ticket</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="threadView" style="display:none">
+      <a href="#" id="backToListFromThread" class="el-link" style="display:inline-block;margin-bottom:14px">← Back to tickets</a>
+      <div class="elp-card" style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div>
+            <div style="font-family:'Fraunces',serif;font-size:22px;color:var(--el-ink);margin-bottom:4px" id="threadSubject">—</div>
+            <div style="font-size:12px;color:var(--el-muted)" id="threadMeta">—</div>
+          </div>
+          <button class="el-btn el-btn-secondary" id="closeBtn" style="font-size:12px">Close ticket</button>
+        </div>
+      </div>
+      <div id="messageList"></div>
+      <div class="elp-card" id="replyCard">
+        <label class="elp-label">Reply</label>
+        <textarea class="tic" id="replyBody" placeholder="Add to this conversation…"></textarea>
+        <div style="margin-top:10px;text-align:right">
+          <button class="el-btn el-btn-primary" id="replySubmitBtn">Send reply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="/assets/portal.js"></script>
+<script type="module">
+  while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
+  const ELP = window.ELP;
+  const session = await ELP.requireSession("/login/");
+  if (!session) throw new Error("redirecting");
+  const user = session.user;
+
+  // Resolve display name for the shell.
+  let displayName = "";
+  try {
+    const profile = await ELP.rest(`landlord_profiles?user_id=eq.${user.id}&select=director_name,company_name&limit=1`);
+    const p = (profile && profile[0]) || {};
+    displayName = (p.director_name || p.company_name || "").trim();
+  } catch (_) {}
+  ELP.mountShell({ user, displayName });
+
+  const $ = (id) => document.getElementById(id);
+  const esc = ELP.esc || ((s) => s);
+  const params = new URLSearchParams(location.search);
+  let activeTicketId = params.get("id");
+
+  function alertBox(kind, msg) {
+    $("alertBox").innerHTML = `<div class="alert ${kind}">${esc(msg)}</div>`;
+    setTimeout(() => { $("alertBox").innerHTML = ""; }, 5000);
+  }
+
+  function pill(status) {
+    const map = {
+      open: '<span class="pill pill-open">Open</span>',
+      awaiting_user: '<span class="pill pill-awaiting">Awaiting your reply</span>',
+      in_progress: '<span class="pill pill-progress">In progress</span>',
+      closed: '<span class="pill pill-closed">Closed</span>',
+    };
+    return map[status] || `<span class="pill pill-open">${esc(status)}</span>`;
+  }
+
+  function fmtTime(iso) {
+    if (!iso) return "—";
+    const d = new Date(iso); if (isNaN(d.getTime())) return iso;
+    const diffMs = Date.now() - d.getTime();
+    if (diffMs < 60_000) return "Just now";
+    if (diffMs < 3_600_000) return `${Math.floor(diffMs/60000)}m ago`;
+    if (diffMs < 86_400_000) return `${Math.floor(diffMs/3_600_000)}h ago`;
+    return d.toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" });
+  }
+
+  function showView(name) {
+    $("listView").style.display   = name === "list"   ? "" : "none";
+    $("newView").style.display    = name === "new"    ? "" : "none";
+    $("threadView").style.display = name === "thread" ? "" : "none";
+  }
+
+  // ── Ticket list ───────────────────────────────────────────────────────
+  async function loadList() {
+    const rows = await ELP.rest(`support_tickets?user_id=eq.${user.id}&order=updated_at.desc&select=*`);
+    const list = $("ticketList");
+    if (!rows || rows.length === 0) {
+      list.innerHTML = `<div class="elp-card" style="text-align:center;color:var(--el-muted);padding:40px">No tickets yet. Open one whenever you need a hand.</div>`;
+      return;
+    }
+    list.innerHTML = rows.map(t => `
+      <div class="ticket-row" data-id="${esc(t.id)}">
+        <div class="meta">
+          <div class="subj">${esc(t.subject)}</div>
+          <div class="sub">${esc((t.category || "general").charAt(0).toUpperCase() + (t.category || "general").slice(1))} · updated ${esc(fmtTime(t.updated_at))}</div>
+        </div>
+        ${pill(t.status)}
+      </div>
+    `).join("");
+    list.querySelectorAll(".ticket-row").forEach(el => el.addEventListener("click", () => openThread(el.dataset.id)));
+  }
+
+  // ── New ticket ────────────────────────────────────────────────────────
+  $("newBtn").addEventListener("click", () => { showView("new"); $("newSubject").focus(); });
+  $("newCancelBtn").addEventListener("click", () => showView("list"));
+  $("backToList").addEventListener("click", (e) => { e.preventDefault(); showView("list"); });
+
+  $("newSubmitBtn").addEventListener("click", async () => {
+    const subject = $("newSubject").value.trim();
+    const body    = $("newBody").value.trim();
+    const category = $("newCategory").value;
+    if (!subject) return alertBox("error", "Please give your ticket a subject.");
+    if (!body) return alertBox("error", "Please describe what's going on.");
+    const btn = $("newSubmitBtn"); btn.disabled = true; btn.textContent = "Sending…";
+    try {
+      const res = await ELP.callFn("support-ticket", { action: "create", subject, body, category });
+      if (!res.ok || !res.data?.ok) throw new Error(res.data?.message || "Couldn't open the ticket.");
+      $("newSubject").value = ""; $("newBody").value = "";
+      activeTicketId = res.data.ticket_id;
+      await loadList();
+      openThread(activeTicketId);
+      alertBox("success", "Ticket sent — we'll be in touch.");
+    } catch (e) {
+      alertBox("error", e.message || "Couldn't open the ticket.");
+    } finally { btn.disabled = false; btn.textContent = "Send ticket"; }
+  });
+
+  // ── Thread view ───────────────────────────────────────────────────────
+  $("backToListFromThread").addEventListener("click", (e) => { e.preventDefault(); activeTicketId = null; showView("list"); history.replaceState({}, "", "/support/"); });
+
+  async function openThread(id) {
+    activeTicketId = id;
+    history.replaceState({}, "", `/support/?id=${encodeURIComponent(id)}`);
+    showView("thread");
+    $("messageList").innerHTML = `<div class="elp-card" style="text-align:center;color:var(--el-muted)">Loading…</div>`;
+    const [tickets, msgs] = await Promise.all([
+      ELP.rest(`support_tickets?id=eq.${id}&select=*&limit=1`),
+      ELP.rest(`support_ticket_messages?ticket_id=eq.${id}&order=created_at.asc&select=*`),
+    ]);
+    const t = (tickets && tickets[0]) || null;
+    if (!t) { alertBox("error", "Ticket not found."); showView("list"); return; }
+
+    $("threadSubject").textContent = t.subject;
+    $("threadMeta").innerHTML = `${pill(t.status)} · opened ${esc(fmtTime(t.created_at))} · ${esc(((t.category || "general").charAt(0).toUpperCase() + (t.category || "general").slice(1)))}`;
+    $("closeBtn").style.display = t.status === "closed" ? "none" : "";
+    $("replyCard").style.display = t.status === "closed" ? "none" : "";
+
+    $("messageList").innerHTML = (msgs || []).map(m => `
+      <div class="msg ${m.author_type === 'admin' ? 'from-admin' : ''}">
+        <div class="msg-head">
+          <strong>${m.author_type === 'admin' ? 'EasierLet support' : (m.author_type === 'system' ? 'System' : 'You')}</strong>
+          · ${esc(fmtTime(m.created_at))}
+        </div>
+        <div class="msg-body">${esc(m.body)}</div>
+      </div>
+    `).join("");
+  }
+
+  $("replySubmitBtn").addEventListener("click", async () => {
+    const text = $("replyBody").value.trim();
+    if (!text || !activeTicketId) return;
+    const btn = $("replySubmitBtn"); btn.disabled = true; btn.textContent = "Sending…";
+    try {
+      const res = await ELP.callFn("support-ticket", { action: "reply", ticket_id: activeTicketId, body: text });
+      if (!res.ok || !res.data?.ok) throw new Error(res.data?.message || "Couldn't send the reply.");
+      $("replyBody").value = "";
+      await openThread(activeTicketId);
+    } catch (e) {
+      alertBox("error", e.message || "Couldn't send the reply.");
+    } finally { btn.disabled = false; btn.textContent = "Send reply"; }
+  });
+
+  $("closeBtn").addEventListener("click", async () => {
+    if (!confirm("Close this ticket? You can always open a new one if something else comes up.")) return;
+    try {
+      const res = await ELP.callFn("support-ticket", { action: "close", ticket_id: activeTicketId });
+      if (!res.ok || !res.data?.ok) throw new Error(res.data?.message || "Couldn't close the ticket.");
+      await openThread(activeTicketId);
+      await loadList();
+    } catch (e) {
+      alertBox("error", e.message || "Couldn't close the ticket.");
+    }
+  });
+
+  // Boot
+  await loadList();
+  if (activeTicketId) openThread(activeTicketId);
+  else showView("list");
+</script>
+</body>
+</html>
