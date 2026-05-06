@@ -85,34 +85,31 @@
   <script>
     const SUPABASE_URL = 'https://ffzknvcptqjlkxmkdxuk.supabase.co'
     const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmemtudmNwdHFqbGt4bWtkeHVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNTQ0ODQsImV4cCI6MjA5MDgzMDQ4NH0.YRdkBgoVm7cpUJlsK8T4nP6iNE3vgfOmODImiAkPhr4'
+    const FN_BASE = SUPABASE_URL + '/functions/v1/inventory-workflow'
+    const FN_HEADERS = { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json' }
     const params = new URLSearchParams(window.location.search)
     const token = params.get('token')
     const app = document.getElementById('app')
     let signaturePad = null
 
-    async function query(table, filters) {
-      let url = SUPABASE_URL + '/rest/v1/' + table + '?select=*'
-      for (const [k, v] of Object.entries(filters)) url += '&' + k + '=eq.' + v
-      const res = await fetch(url, { headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY } })
-      return res.json()
-    }
-
-    async function patch(table, id, data) {
-      try {
-        await fetch(SUPABASE_URL + '/rest/v1/' + table + '?id=eq.' + id, {
-          method: 'PATCH',
-          headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify(data)
-        })
-      } catch(e) { console.log('patch error', e) }
-    }
-
     async function load() {
       if (!token) { app.innerHTML = '<div class="error-msg"><h2>Invalid link</h2><p>Please contact your landlord.</p></div>'; return }
       try {
-        const reports = await query('inventory_reports', { access_token: token })
-        if (!reports.length) { app.innerHTML = '<div class="error-msg"><h2>Not found</h2><p>This link may have expired.</p></div>'; return }
-        const report = reports[0]
+        const res = await fetch(FN_BASE + '?action=get_inventory&token=' + encodeURIComponent(token), {
+          method: 'GET',
+          headers: FN_HEADERS
+        })
+        if (res.status === 404) { app.innerHTML = '<div class="error-msg"><h2>Not found</h2><p>This link may have expired.</p></div>'; return }
+        if (!res.ok) {
+          const err = await res.text()
+          app.innerHTML = '<div class="error-msg"><h2>Error</h2><p>' + err + '</p></div>'
+          return
+        }
+        const data = await res.json()
+        const report = data.report
+        const property = data.property
+        const rooms = data.rooms || []
+        const allItems = data.items || {}
 
         // Block access if locked or already completed
         if (report.status === 'locked') {
@@ -124,16 +121,6 @@
           return
         }
 
-        const properties = await query('properties', { id: report.property_id })
-        const property = properties[0]
-        const rooms = await query('inventory_rooms', { inventory_id: report.id })
-        rooms.sort((a, b) => a.order_index - b.order_index)
-        const allItems = {}
-        for (const room of rooms) {
-          const items = await query('inventory_items', { room_id: room.id })
-          items.sort((a, b) => a.order_index - b.order_index)
-          allItems[room.id] = items
-        }
         renderForm(report, property, rooms, allItems)
       } catch(err) {
         app.innerHTML = '<div class="error-msg"><h2>Error</h2><p>' + err.message + '</p></div>'
@@ -274,18 +261,22 @@
         const formData = new FormData(e.target)
         const signatureData = signaturePad.toDataURL('image/png')
 
-        // Save room and item data
+        // Build the room + item update payloads.
+        const roomsPayload = rooms.map(function(room) {
+          return { id: room.id, tenant_condition: formData.get('room_notes_' + room.id) || null }
+        })
+        const itemsPayload = []
         for (const room of rooms) {
-          await patch('inventory_rooms', room.id, { tenant_condition: formData.get('room_notes_' + room.id) })
           for (const item of (allItems[room.id] || [])) {
-            await patch('inventory_items', item.id, {
+            itemsPayload.push({
+              id: item.id,
               tenant_condition: formData.get('item_condition_' + item.id) || null,
               tenant_notes: formData.get('item_notes_' + item.id) || null
             })
           }
         }
 
-        // Build tenant meter readings
+        // Tenant meter readings.
         const tenantMeterReadings = {}
         const mGas = formData.get('meter_gas')
         const mElec = formData.get('meter_electric')
@@ -294,24 +285,42 @@
         if (mElec) tenantMeterReadings.electric = mElec
         if (mWater) tenantMeterReadings.water = mWater
 
-        const updateData = {
-          tenant_notes: formData.get('tenant_notes'),
+        const submitBody = {
+          token: token,
+          rooms: roomsPayload,
+          items: itemsPayload,
           tenant_signature: signatureData,
-          tenant_signed_at: new Date().toISOString(),
-          status: 'completed',
-          completed_at: new Date().toISOString()
+          tenant_notes: formData.get('tenant_notes') || null
         }
-
-        // Only include meter readings if at least one was provided
         if (Object.keys(tenantMeterReadings).length > 0) {
-          updateData.meter_readings_tenant = tenantMeterReadings
+          submitBody.meter_readings = tenantMeterReadings
         }
 
-        await patch('inventory_reports', report.id, updateData)
+        try {
+          const submitRes = await fetch(FN_BASE + '?action=submit_review', {
+            method: 'POST',
+            headers: FN_HEADERS,
+            body: JSON.stringify(submitBody)
+          })
+          if (!submitRes.ok) {
+            let msg = 'Submission failed'
+            try { msg = (await submitRes.json()).error || msg } catch(_) {}
+            btn.textContent = 'Submit & Sign Inventory'
+            btn.disabled = false
+            alert(msg)
+            return
+          }
+        } catch(err) {
+          btn.textContent = 'Submit & Sign Inventory'
+          btn.disabled = false
+          alert('Network error: ' + err.message)
+          return
+        }
 
-        fetch(SUPABASE_URL + '/functions/v1/inventory-workflow?action=notify_landlord&token=' + token, {
+        // Notify landlord — fire and forget.
+        fetch(FN_BASE + '?action=notify_landlord&token=' + encodeURIComponent(token), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY }
+          headers: FN_HEADERS
         }).catch(function() {})
 
         app.innerHTML = '<div class="success"><div style="font-size:48px;margin-bottom:16px">✓</div><h2>Thank you!</h2><p>Your inventory has been signed and submitted successfully.<br>Your landlord will be notified.</p></div>'
