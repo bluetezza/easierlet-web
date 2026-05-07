@@ -280,6 +280,14 @@
           <div class="dash-inbox-title">Viewing requests</div>
           <div class="dash-inbox-sub" id="dashViewingsSub">No new viewings</div>
         </a>
+        <a href="/support/" class="dash-inbox-card" id="dashInboxSupport">
+          <div class="dash-inbox-icon-wrap">
+            <span class="dash-inbox-icon">💬</span>
+            <span class="dash-inbox-badge" id="dashSupportBadge" style="display:none">0</span>
+          </div>
+          <div class="dash-inbox-title">Support</div>
+          <div class="dash-inbox-sub" id="dashSupportSub">No new messages</div>
+        </a>
       </div>
 
       <!-- Money strip: 3 columns -->
@@ -1009,6 +1017,28 @@
       newApps, "Tap to review", "No new applications");
     setInboxCard("dashInboxViewings", "dashViewingsBadge", "dashViewingsSub",
       newViewings, "Tap to respond", "No new viewings");
+
+    // Support: count tickets with admin replies the user hasn't responded to.
+    // RLS lets the user read their own support_tickets row.
+    try {
+      const tickets = await ELP.rest(
+        `support_tickets?user_id=eq.${user.id}&status=neq.closed&select=last_admin_message_at,last_user_message_at`
+      );
+      let supportNew = 0, supportOpen = tickets.length;
+      for (const t of tickets) {
+        const lastA = t.last_admin_message_at;
+        const lastU = t.last_user_message_at;
+        if (lastA && (!lastU || lastA > lastU)) supportNew++;
+      }
+      const sub = supportNew > 0
+        ? `${supportNew} new repl${supportNew === 1 ? 'y' : 'ies'} from support`
+        : (supportOpen > 0 ? `${supportOpen} open ticket${supportOpen === 1 ? '' : 's'}` : "No new messages");
+      setInboxCard("dashInboxSupport", "dashSupportBadge", "dashSupportSub",
+        supportNew, sub, "No new messages");
+    } catch (_e) {
+      setInboxCard("dashInboxSupport", "dashSupportBadge", "dashSupportSub",
+        0, "Open support", "No new messages");
+    }
 
     // ── Property cards ──────────────────────────────────────────────
     if (!properties.length) {

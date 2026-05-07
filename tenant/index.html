@@ -25,6 +25,15 @@
         <p class="elp-page-sub">Here's what's happening with your renting.</p>
       </div>
 
+      <a href="/support/" id="supportBanner" style="display:none;background:var(--el-green);color:#fff;border-radius:12px;padding:14px 18px;margin-bottom:18px;text-decoration:none;align-items:center;gap:12px">
+        <span style="font-size:22px">💬</span>
+        <span style="flex:1">
+          <span id="supportBannerTitle" style="font-weight:600;display:block">New reply from support</span>
+          <span id="supportBannerSub" style="font-size:13px;opacity:0.9">Tap to view</span>
+        </span>
+        <span style="font-size:18px">→</span>
+      </a>
+
       <div class="elp-stats" id="overviewStats">
         <div class="elp-stat">
           <div class="elp-stat-label">Applications</div>
@@ -207,6 +216,25 @@
 
     const upcoming = await loadUpcomingViewingsCount();
     $("statViewings").textContent = upcoming;
+
+    // Support: surface admin replies they haven't responded to yet.
+    try {
+      const tickets = await ELP.rest(
+        `support_tickets?user_id=eq.${user.id}&status=neq.closed&select=last_admin_message_at,last_user_message_at`
+      );
+      let n = 0;
+      for (const t of tickets) {
+        if (t.last_admin_message_at && (!t.last_user_message_at || t.last_admin_message_at > t.last_user_message_at)) n++;
+      }
+      const banner = $("supportBanner");
+      if (n > 0) {
+        $("supportBannerTitle").textContent = n === 1 ? "New reply from support" : `${n} new replies from support`;
+        $("supportBannerSub").textContent = "Tap to view";
+        banner.style.display = "flex";
+      } else {
+        banner.style.display = "none";
+      }
+    } catch (_e) { /* swallow — banner just stays hidden */ }
 
     // Recent activity = mix of latest application and latest viewing.
     const items = [];
