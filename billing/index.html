@@ -7,9 +7,6 @@
   <title>Billing — easierLet</title>
   <meta name="robots" content="noindex">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/assets/easierlet.css?v=20260428a">
   <link rel="stylesheet" href="/assets/portal.css?v=20260428a">
@@ -21,7 +18,7 @@
       padding: 24px; margin-bottom: 20px;
     }
     .plan-summary .plan-name {
-      font-family: 'Fraunces', serif; font-weight: 400;
+      font-family: var(--font-sans); font-weight: 400;
       font-size: 28px; letter-spacing: -0.4px; margin-bottom: 4px;
     }
     .plan-summary .plan-status { font-size: 13px; color: rgba(255,255,255,0.85); }
@@ -47,7 +44,7 @@
     .price-tile.is-current { border-color: var(--el-green); border-width: 2px; }
     .price-tile.is-picked { border-color: var(--el-green); border-width: 2px; box-shadow: 0 0 0 3px rgba(26,107,85,0.18); }
     .price-tile h3 { font-size: 13px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--el-muted); margin: 0 0 8px; }
-    .price-tile .amount { font-family: 'Fraunces', serif; font-size: 26px; color: var(--el-ink); margin: 0 0 4px; }
+    .price-tile .amount { font-family: var(--font-sans); font-size: 26px; color: var(--el-ink); margin: 0 0 4px; }
     .price-tile .amount small { font-size: 13px; color: var(--el-muted); font-family: inherit; }
     .price-tile .scope { font-size: 13px; color: var(--el-ink-soft); margin: 0 0 14px; }
     .price-tile .upgrade-btn { margin-top: auto; }
@@ -102,7 +99,7 @@
         </div>
       </div>
 
-      <h2 id="plansHeading" style="font-family:'Fraunces',serif;font-weight:400;font-size:22px;margin:0 0 14px">Available plans</h2>
+      <h2 id="plansHeading" style="font-family:var(--font-sans);font-weight:400;font-size:22px;margin:0 0 14px">Available plans</h2>
       <div class="pricing-grid" id="plansGrid"></div>
 
       <p style="font-size:13px;color:var(--el-muted);text-align:center;margin-top:20px">
@@ -177,11 +174,11 @@
       } else if (isPaidActive && idx > currentIdx) {
         const delta = price - (PLAN_PRICES[sub.plan] || 0);
         const extraProps = limit - (PLAN_LIMITS[sub.plan] || 0);
-        amountHtml = `+${fmtMoney(delta)} <small>/ month</small><br><span style="font-size:13px;color:var(--el-muted);font-family:'DM Sans',sans-serif">${extraProps > 0 ? `${extraProps} more properties` : ""}</span>`;
+        amountHtml = `+${fmtMoney(delta)} <small>/ month</small><br><span style="font-size:13px;color:var(--el-muted);font-family:var(--font-sans)">${extraProps > 0 ? `${extraProps} more properties` : ""}</span>`;
         ctaLabel = `Upgrade to ${PLAN_LABELS[plan]}`;
       } else if (isPaidActive && idx < currentIdx) {
         const delta = (PLAN_PRICES[sub.plan] || 0) - price;
-        amountHtml = `Save ${fmtMoney(delta)} <small>/ month</small><br><span style="font-size:13px;color:var(--el-muted);font-family:'DM Sans',sans-serif">Drops to ${limit} properties</span>`;
+        amountHtml = `Save ${fmtMoney(delta)} <small>/ month</small><br><span style="font-size:13px;color:var(--el-muted);font-family:var(--font-sans)">Drops to ${limit} properties</span>`;
         ctaLabel = `Downgrade to ${PLAN_LABELS[plan]}`;
       } else {
         // Trial / expired / cancelled — show absolute prices, "Choose X"

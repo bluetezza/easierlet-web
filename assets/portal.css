@@ -9,7 +9,7 @@
 body.elp-body {
   background: var(--el-bg);
   color: var(--el-ink);
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-sans);
   font-size: 15px;
 }
 
@@ -40,7 +40,7 @@ body.elp-body {
 .elp-brand {
   font-size: 19px; letter-spacing: -0.3px; color: var(--el-ink);
 }
-.elp-brand .e { font-family: 'Fraunces', 'DM Serif Display', serif; font-weight: 400; }
+.elp-brand .e { font-family: var(--font-sans); font-weight: 400; }
 .elp-brand .l { font-weight: 500; }
 .elp-spacer { flex: 1; }
 
@@ -154,7 +154,7 @@ body.elp-body {
 /* ---- Page heading ---- */
 .elp-page-head { margin-bottom: 28px; }
 .elp-page-title {
-  font-family: 'Fraunces', serif; font-weight: 300;
+  font-family: var(--font-sans); font-weight: 300;
   font-size: clamp(26px, 4vw, 36px);
   letter-spacing: -0.6px; color: var(--el-ink);
   margin-bottom: 4px;
@@ -164,7 +164,7 @@ body.elp-body {
 /* ---- Dashboard header ---- */
 .dash-header { margin-bottom: 16px; }
 .dash-title {
-  font-family: 'Fraunces', serif; font-weight: 400;
+  font-family: var(--font-sans); font-weight: 400;
   font-size: 32px; color: var(--el-ink); letter-spacing: -0.5px;
   margin-bottom: 2px;
 }
@@ -197,7 +197,7 @@ body.elp-body {
 }
 .dash-status-icon { font-size: 14px; }
 .dash-status-num {
-  font-family: 'Fraunces', serif; font-weight: 400;
+  font-family: var(--font-sans); font-weight: 400;
   font-size: 28px; line-height: 1; color: #D97A3F;
 }
 .dash-status-num.zero { color: var(--el-green); }
@@ -270,7 +270,7 @@ body.elp-body {
 }
 .dash-money-cell:last-child { border-right: none; }
 .dash-money-value {
-  font-family: 'Fraunces', serif; font-weight: 400;
+  font-family: var(--font-sans); font-weight: 400;
   font-size: 24px; letter-spacing: -0.4px;
   line-height: 1.1;
 }
@@ -396,7 +396,7 @@ body.elp-body {
   margin-bottom: 10px;
 }
 .onboarding-title {
-  font-family: 'Fraunces', serif; font-weight: 400;
+  font-family: var(--font-sans); font-weight: 400;
   font-size: 18px; color: var(--el-ink);
 }
 .onboarding-count { font-size: 12px; color: var(--el-muted); font-weight: 500; }
@@ -502,7 +502,7 @@ body.elp-body {
   margin-bottom: 8px;
 }
 .elp-stat-value {
-  font-family: 'Fraunces', serif; font-weight: 400;
+  font-family: var(--font-sans); font-weight: 400;
   font-size: 28px; color: var(--el-ink);
   letter-spacing: -0.4px;
 }
@@ -583,7 +583,7 @@ body.elp-body {
   border-radius: 14px;
 }
 .elp-empty h3 {
-  font-family: 'Fraunces', serif; font-weight: 400;
+  font-family: var(--font-sans); font-weight: 400;
   font-size: 19px; color: var(--el-ink);
   margin-bottom: 6px;
 }

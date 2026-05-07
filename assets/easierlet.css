@@ -1,6 +1,27 @@
-/* easierLet — shared styles for public pages
-   Refined minimal. Deep forest green accents. Serif headings mixed with sans.
-   Lots of whitespace. Photo-first. */
+/* easierLet — shared styles for public pages.
+   Single-typeface system: Plus Jakarta Sans for everything.
+   Hierarchy via weight + size. Self-hosted for GDPR. */
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/fonts/plus-jakarta-sans-400.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/fonts/plus-jakarta-sans-500.woff2') format('woff2');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/fonts/plus-jakarta-sans-600.woff2') format('woff2');
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/fonts/plus-jakarta-sans-700.woff2') format('woff2');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
 
 :root {
   /* Palette */
@@ -20,10 +41,15 @@
   --el-warn-bg: #FFF8EC;
   --el-danger: #B5462D;
 
-  /* Type */
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-serif: "GT Sectra", "Freight Text Pro", Georgia, "Times New Roman", serif;
-  --font-display: "Fraunces", Georgia, serif;
+  /* Type — single-typeface system */
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-serif: var(--font-sans);
+  --font-display: var(--font-sans);
+
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
 
   /* Spacing */
   --radius-sm: 8px;

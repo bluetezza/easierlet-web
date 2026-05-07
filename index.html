@@ -13,20 +13,17 @@
   <meta property="og:description" content="Property management for UK landlords — tenancy agreements, referencing, inventories, maintenance, compliance, and rent in one place.">
   <meta property="og:url" content="https://easierlet.com/">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/assets/easierlet.css?v=20260428a">
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
   <style>
-    body { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--el-bg); }
+    body { font-family: var(--font-sans); background: var(--el-bg); }
 
     .nav { position: sticky; top: 0; z-index: 50; background: rgba(250,250,247,0.92); backdrop-filter: blur(14px); border-bottom: 1px solid var(--el-line-soft); }
     .nav-inner { max-width: 1120px; margin: 0 auto; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
     .brand { font-size: 20px; color: var(--el-ink); text-decoration: none; }
-    .brand .e { font-family: 'Fraunces', 'DM Serif Display', serif; font-weight: 400; }
+    .brand .e { font-family: var(--font-sans); font-weight: 400; }
     .brand .l { font-weight: 500; }
     .nav-link { font-size: 14px; padding: 8px 12px; border-radius: 8px; color: var(--el-ink-soft); text-decoration: none; }
     .nav-link:hover { background: var(--el-green-pale); color: var(--el-green); }
@@ -37,7 +34,7 @@
     /* ----- Hero ----- */
     .hero { padding: 80px 20px 40px; text-align: center; }
     .hero h1 {
-      font-family: 'Fraunces', serif; font-weight: 300;
+      font-family: var(--font-sans); font-weight: 300;
       font-size: clamp(34px, 5vw, 52px);
       line-height: 1.1; letter-spacing: -0.5px;
       color: var(--el-ink); margin: 0 0 18px;
@@ -71,7 +68,7 @@
     /* ----- Features ----- */
     .features { background: #fff; border-top: 1px solid var(--el-line-soft); border-bottom: 1px solid var(--el-line-soft); }
     .features h2, .pricing h2 {
-      font-family: 'Fraunces', serif; font-weight: 400;
+      font-family: var(--font-sans); font-weight: 400;
       font-size: clamp(26px, 3vw, 36px); letter-spacing: -0.3px;
       text-align: center; color: var(--el-ink); margin: 0 0 12px;
     }
@@ -116,7 +113,7 @@
       color: var(--el-muted); margin: 0 0 8px;
     }
     .price-card .amount {
-      font-family: 'Fraunces', serif; font-weight: 400;
+      font-family: var(--font-sans); font-weight: 400;
       font-size: 32px; color: var(--el-ink); margin: 0 0 4px;
     }
     .price-card .amount small { font-size: 14px; color: var(--el-muted); font-family: inherit; }
@@ -168,7 +165,7 @@
       border-radius: 16px; padding: 32px;
     }
     .signup-card h2 {
-      font-family: 'Fraunces', serif; font-weight: 400; font-size: 26px;
+      font-family: var(--font-sans); font-weight: 400; font-size: 26px;
       margin: 0 0 6px; color: var(--el-ink); text-align: center;
     }
     .signup-card .sub { text-align: center; color: var(--el-ink-soft); font-size: 14px; margin: 0 0 22px; }
