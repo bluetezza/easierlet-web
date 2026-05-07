@@ -45,6 +45,7 @@
       display: flex; flex-direction: column;
     }
     .price-tile.is-current { border-color: var(--el-green); border-width: 2px; }
+    .price-tile.is-picked { border-color: var(--el-green); border-width: 2px; box-shadow: 0 0 0 3px rgba(26,107,85,0.18); }
     .price-tile h3 { font-size: 13px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--el-muted); margin: 0 0 8px; }
     .price-tile .amount { font-family: 'Fraunces', serif; font-size: 26px; color: var(--el-ink); margin: 0 0 4px; }
     .price-tile .amount small { font-size: 13px; color: var(--el-muted); font-family: inherit; }
@@ -185,11 +186,19 @@
       } else {
         // Trial / expired / cancelled — show absolute prices, "Choose X"
         amountHtml = `${fmtMoney(price)} <small>/ month</small>`;
-        ctaLabel = `Choose ${PLAN_LABELS[plan]}`;
+        // If the landlord pre-selected a tier at signup, highlight that
+        // tile so the conversion is one obvious click.
+        if (sub.selected_plan && plan === sub.selected_plan) {
+          ctaLabel = `Continue with ${PLAN_LABELS[plan]}`;
+          badge = `<span class="badge-current" style="background:var(--el-green);color:#fff;">Picked at signup</span>`;
+        } else {
+          ctaLabel = `Choose ${PLAN_LABELS[plan]}`;
+        }
       }
 
+      const isPicked = !isPaidActive && sub.selected_plan === plan;
       return `
-        <div class="price-tile${isCurrent ? " is-current" : ""}" data-plan-tile="${plan}">
+        <div class="price-tile${isCurrent ? " is-current" : ""}${isPicked ? " is-picked" : ""}" data-plan-tile="${plan}">
           ${badge}
           <h3>${PLAN_LABELS[plan]}</h3>
           <div class="amount">${amountHtml}</div>
@@ -204,10 +213,10 @@
 
   async function load() {
     const [subs, props] = await Promise.all([
-      ELP.rest(`landlord_subscriptions?user_id=eq.${user.id}&select=plan,status,trial_ends_at,current_period_end,property_limit,stripe_customer_id&limit=1`).catch(() => []),
+      ELP.rest(`landlord_subscriptions?user_id=eq.${user.id}&select=plan,status,trial_ends_at,current_period_end,property_limit,stripe_customer_id,selected_plan&limit=1`).catch(() => []),
       ELP.rest(`properties?user_id=eq.${user.id}&archived=eq.false&select=id`).catch(() => []),
     ]);
-    const sub = subs[0] || { plan: "trial", status: "trialing", property_limit: 2 };
+    const sub = subs[0] || { plan: "trial", status: "trialing", property_limit: 25 };
     const propCount = props.length;
 
     // Plan name on the hero shows the price in subtle next to the name when
