@@ -51,17 +51,30 @@
     .page-sub { color: var(--el-muted); font-size: 14px; margin-bottom: 22px; }
 
     .filters {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1.2fr 1fr auto;
-      gap: 10px;
       background: #fff;
       border: 1px solid var(--el-line);
       border-radius: 14px;
       padding: 8px;
     }
+    .filters-primary {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr auto auto;
+      gap: 10px;
+    }
+    .filters-advanced {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+      padding-top: 12px;
+      border-top: 1px solid var(--el-line-soft);
+    }
+    .filters-advanced[hidden] { display: none; }
     @media (max-width: 900px) {
-      .filters { grid-template-columns: 1fr 1fr; }
-      .filters button { grid-column: 1 / -1; }
+      .filters-primary { grid-template-columns: 1fr 1fr; }
+      .filters-primary .filter-submit,
+      .filters-primary .filter-toggle { grid-column: 1 / -1; }
+      .filters-advanced { grid-template-columns: 1fr 1fr; }
     }
     .filter {
       padding: 10px 14px;
@@ -81,11 +94,26 @@
     .filter-submit {
       background: var(--el-green); color: #fff;
       border-radius: 10px; padding: 0 22px;
-      font-weight: 500; font-size: 14px;
+      font-weight: 500; font-size: 14px; cursor: pointer; border: none;
       display: flex; align-items: center; justify-content: center; gap: 6px;
     }
     .filter-submit:hover { background: #155545; }
     .filter-submit svg { width: 16px; height: 16px; }
+    .filter-toggle {
+      background: transparent; color: var(--el-muted);
+      border: 1px solid var(--el-line); border-radius: 10px;
+      padding: 0 16px; font-weight: 500; font-size: 13px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      font-family: inherit; transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+    .filter-toggle:hover { color: var(--el-green); border-color: var(--el-green); background: var(--el-green-pale); }
+    .filter-toggle .badge {
+      display: inline-block; min-width: 18px; padding: 1px 6px;
+      background: var(--el-green); color: #fff; border-radius: 999px;
+      font-size: 11px; font-weight: 600; line-height: 1.4;
+    }
+    .filter-toggle .chev { transition: transform 200ms ease; }
+    .filter-toggle.open .chev { transform: rotate(180deg); }
 
     /* ---- Results header ---- */
     .results-head {
@@ -239,80 +267,89 @@
     <p class="page-sub">Verified listings from landlords across the UK.</p>
 
     <form class="filters" id="filterForm">
-      <div class="filter">
-        <label for="area">Area</label>
-        <input id="area" name="area" type="text" placeholder="Town, city or postcode">
+      <div class="filters-primary">
+        <div class="filter">
+          <label for="area">Area</label>
+          <input id="area" name="area" type="text" placeholder="Town, city or postcode">
+        </div>
+        <div class="filter">
+          <label for="minBedrooms">Min beds</label>
+          <select id="minBedrooms" name="minBedrooms">
+            <option value="">Any</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+            <option value="4">4+</option>
+            <option value="5">5+</option>
+          </select>
+        </div>
+        <div class="filter">
+          <label for="maxRent">Max rent (£/mo)</label>
+          <input id="maxRent" name="maxRent" type="number" inputmode="numeric" min="0" step="50" placeholder="No max">
+        </div>
+        <button type="button" class="filter-toggle" id="advToggle" aria-expanded="false" aria-controls="filtersAdvanced">
+          <span class="label">More filters</span>
+          <span class="badge" id="advBadge" hidden>0</span>
+          <svg class="chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <button type="submit" class="filter-submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Search
+        </button>
       </div>
-      <div class="filter">
-        <label for="minBedrooms">Min beds</label>
-        <select id="minBedrooms" name="minBedrooms">
-          <option value="">Any</option>
-          <option value="1">1+</option>
-          <option value="2">2+</option>
-          <option value="3">3+</option>
-          <option value="4">4+</option>
-          <option value="5">5+</option>
-        </select>
+      <div class="filters-advanced" id="filtersAdvanced" hidden>
+        <div class="filter">
+          <label for="availableBy">Available by</label>
+          <input id="availableBy" name="availableBy" type="date">
+        </div>
+        <div class="filter">
+          <label for="furnished">Furnishing</label>
+          <select id="furnished" name="furnished">
+            <option value="">Any</option>
+            <option value="furnished">Furnished</option>
+            <option value="part_furnished">Part-furnished</option>
+            <option value="unfurnished">Unfurnished</option>
+          </select>
+        </div>
+        <div class="filter">
+          <label for="propertyType">Type</label>
+          <select id="propertyType" name="propertyType">
+            <option value="">Any</option>
+            <option value="house">House</option>
+            <option value="flat">Flat</option>
+            <option value="studio">Studio</option>
+            <option value="maisonette">Maisonette</option>
+            <option value="bungalow">Bungalow</option>
+            <option value="room">Room</option>
+          </select>
+        </div>
+        <div class="filter">
+          <label for="parking">Parking</label>
+          <select id="parking" name="parking">
+            <option value="">Any</option>
+            <option value="garage">Garage</option>
+            <option value="driveway">Driveway</option>
+            <option value="allocated">Allocated</option>
+            <option value="off_street">Off-street</option>
+            <option value="on_street">On-street</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+        <div class="filter">
+          <label for="garden">Garden</label>
+          <select id="garden" name="garden">
+            <option value="">Any</option>
+            <option value="private">Private</option>
+            <option value="shared">Shared</option>
+            <option value="patio">Patio</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+        <div class="filter" style="display:flex;align-items:flex-end;gap:8px;padding-bottom:6px">
+          <input type="checkbox" id="petsAllowed" name="petsAllowed" value="true" style="width:18px;height:18px;accent-color:var(--el-green)">
+          <label for="petsAllowed" style="margin:0">Pets allowed</label>
+        </div>
       </div>
-      <div class="filter">
-        <label for="maxRent">Max rent (£/mo)</label>
-        <input id="maxRent" name="maxRent" type="number" inputmode="numeric" min="0" step="50" placeholder="No max">
-      </div>
-      <div class="filter">
-        <label for="availableBy">Available by</label>
-        <input id="availableBy" name="availableBy" type="date">
-      </div>
-      <div class="filter">
-        <label for="furnished">Furnishing</label>
-        <select id="furnished" name="furnished">
-          <option value="">Any</option>
-          <option value="furnished">Furnished</option>
-          <option value="part_furnished">Part-furnished</option>
-          <option value="unfurnished">Unfurnished</option>
-        </select>
-      </div>
-      <div class="filter">
-        <label for="propertyType">Type</label>
-        <select id="propertyType" name="propertyType">
-          <option value="">Any</option>
-          <option value="house">House</option>
-          <option value="flat">Flat</option>
-          <option value="studio">Studio</option>
-          <option value="maisonette">Maisonette</option>
-          <option value="bungalow">Bungalow</option>
-          <option value="room">Room</option>
-        </select>
-      </div>
-      <div class="filter">
-        <label for="parking">Parking</label>
-        <select id="parking" name="parking">
-          <option value="">Any</option>
-          <option value="garage">Garage</option>
-          <option value="driveway">Driveway</option>
-          <option value="allocated">Allocated</option>
-          <option value="off_street">Off-street</option>
-          <option value="on_street">On-street</option>
-          <option value="none">None</option>
-        </select>
-      </div>
-      <div class="filter">
-        <label for="garden">Garden</label>
-        <select id="garden" name="garden">
-          <option value="">Any</option>
-          <option value="private">Private</option>
-          <option value="shared">Shared</option>
-          <option value="patio">Patio</option>
-          <option value="none">None</option>
-        </select>
-      </div>
-      <div class="filter" style="display:flex;align-items:flex-end;gap:8px;padding-bottom:6px">
-        <input type="checkbox" id="petsAllowed" name="petsAllowed" value="true" style="width:18px;height:18px;accent-color:var(--el-green)">
-        <label for="petsAllowed" style="margin:0">Pets allowed</label>
-      </div>
-      <button type="submit" class="filter-submit">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        Search
-      </button>
     </form>
   </div>
 </section>
@@ -398,7 +435,55 @@
     if (sort) sortSelect.value = sort;
     const page = parseInt(u.get('page') || '1', 10);
     currentPage = isNaN(page) || page < 1 ? 1 : page;
+    syncAdvancedToggle({ expandIfActive: true });
   }
+
+  // Advanced filters: count active values, toggle visibility, update badge.
+  const ADVANCED_KEYS = ['availableBy', 'furnished', 'propertyType', 'parking', 'garden', 'petsAllowed'];
+  const advToggle = document.getElementById('advToggle');
+  const advBadge = document.getElementById('advBadge');
+  const advPanel = document.getElementById('filtersAdvanced');
+  const advLabel = advToggle.querySelector('.label');
+
+  function countActiveAdvanced() {
+    let n = 0;
+    for (const k of ADVANCED_KEYS) {
+      const el = document.getElementById(k);
+      if (!el) continue;
+      if (el.type === 'checkbox') { if (el.checked) n++; }
+      else if (String(el.value).trim() !== '') n++;
+    }
+    return n;
+  }
+
+  function syncAdvancedToggle({ expandIfActive = false } = {}) {
+    const n = countActiveAdvanced();
+    if (n > 0) {
+      advBadge.hidden = false;
+      advBadge.textContent = String(n);
+    } else {
+      advBadge.hidden = true;
+    }
+    if (expandIfActive && n > 0 && advPanel.hidden) {
+      setAdvancedExpanded(true);
+    }
+  }
+
+  function setAdvancedExpanded(expanded) {
+    advPanel.hidden = !expanded;
+    advToggle.setAttribute('aria-expanded', String(expanded));
+    advToggle.classList.toggle('open', expanded);
+    advLabel.textContent = expanded ? 'Hide filters' : 'More filters';
+  }
+
+  advToggle.addEventListener('click', () => {
+    setAdvancedExpanded(advPanel.hidden);
+  });
+  // Keep the badge accurate as the user edits advanced fields.
+  ADVANCED_KEYS.forEach((k) => {
+    const el = document.getElementById(k);
+    if (el) el.addEventListener('change', () => syncAdvancedToggle());
+  });
 
   // Build the params from the current form state.
   function currentParams() {
