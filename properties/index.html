@@ -377,6 +377,16 @@
   <p>Try widening your filters — increase the bedrooms, raise the maximum rent, or push the available-by date out a little.</p>
 </div>
 
+<div id="nearestSection" style="display:none;max-width:1200px;margin:0 auto;padding:8px 20px 0">
+  <div style="background:var(--el-green-pale);border:1px solid var(--el-green-border);border-radius:14px;padding:18px 20px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <div style="font-weight:600;color:var(--el-green);font-size:15px;margin-bottom:2px" id="nearestHeadline">Nothing in that area</div>
+      <div style="color:var(--el-muted);font-size:13px" id="nearestSub">Here are the 3 closest properties available right now.</div>
+    </div>
+    <button type="button" id="seeAllBtn" style="background:var(--el-green);color:#fff;border:none;padding:10px 18px;border-radius:10px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer">See all properties</button>
+  </div>
+</div>
+
 <div class="state" id="errorState" style="display:none">
   <h2>Couldn't load homes</h2>
   <p id="errorMessage">Please refresh and try again.</p>
@@ -569,6 +579,7 @@
     errorState.style.display = 'none';
     resultsHead.style.display = 'none';
     pagination.style.display = 'none';
+    document.getElementById('nearestSection').style.display = 'none';
     grid.innerHTML = '';
     updateUrl();
 
@@ -585,6 +596,12 @@
       const results = data.results || [];
 
       if (totalResults === 0) {
+        // Did the EF return geo-nearest fallback results?
+        const nearest = data.nearest;
+        if (nearest && nearest.results && nearest.results.length > 0) {
+          renderNearest(nearest);
+          return;
+        }
         emptyState.style.display = 'block';
         return;
       }
@@ -607,6 +624,26 @@
       errorMessage.textContent = err.message || 'Network error.';
     }
   }
+
+  function renderNearest(nearest) {
+    const sec = document.getElementById('nearestSection');
+    const headline = document.getElementById('nearestHeadline');
+    const sub = document.getElementById('nearestSub');
+    const areaInput = document.getElementById('area').value.trim();
+    const label = nearest.area_label || areaInput || 'that area';
+    headline.textContent = `Nothing live in ${label} right now`;
+    sub.textContent = `Here are the ${nearest.results.length} closest properties available.`;
+    sec.style.display = 'block';
+    grid.innerHTML = nearest.results.map(renderCard).join('');
+    resultsCount.innerHTML = `<strong>${nearest.results.length}</strong> closest match${nearest.results.length === 1 ? '' : 'es'}`;
+    resultsHead.style.display = 'flex';
+  }
+  document.getElementById('seeAllBtn').addEventListener('click', () => {
+    document.getElementById('area').value = '';
+    currentPage = 1;
+    syncAdvancedToggle();
+    search();
+  });
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
