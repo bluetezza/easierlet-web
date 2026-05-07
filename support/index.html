@@ -225,7 +225,7 @@
     $("messageList").innerHTML = (msgs || []).map(m => `
       <div class="msg ${m.author_type === 'admin' ? 'from-admin' : ''}">
         <div class="msg-head">
-          <strong>${m.author_type === 'admin' ? 'EasierLet support' : (m.author_type === 'system' ? 'System' : 'You')}</strong>
+          <strong>${m.author_type === 'admin' ? 'easierLet support' : (m.author_type === 'system' ? 'System' : 'You')}</strong>
           · ${esc(fmtTime(m.created_at))}
         </div>
         <div class="msg-body">${esc(m.body)}</div>
