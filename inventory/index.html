@@ -62,6 +62,17 @@
     .sig-error { color: #D94F4F; font-size: 12px; margin-top: 6px; display: none; }
     .signature-section ul { list-style: disc; }
     .signature-section li { margin-bottom: 2px; }
+    .photo-strip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .photo-thumb { position: relative; width: 80px; height: 80px; border-radius: 8px; overflow: hidden; border: 1px solid #E0E8E4; background: #F0F4F2; }
+    .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-thumb .ll-tag { position: absolute; bottom: 2px; left: 2px; right: 2px; padding: 2px 4px; font-size: 9px; color: #fff; background: rgba(26,107,85,0.85); border-radius: 4px; text-align: center; }
+    .photo-thumb .x-btn { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 10px; border: none; background: rgba(217,79,79,0.9); color: #fff; font-size: 14px; cursor: pointer; line-height: 18px; padding: 0; }
+    .photo-add { width: 80px; height: 80px; border: 2px dashed #C4D9CE; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; cursor: pointer; color: #6B8278; font-size: 11px; background: transparent; padding: 0; }
+    .photo-add:hover { border-color: #1A6B55; color: #1A6B55; }
+    .photo-add svg { width: 20px; height: 20px; }
+    .photo-add input[type="file"] { display: none; }
+    .photo-caption-input { width: 100%; margin-top: 4px; padding: 4px 6px; border: 1px solid #E0E8E4; border-radius: 4px; font-size: 11px; font-family: inherit; background: #F9FBF9; }
+    .photo-uploading { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.85); display: flex; align-items: center; justify-content: center; font-size: 10px; color: #6B8278; }
     .submit-btn { width: 100%; padding: 16px; background: #1A6B55; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 40px; -webkit-appearance: none; }
     .submit-btn:disabled { opacity: 0.6; }
     .success { text-align: center; padding: 60px 20px; }
@@ -86,11 +97,186 @@
     const SUPABASE_URL = 'https://ffzknvcptqjlkxmkdxuk.supabase.co'
     const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmemtudmNwdHFqbGt4bWtkeHVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNTQ0ODQsImV4cCI6MjA5MDgzMDQ4NH0.YRdkBgoVm7cpUJlsK8T4nP6iNE3vgfOmODImiAkPhr4'
     const FN_BASE = SUPABASE_URL + '/functions/v1/inventory-workflow'
+    const MEDIA_FN = SUPABASE_URL + '/functions/v1/inventory-media-upload'
     const FN_HEADERS = { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json' }
+    const PHOTO_MAX_DIM = 1600
+    const PHOTO_QUALITY = 0.6
+    const PHOTO_MAX_PER_ITEM = 3
     const params = new URLSearchParams(window.location.search)
     const token = params.get('token')
     const app = document.getElementById('app')
     let signaturePad = null
+    // photosByItem[item_id] = [{ id, signed_url, caption, uploaded_by }]
+    const photosByItem = {}
+
+    function compressImage(file) {
+      return new Promise(function(resolve, reject) {
+        const reader = new FileReader()
+        reader.onload = function() {
+          const img = new Image()
+          img.onload = function() {
+            const longEdge = Math.max(img.width, img.height)
+            const scale = longEdge > PHOTO_MAX_DIM ? PHOTO_MAX_DIM / longEdge : 1
+            const w = Math.round(img.width * scale)
+            const h = Math.round(img.height * scale)
+            const canvas = document.createElement('canvas')
+            canvas.width = w
+            canvas.height = h
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+            canvas.toBlob(function(blob) {
+              if (!blob) return reject(new Error('compression failed'))
+              resolve({ blob: blob, width: w, height: h })
+            }, 'image/jpeg', PHOTO_QUALITY)
+          }
+          img.onerror = function() { reject(new Error('not an image')) }
+          img.src = reader.result
+        }
+        reader.onerror = function() { reject(new Error('read failed')) }
+        reader.readAsDataURL(file)
+      })
+    }
+
+    async function uploadPhoto(item_id, file) {
+      const compressed = await compressImage(file)
+      if (compressed.blob.size > 1024 * 1024) {
+        throw new Error('Photo still too large after compression. Try a smaller image.')
+      }
+      // Presign
+      const presignRes = await fetch(MEDIA_FN + '?action=presign', {
+        method: 'POST',
+        headers: FN_HEADERS,
+        body: JSON.stringify({
+          token: token,
+          item_id: item_id,
+          mime_type: 'image/jpeg',
+          file_size: compressed.blob.size
+        })
+      })
+      if (!presignRes.ok) {
+        const err = await presignRes.json().catch(function() { return {} })
+        throw new Error(err.error || 'presign failed')
+      }
+      const presign = await presignRes.json()
+      // PUT to R2
+      const putRes = await fetch(presign.upload_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'image/jpeg' },
+        body: compressed.blob
+      })
+      if (!putRes.ok) throw new Error('upload failed: ' + putRes.status)
+      // Confirm
+      const confRes = await fetch(MEDIA_FN + '?action=confirm', {
+        method: 'POST',
+        headers: FN_HEADERS,
+        body: JSON.stringify({
+          token: token,
+          item_id: item_id,
+          photo_id: presign.photo_id,
+          r2_key: presign.r2_key,
+          mime_type: 'image/jpeg',
+          file_size: compressed.blob.size,
+          width: compressed.width,
+          height: compressed.height
+        })
+      })
+      if (!confRes.ok) {
+        const err = await confRes.json().catch(function() { return {} })
+        throw new Error(err.error || 'confirm failed')
+      }
+      const result = await confRes.json()
+      return result.photo
+    }
+
+    async function deletePhoto(photo_id) {
+      const res = await fetch(MEDIA_FN + '?action=delete', {
+        method: 'POST',
+        headers: FN_HEADERS,
+        body: JSON.stringify({ token: token, photo_id: photo_id })
+      })
+      return res.ok
+    }
+
+    function renderPhotoStrip(item_id) {
+      const container = document.getElementById('photos-' + item_id)
+      if (!container) return
+      const photos = photosByItem[item_id] || []
+      let html = ''
+      for (const p of photos) {
+        const isTenant = p.uploaded_by === 'tenant'
+        html += '<div class="photo-thumb">'
+        html += '<img src="' + p.signed_url + '" alt="" />'
+        if (!isTenant) html += '<div class="ll-tag">Landlord</div>'
+        if (isTenant) {
+          html += '<button type="button" class="x-btn" data-photo-id="' + p.id + '" data-item-id="' + item_id + '" aria-label="Delete">×</button>'
+        }
+        html += '</div>'
+      }
+      if (photos.length < PHOTO_MAX_PER_ITEM) {
+        html += '<label class="photo-add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>Add photo<input type="file" accept="image/*" capture="environment" data-item-id="' + item_id + '" /></label>'
+      }
+      container.innerHTML = html
+    }
+
+    function renderAllPhotoStrips() {
+      for (const itemId of Object.keys(photosByItem)) renderPhotoStrip(itemId)
+      // Render strips for items with no photos too — pull all item ids from the form
+      const allStrips = document.querySelectorAll('.photo-strip[data-item-id]')
+      for (const el of allStrips) {
+        const id = el.getAttribute('data-item-id')
+        if (!photosByItem[id]) renderPhotoStrip(id)
+      }
+    }
+
+    function bindPhotoHandlers() {
+      // Add-photo file inputs
+      app.addEventListener('change', async function(e) {
+        const target = e.target
+        if (target.matches && target.matches('.photo-add input[type="file"]')) {
+          const itemId = target.getAttribute('data-item-id')
+          const file = target.files && target.files[0]
+          if (!file || !itemId) return
+          target.disabled = true
+          const container = document.getElementById('photos-' + itemId)
+          const placeholder = document.createElement('div')
+          placeholder.className = 'photo-thumb'
+          placeholder.innerHTML = '<div class="photo-uploading">Uploading…</div>'
+          if (container) container.appendChild(placeholder)
+          try {
+            const photo = await uploadPhoto(itemId, file)
+            if (!photosByItem[itemId]) photosByItem[itemId] = []
+            photosByItem[itemId].push({
+              id: photo.id,
+              signed_url: photo.signed_url,
+              caption: photo.caption,
+              uploaded_by: photo.uploaded_by
+            })
+          } catch (err) {
+            alert('Upload failed: ' + err.message)
+          } finally {
+            renderPhotoStrip(itemId)
+          }
+        }
+      })
+      // Delete-photo X buttons
+      app.addEventListener('click', async function(e) {
+        const target = e.target
+        if (target.matches && target.matches('.photo-thumb .x-btn')) {
+          const photoId = target.getAttribute('data-photo-id')
+          const itemId = target.getAttribute('data-item-id')
+          if (!photoId || !itemId) return
+          if (!confirm('Delete this photo?')) return
+          target.disabled = true
+          const ok = await deletePhoto(photoId)
+          if (ok) {
+            photosByItem[itemId] = (photosByItem[itemId] || []).filter(function(p) { return p.id !== photoId })
+            renderPhotoStrip(itemId)
+          } else {
+            target.disabled = false
+            alert('Delete failed.')
+          }
+        }
+      })
+    }
 
     async function load() {
       if (!token) { app.innerHTML = '<div class="error-msg"><h2>Invalid link</h2><p>Please contact your landlord.</p></div>'; return }
@@ -110,6 +296,13 @@
         const property = data.property
         const rooms = data.rooms || []
         const allItems = data.items || {}
+        const photos = data.photos || {}
+        // Seed the local photo cache from the server payload.
+        for (const itemId of Object.keys(photos)) {
+          photosByItem[itemId] = photos[itemId].map(function(p) { return {
+            id: p.id, signed_url: p.signed_url, caption: p.caption, uploaded_by: p.uploaded_by
+          } })
+        }
 
         // Block access if locked or already completed
         if (report.status === 'locked') {
@@ -200,7 +393,10 @@
           html += '<div class="field-group"><label>Your assessment of condition</label><select name="item_condition_' + item.id + '"><option value="">Select condition</option>'
           const defaultCond = item.tenant_condition || item.landlord_condition
           for (const c of conditions) html += '<option value="' + c + '"' + (defaultCond === c ? ' selected' : '') + '>' + c + '</option>'
-          html += '</select><label>Your notes (optional)</label><textarea name="item_notes_' + item.id + '" placeholder="Any comments...">' + (item.tenant_notes || '') + '</textarea></div></div>'
+          html += '</select><label>Your notes (optional)</label><textarea name="item_notes_' + item.id + '" placeholder="Any comments...">' + (item.tenant_notes || '') + '</textarea>'
+          html += '<label style="margin-top:10px;">Photos (optional, max 3)</label>'
+          html += '<div class="photo-strip" data-item-id="' + item.id + '" id="photos-' + item.id + '"></div>'
+          html += '</div></div>'
         }
         html += '<div class="field-group"><label>Overall notes for this room (optional)</label><textarea name="room_notes_' + room.id + '" placeholder="Any general comments...">' + (room.tenant_condition || '') + '</textarea></div></div>'
       }
@@ -229,6 +425,10 @@
       </form>`
 
       app.innerHTML = html
+
+      // Render photo strips for every item (existing photos + add-button).
+      renderAllPhotoStrips()
+      bindPhotoHandlers()
 
       // Initialise signature pad
       const canvas = document.getElementById('signatureCanvas')
