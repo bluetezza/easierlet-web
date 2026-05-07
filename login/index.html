@@ -160,6 +160,8 @@
     try {
       const { data, error } = await client.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      // Best-effort: record the sign-in for the admin centre's webapp/iOS split.
+      client.rpc("log_user_signin", { p_platform: "web" }).then(() => {}, () => {});
       await resolveRoleAndRedirect(data.user);
     } catch (err) {
       showError(err?.message || "Email or password incorrect.");
