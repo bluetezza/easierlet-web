@@ -412,6 +412,17 @@
         </div>
         <button class="el-btn el-btn-primary" id="addTxBtn">+ Add transaction</button>
       </div>
+      <!-- Pending rent invoices banner — populated by checkPendingRentInvoices() -->
+      <div id="rentInvoicesBanner" style="display:none;background:#FFF8EC;border-left:3px solid #C8A030;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+          <div style="font-size:14px;color:#8A6800;line-height:1.5;">
+            <strong id="rentInvoicesCount">0</strong>
+            <span id="rentInvoicesText"> rent transactions are due to be created.</span>
+            <div id="rentInvoicesDetail" style="font-size:12px;color:#8A6800;margin-top:4px;"></div>
+          </div>
+          <button class="el-btn el-btn-primary" id="generateRentBtn">Generate now</button>
+        </div>
+      </div>
       <div id="transactionsList" class="elp-list">
         <div class="elp-loading"><div class="elp-spinner"></div>Loading transactions…</div>
       </div>
@@ -1970,6 +1981,9 @@
   // Real column is `type` (income/expense), not `kind`. Earlier select with
   // `kind` 400'd and the tab showed empty.
   async function loadTransactions() {
+    // Fire-and-forget — surfaces a banner if rent transactions need creating.
+    checkPendingRentInvoices().catch(() => {});
+
     const [allTx, activeProps] = await Promise.all([
       ELP.rest(
         `transactions?user_id=eq.${user.id}&select=id,date,amount,type,category,note,property_id,properties(address_line1,city)&order=date.desc&limit=200`
@@ -2005,6 +2019,41 @@
       })
       .join("");
   }
+
+  // ---- Rent invoicing banner ---------------------------------------
+  async function checkPendingRentInvoices() {
+    try {
+      const result = await ELP.callFn("rent-invoicing?action=generate_due", { dry_run: true });
+      const banner = $("rentInvoicesBanner");
+      if (!result?.planned?.length) { banner.style.display = "none"; return; }
+      const count = result.planned.length;
+      $("rentInvoicesCount").textContent = String(count);
+      $("rentInvoicesText").textContent = count === 1
+        ? " rent transaction is due to be created."
+        : " rent transactions are due to be created.";
+      const total = result.planned.reduce((s, p) => s + Number(p.amount || 0), 0);
+      const sample = result.planned.slice(0, 3).map((p) => `${ELP.esc(p.tenant_name)} (${ELP.gbp(Number(p.amount))})`).join(", ");
+      $("rentInvoicesDetail").innerHTML = `Total: <strong>${ELP.gbp(total)}</strong> · ${sample}${result.planned.length > 3 ? ` and ${result.planned.length - 3} more` : ""}`;
+      banner.style.display = "";
+    } catch {
+      // silent — feature is optional / opt-in
+    }
+  }
+  document.addEventListener("click", async (e) => {
+    if (e.target?.id !== "generateRentBtn") return;
+    const btn = e.target;
+    btn.disabled = true; btn.textContent = "Generating…";
+    try {
+      const result = await ELP.callFn("rent-invoicing?action=generate_due", { dry_run: false });
+      ELP.toast(`Created ${result.created} rent transaction${result.created === 1 ? "" : "s"}`, "success");
+      $("rentInvoicesBanner").style.display = "none";
+      loaded.delete("transactions");
+      ensureLoaded("transactions");
+    } catch (err) {
+      ELP.toast(err.message || "Could not generate", "error");
+      btn.disabled = false; btn.textContent = "Generate now";
+    }
+  });
 
   // ---- Documents --------------------------------------------------------
   // Documents schema is name / category / file_path / expiry_date — earlier
@@ -2441,6 +2490,28 @@
             </div>
           `).join("")}
         </div>` : ""}
+        ${t.status === "active" ? `
+        <div class="elp-card" style="margin:0 0 14px">
+          <div class="elp-card-title" style="margin-bottom:10px">Rent invoicing</div>
+          <p style="font-size:12px;color:var(--el-muted);margin:0 0 12px;line-height:1.5;">
+            When set, the system can auto-create monthly "Rental Income" transactions for this tenant.
+          </p>
+          <div class="el-field-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="el-field">
+              <label class="el-label">Rent due day of month</label>
+              <input class="el-input" id="tdRentDueDay" type="number" min="1" max="31" value="${t.rent_due_day ?? ""}" placeholder="e.g. 1">
+            </div>
+            <div class="el-field" style="display:flex;align-items:flex-end;">
+              <label style="display:flex;gap:8px;align-items:center;font-size:14px;cursor:pointer;">
+                <input id="tdAutoInvoice" type="checkbox" ${t.auto_invoice ? "checked" : ""} style="width:auto;">
+                Auto-issue monthly
+              </label>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+            <button class="el-btn el-btn-secondary" id="tdSaveInvoicing" data-tenant-id="${t.id}">Save invoicing settings</button>
+          </div>
+        </div>` : ""}
         <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
           ${t.status === "awaiting_review" ? `<button class="el-btn el-btn-primary" data-tenant-status="approved" data-tenant-id="${t.id}">Approve</button>` : ""}
           ${t.status === "awaiting_review" ? `<button class="el-btn el-btn-secondary" data-tenant-status="referencing" data-tenant-id="${t.id}">Send to referencing</button>` : ""}
@@ -2450,6 +2521,22 @@
       $("tdBody").querySelectorAll("[data-tenant-status]").forEach((b) =>
         b.addEventListener("click", () => updateTenantStatus(b.dataset.tenantId, b.dataset.tenantStatus))
       );
+      $("tdSaveInvoicing")?.addEventListener("click", async () => {
+        const id = $("tdSaveInvoicing").dataset.tenantId;
+        const dayRaw = $("tdRentDueDay").value;
+        const day = dayRaw === "" ? null : Math.max(1, Math.min(31, parseInt(dayRaw, 10)));
+        const auto = $("tdAutoInvoice").checked;
+        try {
+          await ELP.rest(`tenants?id=eq.${id}`, {
+            method: "PATCH",
+            headers: { Prefer: "return=minimal" },
+            body: JSON.stringify({ rent_due_day: day, auto_invoice: auto }),
+          });
+          ELP.toast("Invoicing settings saved", "success");
+        } catch (err) {
+          ELP.toast(err.message || "Could not save", "error");
+        }
+      });
     } catch (err) {
       $("tdBody").innerHTML = `<div class="elp-empty"><h3>Couldn't load tenant</h3><p>${ELP.esc(err.message || "Try again.")}</p></div>`;
     }
