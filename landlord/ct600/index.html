@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
+  <title>CT600 export — easierLet</title>
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/easierlet.css?v=20260428a">
+  <link rel="stylesheet" href="/assets/portal.css?v=20260428a">
+  <style>
+    .panel { background: #fff; border: 1px solid #E0E8E4; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .panel h3 { font-size: 15px; margin-bottom: 12px; color: #1A2E28; }
+    .panel .field { margin-bottom: 12px; }
+    .panel label { display: block; font-size: 12px; font-weight: 600; color: #6B8278; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .panel select, .panel input { width: 100%; padding: 10px 12px; border: 1px solid #E0E8E4; border-radius: 8px; font-size: 14px; font-family: inherit; }
+    .panel .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .warn-box { background: #FFF8EC; border-left: 3px solid #C8A030; padding: 12px 16px; border-radius: 6px; font-size: 13px; color: #8A6800; line-height: 1.5; }
+    .warn-box.red { background: #FFEEEE; border-color: #D94F4F; color: #8A1F1F; }
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .summary-grid .stat { background: #F5F7F5; padding: 10px 12px; border-radius: 8px; }
+    .summary-grid .stat .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6B8278; margin-bottom: 4px; }
+    .summary-grid .stat .value { font-size: 18px; font-weight: 700; color: #1A2E28; }
+    .download-row { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+    .warning-list { font-size: 13px; color: #8A6800; margin: 12px 0 0 16px; }
+    .warning-list li { margin-bottom: 4px; }
+  </style>
+</head>
+<body class="elp-body">
+
+<div id="portal-shell" data-role="landlord" data-active="ct600" data-title="CT600 export"></div>
+
+<main class="elp-main">
+  <div class="elp-main-inner">
+    <div class="elp-page-head">
+      <h1 class="elp-page-title">CT600 export</h1>
+      <p class="elp-page-sub">Generate an accountant-handover PDF + CSV for a UK limited company.</p>
+    </div>
+
+    <div class="warn-box" style="margin-bottom:16px;">
+      <strong>Important — read before relying on this.</strong>
+      This export is for accountant handover, not for HMRC submission. It does not produce iXBRL,
+      does not include statutory accounts, and does not constitute tax advice.
+      Capital allowances, property disposals, and statutory accounts are <strong>not</strong> included.
+      From 1 April 2026 HMRC's free CATO filing service is retired — to file a CT600 yourself you'll
+      need HMRC-approved commercial software or an accountant.
+    </div>
+
+    <div class="panel">
+      <h3>Company &amp; period</h3>
+      <div class="field">
+        <label>Company *</label>
+        <select id="company">
+          <option value="">— choose a company —</option>
+        </select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Period start</label>
+          <input type="date" id="periodStart">
+        </div>
+        <div class="field">
+          <label>Period end</label>
+          <input type="date" id="periodEnd">
+        </div>
+      </div>
+      <p style="font-size:12px;color:#6B8278;margin-bottom:12px;">Leave dates blank to use the most recent complete accounting period for this company.</p>
+      <button class="el-btn el-btn-primary" id="btnGenerate">Generate export</button>
+      <a href="/landlord/companies/" class="el-btn" style="margin-left:8px;">Manage companies</a>
+    </div>
+
+    <div id="result"></div>
+  </div>
+</main>
+
+<script type="module" src="/assets/portal.js"></script>
+<script type="module">
+  while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
+  const ELP = window.ELP;
+  const session = await ELP.requireSession("/login/");
+  if (!session) throw new Error("redirecting");
+  ELP.mountShell({ user: session.user });
+
+  const userId = session.user.id;
+  const companySelect = document.getElementById('company');
+  const startEl = document.getElementById('periodStart');
+  const endEl = document.getElementById('periodEnd');
+  const result = document.getElementById('result');
+
+  function fmtMoney(n) {
+    if (n == null) return '—';
+    const sign = n < 0 ? '−' : '';
+    return sign + '£' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  async function loadCompanies() {
+    try {
+      const cos = await ELP.rest(`companies?select=id,name&user_id=eq.${userId}&archived=eq.false&order=name.asc`);
+      companySelect.innerHTML = '<option value="">— choose a company —</option>' +
+        cos.map(co => `<option value="${co.id}">${escapeHtml(co.name)}</option>`).join('');
+      // Pre-select if URL has ?company=
+      const urlCo = new URLSearchParams(location.search).get('company');
+      if (urlCo) companySelect.value = urlCo;
+      if (cos.length === 0) {
+        result.innerHTML = '<div class="warn-box">You haven\'t set up any companies yet. <a href="/landlord/companies/">Add a company →</a></div>';
+      }
+    } catch (e) {
+      result.innerHTML = `<div class="warn-box red">Could not load companies: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  document.getElementById('btnGenerate').addEventListener('click', async () => {
+    const companyId = companySelect.value;
+    if (!companyId) { alert('Please choose a company.'); return; }
+    const body = { company_id: companyId };
+    if (startEl.value && endEl.value) {
+      body.period_start = startEl.value;
+      body.period_end = endEl.value;
+    } else if (startEl.value || endEl.value) {
+      alert('Please provide both period start and end, or leave both blank.'); return;
+    }
+
+    result.innerHTML = '<div class="panel"><h3>Generating…</h3><p style="font-size:13px;color:#6B8278;">This may take 10–20 seconds.</p></div>';
+
+    try {
+      const data = await ELP.callFn('ct600-export?action=generate', body);
+      const s = data.summary || {};
+      const periodLine = `${data.period_start} → ${data.period_end}`;
+      const warnHtml = (data.warnings && data.warnings.length)
+        ? `<div class="warn-box red"><strong>${data.warnings.length} review item${data.warnings.length === 1 ? '' : 's'}.</strong><ul class="warning-list">${data.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul></div>`
+        : '';
+      result.innerHTML = `
+        <div class="panel">
+          <h3>Export ready — ${escapeHtml(periodLine)}</h3>
+          <div class="summary-grid">
+            <div class="stat"><div class="label">Income</div><div class="value">${fmtMoney(s.income)}</div></div>
+            <div class="stat"><div class="label">Allowable expenses</div><div class="value">${fmtMoney(s.allowable_expenses)}</div></div>
+            <div class="stat"><div class="label">Profit</div><div class="value" style="${s.profit < 0 ? 'color:#D94F4F;' : ''}">${fmtMoney(s.profit)}</div></div>
+            <div class="stat"><div class="label">Capital expenditure</div><div class="value">${fmtMoney(s.capital)}</div></div>
+            <div class="stat"><div class="label">Disallowable</div><div class="value">${fmtMoney(s.disallowable)}</div></div>
+            <div class="stat"><div class="label">Director's loan balance</div><div class="value">${fmtMoney(s.director_loan_balance)}</div></div>
+          </div>
+          <p style="font-size:12px;color:#6B8278;margin:8px 0;">${s.property_count} property/properties · ${s.transaction_count} transactions in period</p>
+          <p style="font-size:12px;color:#6B8278;margin:8px 0;">Mortgage interest — computed: ${fmtMoney(s.mortgage_interest_computed)}, recorded: ${fmtMoney(s.mortgage_interest_recorded)} (accountant to reconcile)</p>
+          <div class="download-row">
+            <a href="${data.pdf_signed_url}" target="_blank" rel="noopener" class="el-btn el-btn-primary">Download PDF</a>
+            <a href="${data.csv_signed_url}" target="_blank" rel="noopener" class="el-btn">Download CSV</a>
+          </div>
+          <p style="font-size:11px;color:#6B8278;margin-top:8px;">Download links expire in ${Math.round(data.expires_in / 3600)} hours.</p>
+          ${warnHtml}
+        </div>
+      `;
+    } catch (e) {
+      result.innerHTML = `<div class="warn-box red">Export failed: ${escapeHtml(e.message)}</div>`;
+    }
+  });
+
+  await loadCompanies();
+</script>
+</body>
+</html>

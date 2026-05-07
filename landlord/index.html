@@ -517,6 +517,20 @@
         </div>
       </div>
       <div class="el-field">
+        <label class="el-label">Tax treatment (for CT600 export)</label>
+        <select class="el-select" id="txTaxTreatment">
+          <option value="revenue">Revenue (P&L allowable)</option>
+          <option value="capital">Capital (improvement / new fixture — not P&L)</option>
+          <option value="disallowable">Disallowable (excluded from tax computation)</option>
+          <option value="out_of_scope">Out of scope (e.g. transfer between own accounts)</option>
+        </select>
+        <div class="el-hint" style="font-size:11px;color:#6B8278;">
+          Used by the CT600 accountant-handover export. Defaults to "Revenue" for income and standard expense categories.
+          Use "Capital" for improvements (kitchen, extensions) — not deductible as P&L expense but added to the property's base cost.
+          Director loan flows are tracked separately on the <a href="/landlord/loan/">Director's loan</a> page.
+        </div>
+      </div>
+      <div class="el-field">
         <label class="el-label">Note (optional)</label>
         <textarea class="el-textarea" id="txNote" rows="2"></textarea>
       </div>
@@ -2213,6 +2227,7 @@
       category: $("txCategory").value,
       amount: Number($("txAmount").value),
       note: $("txNote").value.trim() || null,
+      tax_treatment: $("txTaxTreatment").value || null,
     };
     try {
       await ELP.rest("transactions", {

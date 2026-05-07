@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1A6B55">
+  <title>Companies — easierLet</title>
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/easierlet.css?v=20260428a">
+  <link rel="stylesheet" href="/assets/portal.css?v=20260428a">
+  <style>
+    .co-card { background: #fff; border: 1px solid #E0E8E4; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .co-card h3 { font-size: 16px; color: #1A2E28; margin-bottom: 4px; }
+    .co-card .co-reg { font-size: 13px; color: #6B8278; margin-bottom: 12px; }
+    .co-card .co-meta { display: flex; gap: 16px; font-size: 13px; color: #4A6560; margin-bottom: 12px; flex-wrap: wrap; }
+    .co-card .co-meta div { display: flex; flex-direction: column; }
+    .co-card .co-meta span:first-child { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6B8278; margin-bottom: 2px; }
+    .co-prop-list { font-size: 13px; color: #4A6560; }
+    .co-prop-list .co-prop-tag { display: inline-block; background: #E8F4F0; color: #1A6B55; font-size: 12px; padding: 2px 8px; border-radius: 12px; margin: 2px 4px 2px 0; }
+    .co-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .co-warning { background: #FFF8EC; border-left: 3px solid #C8A030; padding: 12px 16px; border-radius: 6px; font-size: 13px; color: #8A6800; line-height: 1.5; margin-bottom: 16px; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+    .modal-backdrop.show { display: flex; }
+    .modal-card { background: #fff; border-radius: 12px; padding: 24px; max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; }
+    .modal-card h2 { font-size: 18px; margin-bottom: 16px; color: #1A2E28; }
+    .modal-card .field { margin-bottom: 12px; }
+    .modal-card label { display: block; font-size: 12px; font-weight: 600; color: #6B8278; margin-bottom: 4px; }
+    .modal-card input, .modal-card select, .modal-card textarea { width: 100%; padding: 10px 12px; border: 1px solid #E0E8E4; border-radius: 8px; font-size: 14px; font-family: inherit; }
+    .modal-card .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-card .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    .prop-bundle-list { max-height: 240px; overflow-y: auto; border: 1px solid #E0E8E4; border-radius: 8px; padding: 8px; }
+    .prop-bundle-list .prop-row { display: flex; align-items: center; gap: 8px; padding: 6px; border-bottom: 1px solid #F0F4F2; font-size: 13px; }
+    .prop-bundle-list .prop-row:last-child { border-bottom: none; }
+    .prop-bundle-list input[type="checkbox"] { margin: 0; }
+  </style>
+</head>
+<body class="elp-body">
+
+<div id="portal-shell" data-role="landlord" data-active="companies" data-title="Companies"></div>
+
+<main class="elp-main">
+  <div class="elp-main-inner">
+    <div class="elp-page-head">
+      <h1 class="elp-page-title">Companies</h1>
+      <p class="elp-page-sub">Bundle properties into UK limited companies for CT600 export.</p>
+    </div>
+
+    <div class="co-warning">
+      <strong>Important.</strong> Setting up a company here is for record-keeping and CT600 export only.
+      It does not register a company with Companies House and does not constitute tax advice.
+      Each property assigned to a company will appear on that company's CT600 accountant-handover export.
+      Properties left unassigned ("personal") fall outside corporation tax — they're handled via Self Assessment.
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <button class="el-btn el-btn-primary" id="btnAdd">+ Add company</button>
+      <a href="/landlord/ct600/" class="el-btn" style="margin-left:8px;">Generate CT600 export →</a>
+    </div>
+
+    <div id="list">Loading…</div>
+  </div>
+</main>
+
+<!-- Add / Edit modal -->
+<div class="modal-backdrop" id="editModal">
+  <div class="modal-card">
+    <h2 id="modalTitle">Add company</h2>
+    <form id="editForm">
+      <input type="hidden" name="id">
+      <div class="field"><label>Company name *</label><input name="name" required></div>
+      <div class="field"><label>Companies House registration number</label><input name="registration_number" placeholder="e.g. 16852456"></div>
+      <div class="field"><label>Registered office — line 1</label><input name="registered_office_line1"></div>
+      <div class="field"><label>Registered office — line 2</label><input name="registered_office_line2"></div>
+      <div class="row2">
+        <div class="field"><label>City</label><input name="registered_office_city"></div>
+        <div class="field"><label>Postcode</label><input name="registered_office_postcode"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>SIC code</label><input name="sic_code" value="68209"></div>
+        <div class="field"><label>Incorporation date</label><input name="incorporation_date" type="date"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Accounting period start — month</label>
+          <select name="accounting_period_start_month">
+            <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+            <option value="4" selected>April</option><option value="5">May</option><option value="6">June</option>
+            <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+            <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+          </select>
+        </div>
+        <div class="field"><label>Day</label><input name="accounting_period_start_day" type="number" min="1" max="31" value="6"></div>
+      </div>
+      <div class="field"><label>Notes</label><textarea name="notes" rows="2"></textarea></div>
+      <div class="actions">
+        <button type="button" class="el-btn" id="btnCancel">Cancel</button>
+        <button type="submit" class="el-btn el-btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Bundle properties modal -->
+<div class="modal-backdrop" id="bundleModal">
+  <div class="modal-card">
+    <h2 id="bundleTitle">Manage properties</h2>
+    <p style="font-size:13px;color:#6B8278;margin-bottom:12px;">Tick the properties to include in this company's CT600 scope. Unticking removes them (the property remains; it just becomes "personal").</p>
+    <div class="prop-bundle-list" id="propBundleList">Loading properties…</div>
+    <div class="actions">
+      <button type="button" class="el-btn" id="btnBundleCancel">Cancel</button>
+      <button type="button" class="el-btn el-btn-primary" id="btnBundleSave">Save assignments</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/assets/portal.js"></script>
+<script type="module">
+  while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
+  const ELP = window.ELP;
+  const session = await ELP.requireSession("/login/");
+  if (!session) throw new Error("redirecting");
+  ELP.mountShell({ user: session.user });
+
+  const userId = session.user.id;
+  const list = document.getElementById('list');
+  const editModal = document.getElementById('editModal');
+  const editForm = document.getElementById('editForm');
+  const bundleModal = document.getElementById('bundleModal');
+  let bundleCompanyId = null;
+  let bundleAssignments = new Map();  // property_id -> 'this' | 'other' | null
+  let bundleOriginal = new Map();
+
+  async function loadCompanies() {
+    list.innerHTML = 'Loading…';
+    try {
+      const cos = await ELP.rest(`companies?select=*&user_id=eq.${userId}&order=created_at.asc`);
+      if (!cos.length) {
+        list.innerHTML = '<div class="elp-empty"><h3>No companies yet</h3><p>Add your first limited company above to start tracking it for CT600.</p></div>';
+        return;
+      }
+      const propsByCo = {};
+      const props = await ELP.rest(`properties?select=id,address,address_line1,city,postcode,company_id&user_id=eq.${userId}&archived=eq.false`);
+      for (const p of props) {
+        if (p.company_id) {
+          if (!propsByCo[p.company_id]) propsByCo[p.company_id] = [];
+          propsByCo[p.company_id].push(p);
+        }
+      }
+      list.innerHTML = cos.map(co => {
+        const propTags = (propsByCo[co.id] || []).map(p => {
+          const addr = [p.address_line1, p.city].filter(Boolean).join(', ') || p.address || p.id.slice(0,8);
+          return `<span class="co-prop-tag">${escapeHtml(addr)}</span>`;
+        }).join('') || '<em style="color:#6B8278;font-size:12px;">No properties assigned yet.</em>';
+        const months = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+        return `<div class="co-card">
+          <h3>${escapeHtml(co.name)}</h3>
+          <div class="co-reg">${co.registration_number ? 'Companies House no. ' + escapeHtml(co.registration_number) : 'No Companies House number on file'}</div>
+          <div class="co-meta">
+            <div><span>SIC code</span>${escapeHtml(co.sic_code || '—')}</div>
+            <div><span>Accounting year start</span>${months[co.accounting_period_start_month] || '—'} ${co.accounting_period_start_day || ''}</div>
+            <div><span>Incorporated</span>${co.incorporation_date ? new Date(co.incorporation_date).toLocaleDateString('en-GB') : '—'}</div>
+          </div>
+          <div class="co-prop-list"><strong style="font-size:12px;color:#6B8278;text-transform:uppercase;letter-spacing:0.5px;">Properties bundled</strong><br>${propTags}</div>
+          <div class="co-actions">
+            <button class="el-btn" data-act="edit" data-id="${co.id}">Edit</button>
+            <button class="el-btn" data-act="bundle" data-id="${co.id}">Manage properties</button>
+            <a href="/landlord/ct600/?company=${co.id}" class="el-btn">CT600 export →</a>
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      list.innerHTML = `<div class="el-toast el-toast-error">${e.message}</div>`;
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function openEdit(co) {
+    document.getElementById('modalTitle').textContent = co ? 'Edit company' : 'Add company';
+    editForm.reset();
+    editForm.elements.id.value = co?.id || '';
+    if (co) {
+      for (const k of ['name','registration_number','registered_office_line1','registered_office_line2',
+                       'registered_office_city','registered_office_postcode','sic_code','incorporation_date',
+                       'accounting_period_start_month','accounting_period_start_day','notes']) {
+        if (editForm.elements[k]) editForm.elements[k].value = co[k] ?? '';
+      }
+    }
+    editModal.classList.add('show');
+  }
+
+  document.getElementById('btnAdd').addEventListener('click', () => openEdit(null));
+  document.getElementById('btnCancel').addEventListener('click', () => editModal.classList.remove('show'));
+
+  editForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(editForm);
+    const id = formData.get('id');
+    const payload = {};
+    for (const [k, v] of formData.entries()) {
+      if (k === 'id') continue;
+      if (v === '' || v === null) {
+        payload[k] = null;
+      } else if (['accounting_period_start_month','accounting_period_start_day'].includes(k)) {
+        payload[k] = parseInt(v, 10);
+      } else {
+        payload[k] = v;
+      }
+    }
+    try {
+      if (id) {
+        await ELP.rest(`companies?id=eq.${id}`, { method: 'PATCH', body: payload });
+      } else {
+        payload.user_id = userId;
+        await ELP.rest('companies', { method: 'POST', body: payload });
+      }
+      editModal.classList.remove('show');
+      await loadCompanies();
+    } catch (e) {
+      alert('Save failed: ' + e.message);
+    }
+  });
+
+  list.addEventListener('click', async (e) => {
+    const t = e.target.closest('button[data-act]');
+    if (!t) return;
+    const id = t.getAttribute('data-id');
+    const act = t.getAttribute('data-act');
+    if (act === 'edit') {
+      const cos = await ELP.rest(`companies?id=eq.${id}&select=*`);
+      if (cos[0]) openEdit(cos[0]);
+    } else if (act === 'bundle') {
+      await openBundle(id);
+    }
+  });
+
+  async function openBundle(coId) {
+    bundleCompanyId = coId;
+    document.getElementById('bundleTitle').textContent = 'Manage properties';
+    const propsListEl = document.getElementById('propBundleList');
+    propsListEl.innerHTML = 'Loading…';
+    bundleModal.classList.add('show');
+    const props = await ELP.rest(`properties?select=id,address,address_line1,city,postcode,company_id&user_id=eq.${userId}&archived=eq.false&order=address_line1.asc`);
+    bundleAssignments = new Map();
+    bundleOriginal = new Map();
+    propsListEl.innerHTML = props.map(p => {
+      const addr = [p.address_line1, p.city, p.postcode].filter(Boolean).join(', ') || p.address || p.id.slice(0,8);
+      const isThis = p.company_id === coId;
+      const isOther = !!p.company_id && !isThis;
+      bundleOriginal.set(p.id, p.company_id);
+      return `<div class="prop-row">
+        <input type="checkbox" ${isThis ? 'checked' : ''} ${isOther ? 'disabled' : ''} data-prop-id="${p.id}">
+        <div style="flex:1;">${escapeHtml(addr)}${isOther ? ' <span style="color:#C87000;font-size:11px;">(in another company)</span>' : ''}</div>
+      </div>`;
+    }).join('') || '<p style="font-size:13px;color:#6B8278;">No properties to assign.</p>';
+
+    propsListEl.querySelectorAll('input[type="checkbox"]').forEach(el => {
+      el.addEventListener('change', (ev) => {
+        bundleAssignments.set(ev.target.getAttribute('data-prop-id'), ev.target.checked ? coId : null);
+      });
+    });
+  }
+
+  document.getElementById('btnBundleCancel').addEventListener('click', () => {
+    bundleModal.classList.remove('show');
+  });
+  document.getElementById('btnBundleSave').addEventListener('click', async () => {
+    try {
+      // Apply only the changes (delta vs original)
+      const updates = [];
+      for (const [propId, target] of bundleAssignments.entries()) {
+        const orig = bundleOriginal.get(propId);
+        if (orig !== target) updates.push({ id: propId, company_id: target });
+      }
+      for (const u of updates) {
+        await ELP.rest(`properties?id=eq.${u.id}`, { method: 'PATCH', body: { company_id: u.company_id } });
+      }
+      bundleModal.classList.remove('show');
+      await loadCompanies();
+    } catch (e) {
+      alert('Save failed: ' + e.message);
+    }
+  });
+
+  await loadCompanies();
+</script>
+</body>
+</html>

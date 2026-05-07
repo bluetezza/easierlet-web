@@ -231,6 +231,18 @@
         </div>
       </details>
 
+      <div class="el-field">
+        <label class="el-label" for="companyId">Company (for CT600 export)</label>
+        <select class="el-select" id="companyId">
+          <option value="">— Personal (no company / Self Assessment) —</option>
+        </select>
+        <div class="el-hint" style="font-size:11px;color:#6B8278;">
+          Assigning to a company means this property is included in that company's CT600 accountant-handover export.
+          Leave as "Personal" if held in your own name.
+          <a href="/landlord/companies/">Manage companies →</a>
+        </div>
+      </div>
+
       <div class="actions">
         <button type="button" class="el-btn el-btn-ghost" id="cancelBtn">Cancel</button>
         <button type="submit" class="el-btn el-btn-primary" id="saveBtn">Save property</button>
@@ -313,12 +325,26 @@
   modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("open"); });
   showArchived.addEventListener("change", load);
 
+  // Cache the user's companies once per page load.
+  let companiesCache = null;
+  async function ensureCompaniesLoaded() {
+    if (companiesCache) return companiesCache;
+    try {
+      companiesCache = await ELP.rest(`companies?select=id,name&user_id=eq.${user.id}&archived=eq.false&order=name.asc`);
+    } catch { companiesCache = []; }
+    const sel = $("companyId");
+    sel.innerHTML = '<option value="">— Personal (no company / Self Assessment) —</option>' +
+      companiesCache.map(c => `<option value="${c.id}">${c.name.replace(/[<>&"]/g, '')}</option>`).join('');
+    return companiesCache;
+  }
+
   function openCreate() {
     editingId = null;
     $("modalTitle").textContent = "Add property";
     $("propertyForm").reset();
     $("addressResults").classList.remove("show");
     $("lookupHint").textContent = "";
+    ensureCompaniesLoaded().then(() => { $("companyId").value = ""; });
     modal.classList.add("open");
   }
 
@@ -347,6 +373,8 @@
     $("mortgageRate").value = p.mortgage_interest_rate ?? "";
     $("mortgageStart").value = p.mortgage_start_date || "";
     $("mortgageTerm").value = p.mortgage_term_months ?? "";
+    await ensureCompaniesLoaded();
+    $("companyId").value = p.company_id || "";
     modal.classList.add("open");
   }
 
@@ -417,6 +445,7 @@
       mortgage_interest_rate: numOrNull($("mortgageRate").value),
       mortgage_start_date: $("mortgageStart").value || null,
       mortgage_term_months: numOrNull($("mortgageTerm").value),
+      company_id: $("companyId").value || null,
     };
     if (form.dataset.lat) body.latitude = Number(form.dataset.lat);
     if (form.dataset.lng) body.longitude = Number(form.dataset.lng);

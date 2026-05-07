@@ -6,13 +6,40 @@
   <meta name="theme-color" content="#1A6B55">
   <title>Director's loan — easierLet</title>
   <meta name="robots" content="noindex">
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="/assets/easierlet.css?v=20260428a">
   <link rel="stylesheet" href="/assets/portal.css?v=20260428a">
+  <style>
+    .panel { background:#fff; border:1px solid #E0E8E4; border-radius:12px; padding:20px; margin-bottom:16px; }
+    .panel h3 { font-size:15px; margin-bottom:12px; color:#1A2E28; }
+    .panel select, .panel input { width:100%; padding:10px 12px; border:1px solid #E0E8E4; border-radius:8px; font-size:14px; font-family:inherit; }
+    .panel label { display:block; font-size:12px; font-weight:600; color:#6B8278; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px; }
+    .balance-card { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:16px; }
+    .balance-card .stat { background:#F5F7F5; padding:12px 14px; border-radius:8px; }
+    .balance-card .stat .label { font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:#6B8278; margin-bottom:4px; }
+    .balance-card .stat .value { font-size:20px; font-weight:700; color:#1A2E28; }
+    .balance-card .stat.balance .value { color:#1A6B55; }
+    .balance-card .stat.warn .value { color:#D94F4F; }
+    .entry-list { background:#fff; border:1px solid #E0E8E4; border-radius:12px; }
+    .entry-row { display:grid; grid-template-columns:90px 1fr 100px 100px 30px; gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid #F0F4F2; font-size:13px; }
+    .entry-row:last-child { border-bottom:none; }
+    .entry-row .date { color:#6B8278; }
+    .entry-row .type-tag { font-size:11px; padding:3px 8px; border-radius:12px; font-weight:600; text-align:center; }
+    .entry-row .type-tag.advance { background:#E8F4F0; color:#1A6B55; }
+    .entry-row .type-tag.repayment { background:#FFEDE3; color:#C87000; }
+    .entry-row .amount { text-align:right; font-weight:600; }
+    .entry-row .delete-btn { background:none; border:none; color:#D94F4F; cursor:pointer; font-size:16px; padding:4px; }
+    .warn-box { background:#FFF8EC; border-left:3px solid #C8A030; padding:12px 16px; border-radius:6px; font-size:13px; color:#8A6800; line-height:1.5; margin-bottom:16px; }
+    .warn-box.red { background:#FFEEEE; border-color:#D94F4F; color:#8A1F1F; }
+    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.4); display:none; align-items:center; justify-content:center; z-index:100; padding:20px; }
+    .modal-backdrop.show { display:flex; }
+    .modal-card { background:#fff; border-radius:12px; padding:24px; max-width:480px; width:100%; }
+    .modal-card .field { margin-bottom:12px; }
+    .modal-card .row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .modal-card .actions { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+  </style>
 </head>
 <body class="elp-body">
 
@@ -22,16 +49,50 @@
   <div class="elp-main-inner">
     <div class="elp-page-head">
       <h1 class="elp-page-title">Director's loan</h1>
-      <p class="elp-page-sub">Track money you've put into the company and repayments back to yourself.</p>
+      <p class="elp-page-sub">Money you've put into the company and repayments back. Used in CT600A on the export.</p>
     </div>
 
-    <div class="elp-empty">
-      <h3>Coming soon</h3>
-      <p>Director's loan tracking is on the roadmap. In the meantime, you can categorise these as transactions on the Transactions tab.</p>
-      <a href="/landlord/?tab=transactions" class="el-btn el-btn-primary">Open Transactions</a>
+    <div class="panel">
+      <label>Company</label>
+      <select id="company"><option value="">— choose a company —</option></select>
     </div>
+
+    <div id="content"></div>
   </div>
 </main>
+
+<div class="modal-backdrop" id="addModal">
+  <div class="modal-card">
+    <h2 id="modalTitle" style="font-size:18px;margin-bottom:16px;color:#1A2E28;">Log director's loan entry</h2>
+    <form id="addForm">
+      <div class="row2">
+        <div class="field">
+          <label>Type</label>
+          <select name="type" required>
+            <option value="advance">Advance (director → company)</option>
+            <option value="repayment">Repayment (company → director)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Amount (£)</label>
+          <input name="amount" type="number" step="0.01" required>
+        </div>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input name="date" type="date" required>
+      </div>
+      <div class="field">
+        <label>Note (optional)</label>
+        <input name="note" placeholder="What this was for">
+      </div>
+      <div class="actions">
+        <button type="button" class="el-btn" id="btnAddCancel">Cancel</button>
+        <button type="submit" class="el-btn el-btn-primary">Add entry</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <script type="module" src="/assets/portal.js"></script>
 <script type="module">
@@ -40,6 +101,124 @@
   const session = await ELP.requireSession("/login/");
   if (!session) throw new Error("redirecting");
   ELP.mountShell({ user: session.user });
+
+  const userId = session.user.id;
+  const companySel = document.getElementById('company');
+  const content = document.getElementById('content');
+  const addModal = document.getElementById('addModal');
+  const addForm = document.getElementById('addForm');
+  let currentCompanyId = null;
+  let currentEntries = [];
+
+  function fmtMoney(n) {
+    const num = Number(n) || 0;
+    const sign = num < 0 ? '−' : '';
+    return sign + '£' + Math.abs(num).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  async function loadCompanies() {
+    const cos = await ELP.rest(`companies?select=id,name&user_id=eq.${userId}&archived=eq.false&order=name.asc`);
+    if (!cos.length) {
+      content.innerHTML = '<div class="warn-box">You haven\'t set up any companies yet. <a href="/landlord/companies/">Add a company →</a></div>';
+      return;
+    }
+    companySel.innerHTML = '<option value="">— choose a company —</option>' +
+      cos.map(co => `<option value="${co.id}">${escapeHtml(co.name)}</option>`).join('');
+    if (cos.length === 1) {
+      companySel.value = cos[0].id;
+      await loadCompany(cos[0].id);
+    }
+  }
+
+  companySel.addEventListener('change', async (e) => {
+    const id = e.target.value;
+    if (id) await loadCompany(id);
+    else content.innerHTML = '';
+  });
+
+  async function loadCompany(coId) {
+    currentCompanyId = coId;
+    content.innerHTML = '<div class="panel"><p style="color:#6B8278;font-size:13px;">Loading…</p></div>';
+    const entries = await ELP.rest(`loan_entries?select=*&company_id=eq.${coId}&order=date.desc,created_at.desc`);
+    currentEntries = entries;
+    render();
+  }
+
+  function render() {
+    const advances = currentEntries.filter(e => e.type === 'advance').reduce((s, e) => s + Number(e.amount), 0);
+    const repayments = currentEntries.filter(e => e.type === 'repayment').reduce((s, e) => s + Number(e.amount), 0);
+    const balance = advances - repayments;
+
+    let warnings = '';
+    if (balance < -10000) {
+      warnings += '<div class="warn-box red"><strong>Balance owed by director exceeds £10,000.</strong> A beneficial loan interest charge may apply (HMRC official rate × outstanding balance) — discuss with your accountant.</div>';
+    }
+    if (balance < 0) {
+      warnings += '<div class="warn-box"><strong>Director owes the company.</strong> Any unpaid balance 9 months after period end triggers <strong>S.455 tax at 33.75%</strong> (CT600A loans-to-participators schedule). Consider repaying or treating as remuneration.</div>';
+    }
+
+    const rows = currentEntries.length ? currentEntries.map(e => `
+      <div class="entry-row">
+        <div class="date">${new Date(e.date).toLocaleDateString('en-GB')}</div>
+        <div>${escapeHtml(e.note || '')}</div>
+        <div><span class="type-tag ${e.type}">${e.type === 'advance' ? 'Advance' : 'Repayment'}</span></div>
+        <div class="amount">${fmtMoney(e.amount)}</div>
+        <button class="delete-btn" data-id="${e.id}" aria-label="Delete">×</button>
+      </div>
+    `).join('') : '<div style="padding:24px;text-align:center;color:#6B8278;font-size:13px;">No entries yet.</div>';
+
+    content.innerHTML = `
+      <div class="balance-card">
+        <div class="stat"><div class="label">Director advances (in)</div><div class="value">${fmtMoney(advances)}</div></div>
+        <div class="stat"><div class="label">Repayments (out)</div><div class="value">${fmtMoney(repayments)}</div></div>
+        <div class="stat ${balance < 0 ? 'warn' : 'balance'}"><div class="label">Balance ${balance >= 0 ? '(company owes director)' : '(director owes company)'}</div><div class="value">${fmtMoney(balance)}</div></div>
+      </div>
+      ${warnings}
+      <div style="margin-bottom:12px;"><button class="el-btn el-btn-primary" id="btnAdd">+ Log entry</button></div>
+      <div class="entry-list">${rows}</div>
+    `;
+
+    document.getElementById('btnAdd').addEventListener('click', () => {
+      addForm.reset();
+      addForm.elements.date.value = new Date().toISOString().slice(0, 10);
+      addModal.classList.add('show');
+    });
+    content.querySelectorAll('.delete-btn').forEach(b => {
+      b.addEventListener('click', async () => {
+        const id = b.getAttribute('data-id');
+        if (!confirm('Delete this entry?')) return;
+        await ELP.rest(`loan_entries?id=eq.${id}`, { method: 'DELETE' });
+        await loadCompany(currentCompanyId);
+      });
+    });
+  }
+
+  document.getElementById('btnAddCancel').addEventListener('click', () => addModal.classList.remove('show'));
+  addForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentCompanyId) return;
+    const fd = new FormData(addForm);
+    const payload = {
+      user_id: userId,
+      company_id: currentCompanyId,
+      type: fd.get('type'),
+      amount: parseFloat(fd.get('amount')),
+      date: fd.get('date'),
+      note: fd.get('note')?.trim() || null,
+    };
+    try {
+      await ELP.rest('loan_entries', { method: 'POST', body: payload });
+      addModal.classList.remove('show');
+      await loadCompany(currentCompanyId);
+    } catch (err) {
+      alert('Failed: ' + err.message);
+    }
+  });
+
+  await loadCompanies();
 </script>
 </body>
 </html>
