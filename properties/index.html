@@ -58,7 +58,7 @@
     }
     .filters-primary {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr auto auto;
+      grid-template-columns: 2fr 1fr 1fr auto;
       gap: 10px;
     }
     .filters-advanced {
@@ -72,10 +72,27 @@
     .filters-advanced[hidden] { display: none; }
     @media (max-width: 900px) {
       .filters-primary { grid-template-columns: 1fr 1fr; }
-      .filters-primary .filter-submit,
-      .filters-primary .filter-toggle { grid-column: 1 / -1; }
+      .filters-primary .filter-submit { grid-column: 1 / -1; }
       .filters-advanced { grid-template-columns: 1fr 1fr; }
     }
+    /* Secondary controls under the filter card — text links, not chips. */
+    .filters-controls {
+      display: flex; align-items: center; gap: 18px;
+      padding: 10px 4px 0;
+    }
+    .filters-controls button {
+      background: transparent; border: none; padding: 4px 0;
+      font-family: inherit; font-size: 13px; cursor: pointer;
+      color: var(--el-muted);
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .filters-controls button:hover { color: var(--el-green); }
+    .filters-controls .toggle-chev {
+      width: 12px; height: 12px;
+      transition: transform 200ms ease;
+    }
+    .filters-controls .toggle.open .toggle-chev { transform: rotate(180deg); }
+    .filters-controls .reset[hidden] { display: none; }
     .filter {
       padding: 10px 14px;
       border-radius: 10px;
@@ -99,21 +116,6 @@
     }
     .filter-submit:hover { background: #155545; }
     .filter-submit svg { width: 16px; height: 16px; }
-    .filter-toggle {
-      background: transparent; color: var(--el-muted);
-      border: 1px solid var(--el-line); border-radius: 10px;
-      padding: 0 16px; font-weight: 500; font-size: 13px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      font-family: inherit; transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
-    }
-    .filter-toggle:hover { color: var(--el-green); border-color: var(--el-green); background: var(--el-green-pale); }
-    .filter-toggle .badge {
-      display: inline-block; min-width: 18px; padding: 1px 6px;
-      background: var(--el-green); color: #fff; border-radius: 999px;
-      font-size: 11px; font-weight: 600; line-height: 1.4;
-    }
-    .filter-toggle .chev { transition: transform 200ms ease; }
-    .filter-toggle.open .chev { transform: rotate(180deg); }
 
     /* ---- Results header ---- */
     .results-head {
@@ -287,11 +289,6 @@
           <label for="maxRent">Max rent (£/mo)</label>
           <input id="maxRent" name="maxRent" type="number" inputmode="numeric" min="0" step="50" placeholder="No max">
         </div>
-        <button type="button" class="filter-toggle" id="advToggle" aria-expanded="false" aria-controls="filtersAdvanced">
-          <span class="label">More filters</span>
-          <span class="badge" id="advBadge" hidden>0</span>
-          <svg class="chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
         <button type="submit" class="filter-submit">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           Search
@@ -349,6 +346,13 @@
           <input type="checkbox" id="petsAllowed" name="petsAllowed" value="true" style="width:18px;height:18px;accent-color:var(--el-green)">
           <label for="petsAllowed" style="margin:0">Pets allowed</label>
         </div>
+      </div>
+      <div class="filters-controls">
+        <button type="button" class="toggle" id="advToggle" aria-expanded="false" aria-controls="filtersAdvanced">
+          <span class="label">More filters</span>
+          <svg class="toggle-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <button type="button" class="reset" id="resetFilters" hidden>Reset filters</button>
       </div>
     </form>
   </div>
@@ -438,35 +442,29 @@
     syncAdvancedToggle({ expandIfActive: true });
   }
 
-  // Advanced filters: count active values, toggle visibility, update badge.
+  // Advanced filters: simple toggle visibility. No count badge — the
+  // toggle is a plain text link, not a filter chip.
+  const ALL_KEYS = ['area', 'minBedrooms', 'maxRent', 'availableBy', 'furnished', 'propertyType', 'parking', 'garden', 'petsAllowed'];
   const ADVANCED_KEYS = ['availableBy', 'furnished', 'propertyType', 'parking', 'garden', 'petsAllowed'];
   const advToggle = document.getElementById('advToggle');
-  const advBadge = document.getElementById('advBadge');
   const advPanel = document.getElementById('filtersAdvanced');
   const advLabel = advToggle.querySelector('.label');
+  const resetBtn = document.getElementById('resetFilters');
 
-  function countActiveAdvanced() {
-    let n = 0;
-    for (const k of ADVANCED_KEYS) {
+  function anyActive(keys) {
+    return keys.some((k) => {
       const el = document.getElementById(k);
-      if (!el) continue;
-      if (el.type === 'checkbox') { if (el.checked) n++; }
-      else if (String(el.value).trim() !== '') n++;
-    }
-    return n;
+      if (!el) return false;
+      return el.type === 'checkbox' ? el.checked : String(el.value).trim() !== '';
+    });
   }
 
   function syncAdvancedToggle({ expandIfActive = false } = {}) {
-    const n = countActiveAdvanced();
-    if (n > 0) {
-      advBadge.hidden = false;
-      advBadge.textContent = String(n);
-    } else {
-      advBadge.hidden = true;
-    }
-    if (expandIfActive && n > 0 && advPanel.hidden) {
+    if (expandIfActive && anyActive(ADVANCED_KEYS) && advPanel.hidden) {
       setAdvancedExpanded(true);
     }
+    // Show the reset link only when there's something to reset.
+    resetBtn.hidden = !anyActive(ALL_KEYS);
   }
 
   function setAdvancedExpanded(expanded) {
@@ -479,11 +477,22 @@
   advToggle.addEventListener('click', () => {
     setAdvancedExpanded(advPanel.hidden);
   });
-  // Keep the badge accurate as the user edits advanced fields.
-  ADVANCED_KEYS.forEach((k) => {
+  resetBtn.addEventListener('click', () => {
+    form.reset();
+    sortSelect.value = sortSelect.options[0]?.value || '';
+    currentPage = 1;
+    syncAdvancedToggle();
+    // Push the cleared state to the URL and re-fetch.
+    history.replaceState({}, '', window.location.pathname);
+    search();
+  });
+  // Keep the reset visibility accurate as the user edits.
+  ALL_KEYS.forEach((k) => {
     const el = document.getElementById(k);
     if (el) el.addEventListener('change', () => syncAdvancedToggle());
   });
+  document.getElementById('area').addEventListener('input', () => syncAdvancedToggle());
+  document.getElementById('maxRent').addEventListener('input', () => syncAdvancedToggle());
 
   // Build the params from the current form state.
   function currentParams() {
