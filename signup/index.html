@@ -297,21 +297,27 @@
       </div>
     </div>
     <p style="text-align:center;font-size:13px;color:var(--el-muted);margin-top:24px;">
-      Not sure which? <a href="#signup" style="color:var(--el-green);" data-pick="">Skip — choose later</a>
+      All plans start with a 14-day free trial. You can change tier any time from <em>Billing</em>.
     </p>
   </div>
 </section>
 
 <section id="signup" class="signup-section">
   <div class="container">
-    <div class="signup-card">
+    <!-- Default state: form is hidden until a tier is picked above. -->
+    <div id="signupPlaceholder" style="text-align:center;max-width:560px;margin:0 auto;padding:24px;background:#fff;border:1px dashed var(--el-line);border-radius:14px;color:var(--el-muted);font-size:14px;">
+      <p style="margin:0 0 6px;font-size:15px;color:var(--el-ink);">Pick a plan above to start your free trial.</p>
+      <p style="margin:0;">Every plan starts with full Professional-level access for 14 days — no card required.</p>
+    </div>
+
+    <div class="signup-card" id="signupCard" style="display:none;">
       <h2>Create your free account</h2>
       <p class="sub">14 days, no card required. Cancel anytime.</p>
 
-      <div class="selected-banner" id="selectedBanner">
-        <strong id="selectedPlanLabel">No plan picked.</strong>
-        <span id="selectedPlanSubtext"> Pick a tier above, or skip and choose when you're ready.</span>
-        <a href="#" id="clearSelected" style="margin-left:6px;">Change</a>
+      <div class="selected-banner show" id="selectedBanner">
+        <strong id="selectedPlanLabel">—</strong>
+        <span id="selectedPlanSubtext"></span>
+        <a href="#pricing" id="clearSelected" style="margin-left:6px;">Pick a different tier</a>
       </div>
 
       <div class="alert" id="alertBox"></div>
@@ -384,10 +390,12 @@
   };
 
   function setSelectedPlan(plan) {
-    const hidden = $('suSelectedPlan');
-    const banner = $('selectedBanner');
-    const label  = $('selectedPlanLabel');
-    const sub    = $('selectedPlanSubtext');
+    const hidden      = $('suSelectedPlan');
+    const banner      = $('selectedBanner');
+    const label       = $('selectedPlanLabel');
+    const sub         = $('selectedPlanSubtext');
+    const card        = $('signupCard');
+    const placeholder = $('signupPlaceholder');
     document.querySelectorAll('.price-card').forEach((c) => {
       c.classList.toggle('selected', c.dataset.plan === plan);
     });
@@ -397,11 +405,13 @@
       label.textContent = `Trial ends → ${meta.name} (${meta.price}, ${meta.scope}).`;
       sub.textContent   = ' We\'ll pre-select this for you when you upgrade.';
       banner.classList.add('show');
+      if (card)        card.style.display = '';
+      if (placeholder) placeholder.style.display = 'none';
     } else {
       hidden.value = '';
-      label.textContent = 'No plan picked.';
-      sub.textContent   = ' You can choose any tier when you\'re ready.';
       banner.classList.remove('show');
+      if (card)        card.style.display = 'none';
+      if (placeholder) placeholder.style.display = '';
     }
   }
 
@@ -416,7 +426,7 @@
   });
   $('clearSelected').addEventListener('click', (e) => {
     e.preventDefault();
-    setSelectedPlan(null);
+    document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
   });
   // Honour ?plan=growth on page load (e.g. landing from a campaign link).
   const urlPlan = new URLSearchParams(location.search).get('plan');
@@ -434,6 +444,7 @@
     const agreed = $('suAgree').checked;
     const turnstileToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
 
+    if (!$('suSelectedPlan').value) return showAlert('error', 'Please pick a plan above first.');
     if (!name) return showAlert('error', 'Please enter your name.');
     if (!email || !/.+@.+\..+/.test(email)) return showAlert('error', 'Please enter a valid email address.');
     if (!agreed) return showAlert('error', 'Please agree to the privacy policy and terms.');
@@ -464,6 +475,7 @@
           email_exists: 'An account with this email already exists. Try signing in instead.',
           bad_email: 'Please enter a valid email address.',
           bot_check_failed: 'Captcha check failed — please try again.',
+          missing_plan: 'Please pick a plan above first.',
         };
         showAlert('error', map[data.error] || data.message || 'Something went wrong. Please try again.');
         btn.disabled = false;
