@@ -193,7 +193,7 @@ function mountShell({ user, displayName } = {}) {
         <button class="elp-menu-btn" id="elp-menu-btn" aria-label="Menu">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <a href="/" class="elp-brand"><span class="e">easier</span><span class="l">Let</span></a>
+        <a href="/" class="elp-brand" style="display:inline-flex;align-items:center"><img src="/brand/easierlet-logo-horizontal.svg" alt="easierLet" style="height:26px;width:auto;display:block;"></a>
         <div class="elp-spacer"></div>
         <div class="elp-user" id="elp-user-menu">
           <button class="elp-user-btn">
