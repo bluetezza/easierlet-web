@@ -17,18 +17,22 @@ Newest entries at the top of each section.
 
 | Layer | Tool |
 |---|---|
-| Frontend | SwiftUI / Xcode |
-| Backend | Supabase (project `ffzknvcptqjlkxmkdxuk`) |
-| File storage | Cloudflare R2 |
-| Email | Resend (domain `[easierlet.com](http://easierlet.com)` **verified**) |
-| Web forms | GitHub Pages |
-| iOS repo | `bluetezza/easierlet-swift` — local `~/Documents/EasierLet/` |
-| Web repo | `bluetezza/easierlet-web` — local `~/easierlet-web/` |
-| Tenant portal (planned) | `[portal.easierlet.com](http://portal.easierlet.com)` — separate repo `bluetezza/easierlet-portal` |
+| Frontend (iOS) | SwiftUI / Xcode |
+| Frontend (web) | Static HTML / CSS / JS via GitHub Pages, Supabase JS SDK from esm.sh CDN (no build step) |
+| Backend | Supabase (project `ffzknvcptqjlkxmkdxuk`) — Postgres 15 + PostGIS, Auth (incl. TOTP MFA for admin), Edge Functions (Deno) |
+| Media storage | Cloudflare R2 — `easierlet-media-public` (listings, served from `media.easierlet.com`) + `easierlet-media-private` (inventory photos, signed URLs) |
+| Document storage | Supabase Storage `documents` bucket (tenancy PDFs, certificates, info sheets) |
+| Email | Resend (`no.reply@easierlet.com`, domain verified) |
+| Billing | Stripe Checkout + Customer Portal + webhooks |
+| CAPTCHA | Cloudflare Turnstile on public forms |
+| Address lookup | Ideal Postcodes (UK postcode → address + UPRN + lat/lng) |
+| Public site | `easierlet.com` — `bluetezza/easierlet-web` — local `~/easierlet-web/` |
+| iOS app | `bluetezza/easierlet-swift` — local `~/Documents/EasierLet/` |
+| Admin centre | `admin.easierlet.com` — `bluetezza/easierlet-admin` (separate repo, mandatory MFA) |
 
 ### Domain
 
-**We own `[easierlet.com](http://easierlet.com)`. We do NOT own `[easierlet.app](http://easierlet.app)`.** Never reference `.app`.
+**We own `[easierlet.com](http://easierlet.com)`. We do NOT own `[easierlet.app](http://easierlet.app)`.** Never reference `.app`. Subdomain `admin.easierlet.com` hosts the admin centre.
 
 ### Tab bar (current)
 
@@ -52,23 +56,32 @@ Newest entries at the top of each section.
 6. **Maintenance overhaul + Property visits** ✅ (2026-04-26) — Full triage workflow (Acknowledge / Reject / Request more info), 13-trade picker + group-by-trade list, 8-status flow (`new → acknowledged → awaiting_info → scheduled → in_progress → completed → closed` + `rejected`), structured rejection reasons, contractor + scheduled-date fields, transaction linking, vertical timeline. Tenant portal handles awaiting-info reply + post-completion confirm. Three new Edge Functions (`maintenance-notify`, `visit-notify`, `visit-response`) wired through Resend. Unified property visits table with 24hr UK notice enforcement, tenant accept/reschedule via tokenised `/visit-response/` web form. Visits surfaced on dashboard activity feed, summary actions, and per-property cards. Certificate-renewal action items prompt scheduling when gas/EICR/EPC expire within 60 days with no matching visit booked.
 7. **Onboarding + Billing + Documents compliance** ✅ (2026-04-27) — Public `/signup/` landing page with hero / features / 4-tier pricing / Turnstile-protected form. New `landlord-signup` EF creates auth user + landlord_profile + 14-day trialing landlord_subscriptions row + Resend welcome email. New Stripe-backed `create-checkout-session` / `stripe-webhook` / `billing-portal` EFs (deployed; gracefully fail with `stripe_not_configured` until Stripe keys are added). Per-property billing limits enforced in iOS at `+ Add property` with upgrade alert. Dashboard onboarding card (10 derived steps), better empty states across Dashboard / Transactions / Maintenance / Tenants, first-visit intro banners on Documents / Maintenance / Transactions. Tenant Portal Guide rewritten as 5 collapsible sections + status-aware home guide card. `MandatoryDocuments` constants drive a new compliance UI in DocumentsView (per-property, 3 urgency tiers, placeholder cards for missing items with Upload Now). Per-property compliance pill on dashboard cards + COMPLIANCE section on PropertySummarySheet + Actions Needed list flags missing/expired legal docs. All items linked to archived properties are now hidden from the active dashboard / lists / activity feed (iOS + web).
 8. **Admin, Audit, Privacy, Retention & DSAR** ✅ (2026-04-28) — Append-only `audit_log` table + `log_audit()` helper with `RULE … DO INSTEAD NOTHING` to block update/delete from any role. 11 existing Edge Functions instrumented + iOS `AuditLogger` for direct-DB writes (documents, properties, transactions, maintenance). `admin_users` table + mandatory-TOTP admin auth via new `admin-auth` and `admin-api` Edge Functions. New repo `bluetezza/easierlet-admin` deployed at `admin.easierlet.com` — login + dashboard + landlord detail + audit explorer + retention queue + DSAR generator + settings. Sensitive-column inventory via Postgres `COMMENT ON COLUMN PII:…`. `security-check` EF for system health. `retention_rules` table + retention-tracking columns on tenants/viewing_requests + nightly `retention-enforce` EF + `pg_cron` schedule. `generate-dsar` EF generates branded HTML exports (printable to PDF) for admins and tenant self-serve. `tenant-delete-account` EF for tenant erasure. Public privacy + retention + terms pages on easierlet.com. Three internal policy docs in admin repo. iOS adds Privacy / Terms / Retention links + tenant Download My Data + Delete My Account.
+9. **Companies + Director's loan + CT600 export** ✅ — `companies` table (registration number, SIC code, accounting-period start, registered office). `loan_entries` ledger (advances + repayments) scoped to a company. `properties.company_id` FK assigns properties to a company for CT600 scope. `ct600-export` Edge Function generates a CT600 handover PDF + transactions CSV per company per period (pdf-lib, 24-hour signed R2 URLs). iOS: `CompaniesView`/`CompaniesModel`/`CT600ExportClient` + `LoanView`/`AddDirectorLoanEntryView`/`DirectorLoanModel` with S.455 / BIK warnings. Web: `/landlord/companies/` + `/landlord/ct600/` + `/landlord/loan/` (full ledger UI replacing the earlier placeholder).
+10. **Compliance tracking** ✅ — `compliance_requirements` catalogue (25 rows seeded for England / Wales / Scotland — Gas Safety, EICR, EPC, smoke/CO alarms, deposit protection, etc.) with frequency type, legal basis, applies_to, tenant-copy deadlines. `property_compliance` table joins requirements to a property with status + due dates. `v_compliance_status` view computes `computed_status` + `days_until_due`. `sync_property_compliance()` trigger reconciles requirements when a property's `has_gas`/etc. changes. `compliance-export` Edge Function streams a ZIP of all certificates + manifest PDF per property. iOS: `ComplianceListView` / `ComplianceDetailView` / `ComplianceGuideView` / `ComplianceGuideContent` + per-property count tiles + Actions Needed integration. Web: `/compliance/` overview + `/compliance/guide/` educational content.
+11. **Support tickets** ✅ — `support_tickets` + `support_ticket_messages` tables. `support-ticket` Edge Function with `create` / `reply` / `close` actions. Emails `SUPPORT_NOTIFY_EMAIL` on every user message. Plan snapshot at open. Web `/support/` thread UI for both tenants + landlords. Tenant portal banner surfaces awaiting-reply tickets.
+12. **Inventory photos** ✅ — `inventory_photos` table (R2 private bucket, signed URLs, 3 photos per item / 50 per inventory / 1 MiB max). `inventory-media-upload` Edge Function (`presign` / `confirm` / `delete` / `get_signed_urls`) with dual auth (tenant token OR landlord JWT). `inventory-media-cleanup` nightly cron deletes 24-hour-old R2 orphans. `inventory-workflow` finalise embeds JPEGs at 800 px / q70 in the inventory PDF. iOS: `InventoryPhotosRepository` + `InventoryPhotoStrip`; tenants upload via `/inventory/?token=` web form.
+13. **Auto-rent invoicing + trial lifecycle** ✅ — `tenants.auto_invoice` + `rent_due_day` + `last_invoice_period` columns. `rent-invoicing` Edge Function with `generate_due` (JWT, manual) and `auto_run` (bearer-secret cron, daily 06:00 UTC) — creates `transactions` for tenants on `auto_invoice=true` whose `rent_due_day` has passed. `trial-lifecycle` Edge Function (bearer secret, daily cron) sends T-3 / T-1 reminders + flips expired trials. `landlord_subscriptions.trial_reminder_stage` prevents duplicate sends. `subscription_events` append-only event log.
+14. **Password reset + email security hardening** ✅ — `password-reset-request` Edge Function (no auth) sends a branded reset email via Supabase `auth.admin.generateLink`. Returns 200 regardless of whether the email exists (enumeration mitigation). New `/reset-password/` web page accepts the recovery code and updates the user's password. iOS `AuthView` "Forgot password" hits the same EF.
+15. **Push notification infrastructure** ✅ — `user_devices` table (UNIQUE on `(user_id, device_token)`) for APNs tokens. `notification_queue` outbox with `pending` / `sent` / `failed` status and a `payload jsonb`. Hooks for the maintenance + visit + tenancy flows. Not yet wired to APNs delivery in production but the model + queue are in place.
 
 ### In progress 🟡
 
-7. **Tenant portal** — iOS side complete: Home/Docs/Maintenance/Guide views, visual timeline, maintenance workflow (acknowledge/urgency/dates/transaction link), role-based auth routing, archived docs section, two-stage referencing flow, password-based tenant signup at pre-app approval. Now also: visits section on Home tab with inline confirm / request-reschedule.
+16. **Tenant portal — final polish** — iOS surfaces complete: Home/Docs/Maintenance/Guide views, visual timeline, maintenance workflow (acknowledge/urgency/dates/transaction link), role-based auth routing, archived docs section, two-stage referencing flow, password-based tenant signup at pre-app approval, visits section with inline Confirm / Reschedule, Download My Data + Delete My Account, Privacy/Terms/Retention links. Web parity at `/tenant/` is in place but covers fewer flows than iOS.
 
    **Pending items on tenant portal:**
-   - [ ] Delete account from tenant profile
-   - [ ] Force password reset on first login
+   - [x] Delete account from tenant profile — shipped via `tenant-delete-account` EF (iOS) — surface on web TODO
+   - [x] Password reset — shipped via `password-reset-request` EF + `/reset-password/` page
+   - [ ] Force password reset on first login (after `tenant-portal` provisions a temp password)
    - [ ] Dashboard action nav (1 action → detail, >1 → list)
    - [ ] Single-property display fix in `AddTenantView` (hide property picker when only one option)
 
 ### Queued
 
-8. Monthly invoicing (additive to existing transactions — rent only, income side)
-9. CT600 export
-10. Landlord in-app help/guides
-11. App Store preparation
+17. Landlord in-app help / guides + tutorial videos
+18. App Store preparation (icons, screenshots, App Store Connect listing, TestFlight beta cycle)
+19. APNs delivery for `notification_queue` (model + outbox already in place — just needs the worker / Apple key wired up)
+20. Web parity for tenant-side delete account + maintenance reporting
+21. Companies House submission flow (CT600 export is already done; submission API is a separate beast)
 
 ### Standalone features — completed
 
@@ -84,15 +97,19 @@ Newest entries at the top of each section.
 
 - ~~**Maintenance overhaul**~~ — ✅ shipped 2026-04-26 (see Completed item 6).
 - ~~**Property visits**~~ — ✅ shipped 2026-04-26 (see Completed item 6).
+- ~~**Landlord onboarding + Stripe billing**~~ — ✅ shipped 2026-04-27 (see Completed item 7).
+- ~~**In-app guided onboarding**~~ — ✅ shipped 2026-04-27 (see Completed item 7).
+- ~~Web tenant portal at `portal.easierlet.com`~~ — **delivered on `easierlet.com/tenant/`** (2026-04-26).
+- ~~**CT600 export**~~ — ✅ shipped (see Completed item 9).
+- ~~**Director's loan**~~ — ✅ shipped (see Completed item 9).
+- ~~**Monthly rent invoicing**~~ — ✅ shipped via `rent-invoicing` EF (see Completed item 13).
+- **Open Banking** (TrueLayer / Plaid) for bank balance — future phase. GoCardless free route closed July 2025. Phased plan: Phase 1 CSV/OFX import with auto-tagging (free, all banks), Phase 2 Starling personal access token for own account, Phase 3 paid aggregator at scale. `bank_accounts` table already exists (single-row placeholder).
 - **Email-based maintenance submission** — tenant emails `[maintenance@easierlet.com](mailto:maintenance@easierlet.com)`, system parses, returns GitHub Pages web form pre-filled with tenant/property/issue. Submitted form creates `maintenance_request` row.
-- **Viewing workflow fork** — `viewing_manager` field at **property level** (not listing) = `'self'` or `'agent'` (+ `agent_email`). Agent route: plain forwarded email via Resend, timestamp logged. Self route: accept/propose alternative, `.ics` calendar invite (address/time/landlord contact). Manual "viewing completed" button triggers application form send (no auto-fire, avoids no-show sends).
-- **Room metadata on listing photos** — enum `listing_room_type` (exterior/living/kitchen/dining/kitchen_diner/bedroom_main/bedroom/bathroom/ensuite/wc/hallway/garden/garage/parking/other) + `is_hero` bool (unique per listing) + `room_caption` + `room_label_source` (ai/landlord/default). AI pre-fill via Claude Haiku in `listing-media-upload` confirm; landlord can override.
+- **Viewing workflow fork** — `viewing_manager` field at **property level** (not listing) = `'self'` or `'agent'` (+ `agent_email`). Agent route: plain forwarded email via Resend, timestamp logged. Self route: accept/propose alternative, `.ics` calendar invite. Manual "viewing completed" button triggers application form send (no auto-fire, avoids no-show sends).
+- **Room metadata on listing photos** — partially shipped: `listing_media.room_type` (enum) + `is_hero` (with partial unique index) + `room_caption` + `room_label_source` (`ai\|landlord\|default`) all present. **Outstanding:** AI pre-fill via Claude Haiku in `listing-media-upload` confirm; landlord override UI.
 - **AI social video ads for listings** — Shotstack template composition (~£0.15/video), 27s 9:16 vertical reel driven by room metadata. New `property_listings` fields: `social_video_status` enum, `social_video_url`, `social_video_job_id`, `social_video_generated_at`. Edge Function `generate-listing-video`. Template + HTML preview designed April 2026.
-- **Open Banking** (TrueLayer / Plaid) for bank balance — future phase. GoCardless free route closed July 2025. Phased plan: Phase 1 CSV/OFX import with auto-tagging (free, all banks), Phase 2 Starling personal access token for own account, Phase 3 paid aggregator at scale.
-- **Vorensys Phase 2** — white-label REST API with webhook report return — when platform scales
-- ~~Web tenant portal at `portal.easierlet.com`~~ — **delivered on `easierlet.com/tenant/`** (2026-04-26). Subdomain not used; the full site is one repo and one host.
-- **Landlord onboarding + Stripe billing** — web signup flow, Stripe Checkout for payment, webhook to activate account. Per-property pricing model under consideration.
-- **In-app guided onboarding** — progressive checklist on Dashboard, contextual empty states, "next steps" prompts adapting to landlord journey stage.
+- **Vorensys Phase 2** — white-label REST API with webhook report return — when platform scales.
+- **PRS Database integration** — `properties.prs_property_id` + `prs_registered_at` + `prs_renewal_due` columns and `landlord_profiles.prs_landlord_id` + `prs_landlord_registered_at` already added in anticipation of the England Private Rented Sector Database going live (Renters' Rights Act 2025). UI + sync not yet built.
 
 ---
 
@@ -130,6 +147,15 @@ Newest entries at the top of each section.
 | `retention-enforce` | **NEW (2026-04-28)** | No (RETENTION_CRON_SECRET) | Nightly job (03:00 UTC via pg_cron) — Pass 1 sends 30-day warnings, Pass 2 anonymises records past their retention deadline. Handles tenants + viewing_requests. |
 | `generate-dsar` | **NEW (2026-04-28)** | Yes | Builds a branded HTML export of all data we hold for a user. Two modes: `admin` (proxied via admin-api with service-role) and `self` (tenant JWT). Filters out landlord-only fields when self-serve. Returns a 24-hour signed URL. |
 | `tenant-delete-account` | **NEW (2026-04-28)** | Yes (tenant JWT) | Tenant-initiated erasure — anonymises tenant + tenant_references rows, deletes auth account, emails landlord. |
+| `inventory-media-upload` | current | No (manual JWT or token) | R2 photo flow for inventory_photos. Actions: `presign` (15-min PUT URL, enforces 3-per-item / 50-per-inventory / 1 MiB caps), `confirm` (insert row), `delete` (R2 + DB, only while not locked), `get_signed_urls` (batch r2_key → 24h read URL). Dual auth: tenant inventory access token OR landlord JWT. |
+| `inventory-media-cleanup` | current | No (cron secret) | Nightly cron — scans R2 `inventory/` prefix, deletes objects 24h+ old with no matching `inventory_photos` row. Capped at 500 deletes per run. |
+| `password-reset-request` | current | No (public) | POST `{email}`. Always returns 200 (enumeration mitigation). Generates Supabase recovery link, sends branded Resend email. Hit by iOS `AuthView` "Forgot password" and `/reset-password/` flow. |
+| `rent-invoicing` | current | Yes (JWT) or No (cron secret) | Auto-rent invoicing. `generate_due` (JWT, landlord-manual) creates `transactions` for tenants on `auto_invoice=true` whose `rent_due_day` has passed; `auto_run` (bearer-secret cron, daily 06:00 UTC) runs the same across the whole DB. Bumps `tenants.last_invoice_period`. |
+| `trial-lifecycle` | current | No (cron secret) | Nightly cron. Sends `t_minus_3` and `t_minus_1` trial reminders, flips expired trials to `status='expired'`. Bumps `landlord_subscriptions.trial_reminder_stage` so reminders aren't duplicated. |
+| `support-ticket` | current | Yes (JWT) | Actions: `create`, `reply`, `close`. Writes `support_tickets` + `support_ticket_messages`. Emails `SUPPORT_NOTIFY_EMAIL` on every user message. Plan-at-open snapshot. |
+| `ct600-export` | current | Yes (JWT) | Generates CT600 handover PDF + transactions CSV for a `companies` row + period range. Built with pdf-lib. Returns 24-hour signed Supabase Storage URLs. iOS calls via `CT600ExportClient`; web from `/landlord/ct600/`. |
+| `compliance-export` | current | Yes (JWT) | Streams a ZIP of every compliance certificate (Gas Safety, EICR, EPC, deposit protection, etc.) for one property + a manifest PDF. Content-Type `application/zip`. |
+| `dynamic-handler` | current | Yes | Generic catch-all handler — experimental, not tied to a specific UI surface today. Listed for completeness. |
 
 #### Key Edge Function behaviours
 
@@ -139,7 +165,22 @@ Newest entries at the top of each section.
 
 ### Edge Function secrets configured
 
-`RESEND_API_KEY`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_BUCKET`, `R2_PRIVATE_BUCKET`, `R2_PUBLIC_URL_BASE`, `IDEAL_POSTCODES_API_KEY`, `TURNSTILE_SECRET_KEY`, `APP_BASE_URL=https://easierlet.com`, `WEB_BASE_URL=https://easierlet.com` (plus auto-injected `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`).
+Core: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_BUCKET`, `R2_PRIVATE_BUCKET`, `R2_PUBLIC_URL_BASE`, `IDEAL_POSTCODES_API_KEY`, `TURNSTILE_SECRET_KEY`, `APP_BASE_URL=https://easierlet.com`, `WEB_BASE_URL=https://easierlet.com`, `SUPPORT_NOTIFY_EMAIL`.
+
+Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_GROWTH`, `STRIPE_PRICE_PROFESSIONAL`.
+
+Cron / bootstrap shared secrets: `INVENTORY_MEDIA_CLEANUP_SECRET`, `TRIAL_LIFECYCLE_SECRET`, `RENT_INVOICING_CRON_SECRET`, `RETENTION_CRON_SECRET`, `SEED_SECRET`.
+
+Auto-injected by Supabase: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`.
+
+### Scheduled jobs (Supabase `pg_cron` + bearer secrets)
+
+| Job | Frequency | Function | Auth |
+|---|---|---|---|
+| Inventory R2 orphan cleanup | Nightly | `inventory-media-cleanup` | `INVENTORY_MEDIA_CLEANUP_SECRET` |
+| Trial reminders + expiry | Daily | `trial-lifecycle` | `TRIAL_LIFECYCLE_SECRET` |
+| Rent auto-invoicing | Daily 06:00 UTC | `rent-invoicing?action=auto_run` | `RENT_INVOICING_CRON_SECRET` |
+| Retention enforce (warning + anonymise) | Nightly 03:00 UTC | `retention-enforce` | `RETENTION_CRON_SECRET` |
 
 ### Public web pages
 
@@ -171,8 +212,15 @@ Newest entries at the top of each section.
 | `/privacy/retention/` | — | **NEW (2026-04-28)** Plain-English retention summary table with periods + legal basis per data category. |
 | `/terms/` | — | **NEW (2026-04-28)** Landlord Terms of Service: account, billing, acceptable use, data-controller/processor split, liability, governing law (England & Wales). |
 | `/sign-tenancy/?token=…` | `tenancy-workflow` | Per-signer tenancy agreement signing. `signature_pad` canvas. |
-| `/inventory/?token=…` | `inventory-workflow` | Tenant-side inventory web form. |
-| `/privacy/` | — | Privacy policy. |
+| `/inventory/?token=…` | `inventory-workflow` + `inventory-media-upload` | Tenant-side inventory web form. Now also supports per-item photo upload (R2 private bucket, signed URLs in PDF). |
+| `/reference/?token=…` | `tenant-workflow?action=get_reference\|submit_application` | Standalone referencing form (referee / employer fills, response stored). |
+| `/reset-password/` | `password-reset-request` (entry); Supabase auth | Recovery-code landing page. Accepts the Supabase recovery token, updates the user's password, signs them in. |
+| `/support/` | `support-ticket` | Tenant + landlord support threads. `create` / `reply` / `close`. |
+| `/compliance/` | (REST `v_compliance_status`) | Public landlord compliance overview / educational landing. |
+| `/compliance/guide/` | — | Static UK compliance guide (Gas Safety / EICR / EPC / smoke + CO / deposit / right-to-rent / "How to rent"). |
+| `/landlord/companies/` | (REST `companies`) | **NEW** Limited-company CRUD: registration number, SIC code, accounting period, registered office. Required for CT600 scope. |
+| `/landlord/ct600/` | `ct600-export?action=generate` | **NEW** CT600 handover export per company per period (downloads PDF + CSV from 24h signed URLs). |
+| `/landlord/loan/` | (REST `loan_entries`) | **UPDATED** Director's loan ledger over `loan_entries` (advances + repayments) scoped to a company. Running balance, S.455 + BIK warning banners. Replaces the earlier "coming soon" placeholder. |
 | `/assets/easierlet.css` + `easierlet.js` | — | Shared styles + helpers. |
 | `/assets/portal.css` + `portal.js` | — | **NEW (2026-04-26)** Sidebar shell, Supabase client (esm.sh CDN), auth helpers, tab routing, toast — used by all `/tenant/` and `/landlord/` pages. |
 | `/assets/signature.js` | — | **NEW (2026-04-26)** DPR-aware canvas signature pad (mouse + touch + stylus, base64 PNG output matching iOS). |
@@ -435,6 +483,32 @@ Status flow: `pending → proposed → (viewer-accepts) → confirmed → comple
 
 `ranking_band` values observed: see `PreApplicationReviewView.bandColor`. Bands stored as strings.
 
+### Other tables (consolidated)
+
+The schema has grown beyond what's listed individually above. Full per-column reference lives in
+[`TECHNICAL_REFERENCE.md`](TECHNICAL_REFERENCE.md). Summary:
+
+- **`companies`** — limited companies owned by landlords. Used for CT600 scope. `accounting_period_start_month/day` default to UK fiscal year (April 6). `sic_code` defaults to `'68209'`.
+- **`loan_entries`** — director's loan ledger. CHECK `type ∈ {advance, repayment}`. Scoped via `user_id` + nullable `company_id` and `property_id`.
+- **`compliance_requirements`** — seed catalogue of statutory requirements. 25 rows for England / Wales / Scotland. Frequency types: `annual\|years\|once\|event\|ongoing\|monthly`. Tenant-copy deadlines per legal basis.
+- **`property_compliance`** — joins a requirement to a property with status + due dates. UNIQUE (property_id, requirement_id). `sync_property_compliance()` trigger reconciles when a property's `has_gas`/etc. changes.
+- **`v_compliance_status`** — view joining the above two and computing `computed_status` + `days_until_due` for dashboard use.
+- **`compliance`** — legacy table (pre-requirement model). Kept for back-compat.
+- **`bank_accounts`** — single-row-per-user placeholder for the open-banking work; not actively used in the UI yet.
+- **`inventory_photos`** — per-item photos in R2 private bucket. CHECKs: `mime_type ∈ {jpeg, png, webp}`, `file_size ∈ (0, 1 MiB]`, `caption` ≤ 200 chars, `uploaded_by ∈ {landlord, tenant}`. UNIQUE `r2_key`.
+- **`notification_queue`** + **`user_devices`** — push-notification outbox and APNs device tokens. CHECK `notification_queue.status ∈ {pending, sent, failed}`, `user_devices.platform ∈ {ios, android}`.
+- **`subscription_events`** — append-only Stripe event log; one row per webhook delivery.
+- **`support_tickets`** + **`support_ticket_messages`** — threaded help-desk. Status ∈ `{open, awaiting_user, in_progress, closed}`. Priority ∈ `{low, normal, high, urgent}`. `support_ticket_messages.author_type ∈ {user, admin, system}`.
+- **`tenancies`** — active-tenancy summary row (distinct from `tenancy_agreements`, which is the signing artefact). Used by the dashboard.
+- **`landlord_subscriptions`** — already covered in the dedicated section above. Now with `selected_plan` + `trial_reminder_stage`.
+- **`landlord_profiles`** — expanded with email/phone/identity verification flags + `verification_level` CHECK (`none\|email\|phone\|identity\|property`) + `prs_landlord_id` for England PRS Database (when live).
+- **`properties`** — now also has `country` (CHECK), `has_gas`, `has_solid_fuel`, `property_type` (CHECK), `parking` (CHECK), `garden` (CHECK), `pets_allowed`, `company_id` (FK), `prs_*` (PRS Database).
+- **`tenants`** — now also has `rent_due_day` (CHECK 1–31), `auto_invoice` (bool), `last_invoice_period` (date) for the rent-invoicing cron.
+- **`transactions`** — now has `tax_treatment` CHECK (`revenue\|capital\|director_loan_in\|director_loan_out\|disallowable\|out_of_scope`) for CT600 grouping.
+- **`maintenance_requests`** — `transaction_id` FK links a completed request to its expense entry.
+
+For state-machine cheat-sheets, foreign-key map, RLS pattern, and storage layouts see TECHNICAL_REFERENCE.md sections 2.5 + 2.6.
+
 ---
 
 ## Decisions & rationale
@@ -575,20 +649,19 @@ Status flow: `pending → proposed → (viewer-accepts) → confirmed → comple
 
 ---
 
-## Current priorities (as of 2026-04-26)
+## Current priorities (as of 2026-05-23)
 
-1. **End-to-end smoke-test the maintenance overhaul + visits build** — tenant raises a request → landlord acknowledges with trade + ack notes → tenant receives `maintenance-notify` email → landlord schedules a visit linked to the request → tenant receives `visit-notify` email → tenant accepts via `/visit-response/` → landlord marks visit completed (+ linked maintenance) → tenant receives completion email → tenant confirms in portal. Key checks: `tenant_id` populated on every new request, RLS lets active tenants see their property's visits, 24h notice gate fires, junction `visit_maintenance_links` populated. The MCP migrations and EF deploys are already live.
-2. **Verify the website portals end-to-end** with a real landlord and tenant account: properties CRUD, listing publish from web, viewing-request confirm, tenancy generate+sign canvas signature, inventory send, document upload. Particularly check that all the RLS policies allow inserts via the user JWT (everything that works in iOS should work here, but worth confirming).
-3. **Add `https://easierlet.com/login/` to Supabase Auth → URL Configuration → Redirect URLs** so magic links sent by `/login/` actually land back on it (the legacy `/tenant/login/` and `/landlord/login/` redirect stubs already preserve the auth fragment, but the canonical URL should be in the allow-list).
-4. TEST `invite-tenant` `getUser(jwt)` fix end-to-end — deployed 2026-04-22 but unverified
-5. Backfill Sean Lock + Judge Live test tenant auth accounts (portal email test)
-6. FIX floating map on public `/listings/` page overlapping sticky CTA bar
-7. Reorganise `ViewingRequestsView` by property (flat list → per-property sections / filter chips)
-8. Surface per-property viewing counts on `DashboardPropertyCard` / `PropertySummarySheet`
-9. Delete `AddTenantChooserView.swift` from Xcode project
-10. Re-verify Stonebridge Drive + remaining 10 properties via postcode picker (populate structured fields + coords)
-11. Delete `/apply/` (old form) after E2E test of `/apply-v2/` passes
-12. Wire **Group-by-trade list header → Checkatrade postcode deep-link** for the contractor batching flow.
+1. **Activate Stripe in production** — `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_{STARTER,GROWTH,PROFESSIONAL}` need setting; webhook endpoint added in Stripe Dashboard for the five subscribed events; Customer Portal configured. EFs flip from `stripe_not_configured` to live as soon as the env vars are present (Completed item 7 has the activation steps).
+2. **End-to-end smoke-test the production stack** with a real landlord + tenant account, covering everything in the capabilities matrix in TECHNICAL_REFERENCE.md section 6 — properties CRUD, listing publish, viewing confirm, tenancy generate + sign canvas, inventory send + finalise, maintenance triage, visit notice + 24h gate, compliance ZIP export, CT600 export, support ticket round-trip, password reset, account deletion.
+3. **Finish admin centre activation** — pending `admin CNAME bluetezza.github.io.` DNS record + first-admin seed via `seed-admin` EF (see Session 2026-04-28).
+4. **Wire APNs delivery for `notification_queue`** — model + outbox already in place; needs the worker + Apple Auth Key.
+5. **Reorganise `ViewingRequestsView` by property** (flat list → per-property sections / filter chips).
+6. **Surface per-property viewing counts** on `DashboardPropertyCard` / `PropertySummarySheet`.
+7. **Re-verify Stonebridge Drive + remaining 10 properties** via postcode picker (populate structured fields + coords).
+8. **Wire group-by-trade header → Checkatrade postcode deep-link** for the contractor batching flow.
+9. **FIX floating map on public `/listings/` page** overlapping sticky CTA bar (long-standing).
+10. **Delete `/apply/`** (old form) — last clean-up before retiring it.
+11. **Delete `AddTenantChooserView.swift`** from Xcode project (obsolete since 2026-04-22).
 
 ---
 
@@ -600,12 +673,46 @@ Status flow: `pending → proposed → (viewer-accepts) → confirmed → comple
 - [ ] 360 photo: add soft warning in `ListingMediaPicker` when upload isn't equirectangular (2:1 aspect ratio)
 - [ ] Pre-application review on its own web page (the tenant detail panel covers the read side; full review form on web is a TODO)
 - [ ] Maintenance request → transactions linkage on web (`transaction_id` exists in the schema; UI not yet wired)
-- [ ] Tenant-side maintenance reporting on `/tenant/`
-- [ ] Director's loan implementation (web placeholder matches iOS placeholder)
+- [ ] Tenant-side maintenance reporting + delete-account UI on web `/tenant/` (iOS shipped; web TODO)
+- [ ] AI room-type pre-fill for listing photos via Claude Haiku in `listing-media-upload` confirm (schema already supports `room_label_source='ai'`)
+- [ ] PRS Database integration (England) — schema columns already added; needs sync logic once the API goes live
+- [ ] Migrate iOS `NavigationLink(destination:isActive:)` to NavigationStack (deprecated on iOS 16+ but still works — codebase uses the old pattern consistently)
 
 ---
 
 ## Session history (newest first)
+
+### 2026-05-23 — Platform reference doc + PROJECT_LOG refresh
+
+Built [`TECHNICAL_REFERENCE.md`](TECHNICAL_REFERENCE.md) — a comprehensive source-of-truth document covering every database table (35), every Edge Function (36), the iOS app tab-by-tab + feature area, every web page, and a capabilities matrix between the two surfaces. Generated by querying the live Supabase project (`ffzknvcptqjlkxmkdxuk`) via MCP for schema, then surveying both codebases.
+
+**What the survey surfaced** that wasn't yet in this log:
+
+- 24 Edge Functions beyond the 12 originally documented — billing/Stripe (5), admin centre with TOTP MFA (4), CT600 / DSAR / retention / rent invoicing / support / inventory-media / compliance-export / password-reset / trial-lifecycle. Added all of them to the Edge Functions table above.
+- 13 tables beyond the 8 originally documented — `companies`, `loan_entries`, `compliance_requirements`, `property_compliance`, `bank_accounts`, `inventory_photos`, `notification_queue`, `user_devices`, `subscription_events`, `support_tickets`, `support_ticket_messages`, `tenancies`. Plus the `v_compliance_status` view. All summarised under "Other tables (consolidated)".
+- 6 web pages not previously listed — `/support/`, `/compliance/`, `/compliance/guide/`, `/reference/`, `/reset-password/`, `/landlord/companies/`, `/landlord/ct600/`. Plus `/landlord/loan/` was updated from "placeholder" to "full ledger".
+- Director's loan, CT600 export, monthly rent invoicing, compliance tracking, inventory photos, support tickets, password reset, push-notification infrastructure — all already shipped, none listed as Completed. Now items 9–15.
+
+**Updates to PROJECT_LOG**
+
+- Stack table: added admin domain, Stripe, both R2 buckets, removed the stale `portal.easierlet.com` line.
+- Completed roadmap items 9–15 added.
+- In progress / Queued sections refreshed — several pending items now ticked.
+- Future features section pruned of items that have shipped (CT600, director's loan, monthly invoicing, onboarding+Stripe, in-app guided onboarding, web tenant portal). Open Banking, AI social video ads, AI room metadata, Vorensys Phase 2, PRS Database, viewing workflow fork remain.
+- Edge Functions table: now lists all 36 deployed functions.
+- Edge Function secrets: added Stripe + cron + bootstrap secrets that had accumulated.
+- New "Scheduled jobs" table consolidating the four pg_cron entries.
+- Public web pages table: added the 6 missing pages.
+- "Other tables (consolidated)" section pointing at TECHNICAL_REFERENCE for full per-column detail.
+- Current priorities rewritten to 2026-05-23 — Stripe activation, end-to-end smoke test, APNs delivery, admin DNS.
+- Remaining small items: removed shipped items (director's loan, web delete-account); added new ones (AI pre-fill, PRS sync, NavigationStack migration).
+
+**Production state**
+
+- Two reference docs now live on `bluetezza/easierlet-web` `main`:
+  - [`PROJECT_LOG.md`](PROJECT_LOG.md) — narrative, decisions, session history.
+  - [`TECHNICAL_REFERENCE.md`](TECHNICAL_REFERENCE.md) — reference, every table / function / page.
+- No code changes; documentation only.
 
 ### 2026-04-28 — Admin, Audit, Privacy, Retention & DSAR
 
