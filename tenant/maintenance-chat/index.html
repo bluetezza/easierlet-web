@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#194D3A">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <title>Maintenance chat — easierLet</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/assets/easierlet.css?v=20260610a">
+  <link rel="stylesheet" href="/assets/portal.css?v=20260428a">
+  <style>
+    .chat-wrap { max-width: 680px; margin: 0 auto; }
+    .chat-head { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; }
+    .chat-head a { font-size: 13px; color: var(--el-green, #194D3A); text-decoration: none; }
+    .chat-input-row { display: flex; gap: 8px; margin-top: 6px; }
+    .chat-input-row textarea { flex: 1; resize: none; }
+    .override-link { display: block; text-align: center; font-size: 13px; color: var(--el-muted); margin-top: 12px; background: none; border: none; cursor: pointer; text-decoration: underline; width: 100%; }
+    .override-form { background: #F5F7F5; border-radius: 10px; padding: 14px; margin-top: 10px; }
+    .checklist { background: #f0faf6; border: 1px solid #c8eade; border-radius: 10px; padding: 14px 16px; margin: 10px 0 0; }
+    .checklist label { display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; color: #2d5a4a; margin-bottom: 8px; }
+    .typing { align-self: flex-start; font-size: 12.5px; color: var(--el-muted); padding: 2px 6px; }
+  </style>
+</head>
+<body class="elp-body">
+
+<div id="portal-shell" data-role="tenant" data-active="maintenance" data-title="Maintenance chat"></div>
+
+<main class="elp-main">
+  <div class="elp-main-inner chat-wrap">
+
+    <div class="chat-head">
+      <a href="/tenant/?tab=maintenance">← Back to maintenance</a>
+    </div>
+
+    <div class="el-chat-disclosure">
+      ✨ <strong>You're chatting with EasierLet's AI Assistant</strong><br>
+      This is an automated service, not a human. For emergencies, call 999 or your landlord directly.<br>
+      You can request to speak to your landlord at any time.
+      <a href="/ai-transparency/" target="_blank">How we use AI</a>
+    </div>
+
+    <div class="elp-card">
+      <div class="el-chat-list" id="chatList">
+        <div class="elp-loading"><div class="elp-spinner"></div>Loading conversation…</div>
+      </div>
+
+      <div id="checklistHost"></div>
+
+      <div id="endState" class="el-chat-ended" style="display:none"></div>
+
+      <div id="inputArea">
+        <div class="chat-input-row">
+          <textarea class="el-input" id="msgInput" rows="2" placeholder="Type your message…" maxlength="2000"></textarea>
+          <button class="el-btn el-btn-primary" id="sendBtn" style="align-self:flex-end">Send</button>
+        </div>
+        <button class="override-link" id="overrideLink">I need to speak to my landlord</button>
+        <div class="override-form" id="overrideForm" style="display:none">
+          <label class="el-label" for="overrideReason">Tell us briefly why you need your landlord directly</label>
+          <textarea class="el-input" id="overrideReason" rows="2" maxlength="500" placeholder="At least 10 characters"></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="el-btn el-btn-primary" id="overrideSubmit" style="font-size:13px">Request landlord contact</button>
+            <button class="el-btn" id="overrideCancel" style="font-size:13px">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script type="module" src="/assets/portal.js"></script>
+<script type="module">
+  while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
+  const ELP = window.ELP;
+  const $ = (id) => document.getElementById(id);
+
+  const session = await ELP.requireSession("/login/");
+  if (!session) throw new Error("redirecting");
+  ELP.mountShell({ user: session.user });
+
+  const conversationId = new URLSearchParams(window.location.search).get("conversation");
+  if (!conversationId) {
+    window.location.replace("/tenant/?tab=maintenance");
+    throw new Error("no conversation");
+  }
+
+  const DAMP_CHECKLIST = [
+    "Ventilate the affected room daily (open windows for 15+ minutes)",
+    "Avoid drying clothes indoors in the affected room",
+    "Clean visible mould with an appropriate mould remover",
+    "Keep the heating at 18°C or above regularly",
+  ];
+
+  let conversation = null;
+  let renderedIds = new Set();
+  let pollTimer = null;
+
+  function endConversation(status) {
+    $("inputArea").style.display = "none";
+    const end = $("endState");
+    end.style.display = "block";
+    end.textContent = status === "resolved"
+      ? "This conversation is closed — glad we could help! If anything changes, report a new issue."
+      : "We've passed this to your landlord. You'll hear back soon.";
+    if (pollTimer) clearInterval(pollTimer);
+  }
+
+  function renderMessage(m) {
+    if (renderedIds.has(m.id)) return;
+    renderedIds.add(m.id);
+    if (m.role === "system") return; // disclosure card is rendered statically above
+    const div = document.createElement("div");
+    div.className = `el-chat-msg ${m.role === "tenant" ? "tenant" : "assistant"}`;
+    div.innerHTML = (m.role === "assistant" ? `<span class="who">EasierLet Assistant 🤖</span>` : "") + ELP.esc(m.content);
+    $("chatList").appendChild(div);
+    if (m.role === "assistant" && m.metadata?.action === "checklist_sent") renderChecklist();
+    div.scrollIntoView({ behavior: "smooth", block: "end" });
+  }
+
+  function renderChecklist() {
+    if ($("dampChecklist")) return;
+    const host = $("checklistHost");
+    host.innerHTML = `<div class="checklist" id="dampChecklist">
+      <strong style="font-size:13.5px;color:#2d5a4a">Damp &amp; mould checklist</strong>
+      ${DAMP_CHECKLIST.map((item, i) => `<label><input type="checkbox" data-check-item="${i}"> ${ELP.esc(item)}</label>`).join("")}
+      <button class="el-btn el-btn-primary" id="checklistConfirm" style="font-size:13px;margin-top:4px">Confirm what I've done</button>
+    </div>`;
+    $("checklistConfirm").addEventListener("click", async () => {
+      const items = [...host.querySelectorAll("[data-check-item]:checked")]
+        .map((cb) => DAMP_CHECKLIST[Number(cb.dataset.checkItem)]);
+      if (!items.length) { ELP.toast("Tick the items you've completed first.", "info"); return; }
+      $("checklistConfirm").disabled = true;
+      const res = await ELP.callFn("ai-maintenance", {
+        action: "confirm_damp_checklist", conversation_id: conversationId, confirmed_items: items,
+      });
+      $("checklistConfirm").disabled = false;
+      if (res.ok && res.data?.checklist_complete) host.innerHTML = "";
+      await refresh();
+    });
+  }
+
+  async function refresh() {
+    try {
+      const convs = await ELP.rest(`maintenance_conversations?id=eq.${conversationId}&select=*&limit=1`);
+      conversation = convs?.[0] ?? null;
+      if (!conversation) {
+        $("chatList").innerHTML = `<p style="color:var(--el-muted);font-size:14px">Conversation not found.</p>`;
+        $("inputArea").style.display = "none";
+        return;
+      }
+      const msgs = await ELP.rest(
+        `maintenance_conversation_messages?conversation_id=eq.${conversationId}&select=*&order=created_at.asc&limit=80`
+      );
+      if (renderedIds.size === 0) $("chatList").innerHTML = "";
+      (msgs ?? []).forEach(renderMessage);
+      if (conversation.status !== "active") endConversation(conversation.status);
+    } catch (e) {
+      console.error("refresh failed", e);
+    }
+  }
+
+  async function send() {
+    const text = $("msgInput").value.trim();
+    if (!text) return;
+    $("sendBtn").disabled = true;
+    $("msgInput").value = "";
+    const typing = document.createElement("div");
+    typing.className = "typing";
+    typing.textContent = "EasierLet Assistant is typing…";
+    $("chatList").appendChild(typing);
+    try {
+      const res = await ELP.callFn("ai-maintenance", {
+        action: "send_message", conversation_id: conversationId, message: text,
+      });
+      typing.remove();
+      if (!res.ok || res.data?.error) {
+        ELP.toast(res.data?.error === "conversation_closed" ? "This conversation has ended." : "Couldn't send — try again.", "error");
+      }
+      await refresh();
+    } catch (e) {
+      typing.remove();
+      ELP.toast("Couldn't send — try again.", "error");
+    } finally {
+      $("sendBtn").disabled = false;
+    }
+  }
+
+  $("sendBtn").addEventListener("click", send);
+  $("msgInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+
+  $("overrideLink").addEventListener("click", () => {
+    $("overrideForm").style.display = $("overrideForm").style.display === "none" ? "block" : "none";
+  });
+  $("overrideCancel").addEventListener("click", () => { $("overrideForm").style.display = "none"; });
+  $("overrideSubmit").addEventListener("click", async () => {
+    const justification = $("overrideReason").value.trim();
+    if (justification.length < 10) { ELP.toast("Please give a little more detail (10+ characters).", "info"); return; }
+    $("overrideSubmit").disabled = true;
+    try {
+      const res = await ELP.callFn("ai-maintenance", {
+        action: "tenant_override", conversation_id: conversationId, justification,
+      });
+      $("overrideForm").style.display = "none";
+      $("overrideReason").value = "";
+      await refresh();
+      if (res.data?.can_retry_override) {
+        ELP.toast("If you still need your landlord, use the link again and we'll connect you.", "info");
+      }
+    } finally {
+      $("overrideSubmit").disabled = false;
+    }
+  });
+
+  await refresh();
+  // Poll for new assistant messages (covers multi-device + async escalation)
+  pollTimer = setInterval(refresh, 5000);
+</script>
+</body>
+</html>

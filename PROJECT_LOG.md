@@ -24,8 +24,9 @@ Newest entries at the top of each section.
 | Document storage | Supabase Storage `documents` bucket (tenancy PDFs, certificates, info sheets) |
 | Email | Resend (`no.reply@easierlet.com`, domain verified) |
 | Billing | Stripe Checkout + Customer Portal + webhooks |
+| AI | Anthropic Claude API (claude-sonnet-4-6 + claude-haiku-4-5) via `_shared/anthropic.ts`; per-landlord $2/month budget in `ai_usage` |
 | CAPTCHA | Cloudflare Turnstile on public forms |
-| Address lookup | Ideal Postcodes (UK postcode → address + UPRN + lat/lng) |
+| Address lookup | postcodes.io (free, no key — UK postcode → coordinates + district; user types address lines). Replaced Ideal Postcodes 2026-06-11 |
 | Public site | `easierlet.com` — `bluetezza/easierlet-web` — local `~/easierlet-web/` |
 | iOS app | `bluetezza/easierlet-swift` — local `~/Documents/EasierLet/` |
 | Admin centre | `admin.easierlet.com` — `bluetezza/easierlet-admin` (separate repo, mandatory MFA) |
@@ -681,6 +682,31 @@ For state-machine cheat-sheets, foreign-key map, RLS pattern, and storage layout
 ---
 
 ## Session history (newest first)
+
+### 2026-06-11 — AI feature build, Terms of Service v1.0, free address lookup
+
+**Built from `EASIERLET_AI_BUILD_PROMPT.md` (all nine features) + ToS v1.0 embed + Ideal Postcodes replacement.**
+
+**Database (6 migrations, advisors clean):** `ai_usage` + `record_ai_usage()` RPC (per-landlord $2/month budget, EXECUTE revoked from client roles), `maintenance_conversations` + `maintenance_conversation_messages` (landlord-owns + tenant-auth read policies), `maintenance_triage`, `landlord_reports` + `report_score_log` + `admin_reports` (service-role only), listing AI columns (`ai_generation_count`, `ai_generated_content`, `ai_generation_1_content`, `ai_last_generated_at`), `helper_bubbles` + `helper_bubble_dismissals` + `profiles.show_helper_bubbles` (12 bubbles seeded), terms tracking (`profiles.terms_*`, append-only `terms_acceptance_log` with IP/UA, single-row `platform_config`).
+
+**Edge functions (7 new, 5 updated, all deployed):**
+- `ai-maintenance` (verify_jwt=false; tenant JWT / landlord JWT / invite_token auth) — tenant conversation: hard emergency triggers BEFORE any AI call (heating Oct–Mar, gas/flood/CO/lock keywords), damp/mould → landlord notified + checklist protocol, 3-turn limit, tenant override (1 soft routing decision, 2nd always escalates), budget gate, escalation = status reset + notification_queue + Resend email + fires ai-triage.
+- `ai-triage` — Sonnet resolution pack into `maintenance_triage`; sanitises against CHECK constraints; folds richer categories onto `maintenance_requests` (damp_mould→structural etc.), urgency→priority mapping.
+- `ai-listing` — Sonnet vision over up to 5 R2 photo URLs; 2-generation limit, retry requires confirmed_retry; first output preserved for revert.
+- `ai-onboarding` — Haiku welcome email (template fallback if budget out); fired from tenancy-workflow finalise.
+- `ai-report` — portfolio gather → Sonnet JSON → pdf-lib PDF → `documents` bucket `{user}/reports/` + documents row + landlord_reports row + email. 7-day gap gate.
+- `ai-report-scheduler` (bearer `AI_REPORT_SCHEDULER_SECRET`) — pure-SQL scoring (+3 compliance 60d / +3 tenancy-end 90d / +2 maint open 7d / +2 arrears 35d / +1 referencing / +1 docs 30d) → thresholds 30/7/2 days. pg_cron `ai-report-scheduler-daily` 07:00 UTC (job 6, secret in Vault as `ai_report_scheduler_secret`).
+- `accept-terms` — accept/check; stamps profiles + appends terms_acceptance_log.
+- Updated: `landlord-signup` (server-side `terms_accepted` enforcement + acceptance recording + fixed silent `profiles.role`→`user_role` bug), `tenancy-workflow` (fires ai-onboarding on finalise), `listing-public-fetch` (+`ai_generation_count`), `admin-api` (+7 actions: get_ai_stats, update_ai_cap, reset_ai_suspension, get_terms_stats, update_terms_version, generate_platform_insight, list_platform_insights), `address-lookup` (rewritten on postcodes.io — postcode → coords/district; IDEAL_POSTCODES_API_KEY secret removed).
+- New shared: `_shared/anthropic.ts` (callClaude + budget helpers + cost meter), `_shared/email-footer.ts` (AI disclosure footer on all AI-drafted emails).
+
+**Web (`easierlet-web`, NOT yet pushed — push to deploy):** `/terms/` rebuilt with ToS v1.0 (17 sections), `/website-terms/` (new), `/ai-transparency/` (new), `/privacy/` updated (Anthropic + postcodes.io processors, AI section, cookie-banner wording, v2.1), cookie banner on public pages, website-terms one-liners on apply-v2 + book-viewing, signup checkbox wired to `terms_accepted` (**required — old page breaks signup once EF enforces**), portal-wide re-acceptance gate in portal.js + `/terms-update/`, tenant **Maintenance tab** (new on web) + `/tenant/maintenance-chat/` AI chat, landlord maintenance AI Brief, `/landlord/reports/`, listing editor AI generate + retry modal + revert, public listing AI note, `helper-bubbles.js` + CSS, properties page postcode-confirm picker.
+
+**iOS (`easierlet-swift`, compiles — parse-verified; full xcodebuild blocked by missing iOS platform component on the Mac):** `ELAIFeatures.swift` (ELFn client, ELAIBadge/ELAIBanner + disclosure sheet, helper bubble store/view, TermsGate + TermsAcceptanceView, TenantMaintenanceConversationView with 5s polling, MaintenanceAIBriefSection, MaintenanceDigestCard, AIUsageSection + guidance toggle/reset), `ELAIListingSection.swift` (generate + retry sheet + revert), `AddressPicker.swift` rewritten for postcodes.io, integrations in EasierLetApp (terms gate), TenantPortalView (chat start + card link + bubbles), Tenant.swift MaintenanceDetailView (AI brief), ListingEditorView, DashboardView (digest), PlaceholderViews MoreView (AI usage), Listings.swift (+aiGenerationCount).
+
+**Admin (`easierlet-admin`, NOT yet pushed):** `/ai.html` — platform AI spend, per-landlord caps (extend/resume), terms version management + acceptance counts, platform insight report (admin-only Claude call → `admin_reports`). Nav + admin-api wired.
+
+**Outstanding before customers:** push easierlet-web + easierlet-admin (signup checkbox wiring rides on it), set `ANTHROPIC_API_KEY` edge-function secret, one Xcode build + on-device smoke test, solicitor review of ToS v1.0 + privacy policy.
 
 ### 2026-05-23 — Platform reference doc + PROJECT_LOG refresh
 

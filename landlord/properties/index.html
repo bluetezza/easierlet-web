@@ -124,6 +124,7 @@
     <p class="modal-sub">Look up the address by postcode, then we'll fill in the rest.</p>
 
     <form id="propertyForm">
+      <div data-bubble-host></div>
       <div class="el-field">
         <label class="el-label" for="postcode">Postcode</label>
         <div style="display:flex;gap:8px">
@@ -384,41 +385,34 @@
   $("lookupBtn").addEventListener("click", lookup);
   $("postcode").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); lookup(); } });
 
+  // Postcode lookup via the address-lookup edge fn (postcodes.io — free,
+  // no per-building address list). The postcode is validated and geocoded;
+  // the landlord types the address lines, with city pre-filled from the
+  // postcode's district.
   async function lookup() {
     const pc = $("postcode").value.trim();
     if (!pc) return;
-    $("lookupHint").textContent = "Searching…";
+    $("lookupHint").textContent = "Checking postcode…";
     $("addressResults").classList.remove("show");
     try {
       const res = await ELP.callFn("address-lookup", { postcode: pc });
       const data = res.data || {};
-      const results = data.result || data.addresses || [];
-      if (!res.ok || !results.length) {
-        $("lookupHint").textContent = data.message || "No addresses found for that postcode.";
+      const r = data.result;
+      if (!res.ok || data.code !== 2000 || !r) {
+        $("lookupHint").textContent = data.message || "Postcode not found — check it or enter the address manually.";
+        $("propertyForm").dataset.lat = "";
+        $("propertyForm").dataset.lng = "";
+        $("propertyForm").dataset.uprn = "";
         return;
       }
-      $("lookupHint").textContent = `${results.length} address${results.length === 1 ? "" : "es"} — pick one to fill the form.`;
-      const ul = $("addressResults");
-      ul.innerHTML = results.map((r, i) => {
-        const label = [r.line_1, r.line_2, r.line_3].filter(Boolean).join(", ") + (r.post_town ? `, ${r.post_town}` : "") + (r.postcode ? `, ${r.postcode}` : "");
-        return `<button type="button" class="ap-result" data-idx="${i}">${ELP.esc(label)}</button>`;
-      }).join("");
-      ul.classList.add("show");
-      ul.querySelectorAll(".ap-result").forEach((btn) =>
-        btn.addEventListener("click", () => {
-          const r = results[parseInt(btn.dataset.idx, 10)];
-          $("addressLine1").value = [r.line_1, r.line_2].filter(Boolean).join(", ");
-          $("addressLine2").value = r.line_3 || "";
-          $("city").value = r.post_town || "";
-          $("postcodeFinal").value = r.postcode || "";
-          ul.classList.remove("show");
-          $("lookupHint").textContent = "Address loaded — review and adjust if needed.";
-          // Stash the geo + UPRN for later save
-          $("propertyForm").dataset.lat = r.latitude ?? "";
-          $("propertyForm").dataset.lng = r.longitude ?? "";
-          $("propertyForm").dataset.uprn = r.uprn != null ? String(r.uprn) : "";
-        })
-      );
+      $("postcodeFinal").value = r.postcode || pc.toUpperCase();
+      if (!$("city").value.trim()) $("city").value = r.district || "";
+      // Stash the postcode-centroid geo for the save
+      $("propertyForm").dataset.lat = r.latitude ?? "";
+      $("propertyForm").dataset.lng = r.longitude ?? "";
+      $("propertyForm").dataset.uprn = "";
+      $("lookupHint").textContent = `Postcode confirmed — ${r.postcode}${r.district ? " (" + r.district + ")" : ""}. Now enter the address lines.`;
+      $("addressLine1").focus();
     } catch (err) {
       $("lookupHint").textContent = err.message || "Lookup failed. Enter the address manually.";
     }
@@ -499,6 +493,11 @@
   }
 
   load();
+</script>
+<script src="/assets/helper-bubbles.js" defer></script>
+<script type="module">
+  while (!window.ELP || !window.ELBubbles) await new Promise((r) => setTimeout(r, 60));
+  if (await ELP.getSession()) ELBubbles.render("property_add");
 </script>
 </body>
 </html>

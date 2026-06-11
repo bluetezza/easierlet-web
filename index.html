@@ -381,7 +381,7 @@
 
         <label class="agree">
           <input type="checkbox" id="suAgree" required>
-          <span>I agree to the <a href="/privacy/">privacy policy</a> and terms of service. I understand that easierLet stores my landlord details to manage my tenancies.</span>
+          <span>I have read and agree to easierLet's <a href="/terms/" target="_blank">Terms of Service</a> and <a href="/privacy/" target="_blank">Privacy Policy</a>. I understand that easierLet stores my landlord details to manage my tenancies.</span>
         </label>
 
         <button type="submit" class="btn-primary submit-btn" id="suSubmit">Start my free trial</button>
@@ -395,7 +395,10 @@
   <a href="/">Home</a> ·
   <a href="/properties/">Browse rentals</a> ·
   <a href="/login/">Sign in</a> ·
-  <a href="/privacy/">Privacy</a>
+  <a href="/privacy/">Privacy</a> ·
+  <a href="/terms/">Terms</a> ·
+  <a href="/website-terms/">Website terms</a> ·
+  <a href="/ai-transparency/">How we use AI</a>
   <p style="margin-top:14px;color:var(--el-muted)">© easierLet — Property management made easier.</p>
 </footer>
 
@@ -496,6 +499,7 @@
           phone: phone || null,
           turnstile_token: turnstileToken,
           selected_plan: $('suSelectedPlan').value || null,
+          terms_accepted: agreed === true,
         }),
       });
       const data = await res.json();
@@ -505,6 +509,7 @@
           bad_email: 'Please enter a valid email address.',
           bot_check_failed: 'Captcha check failed — please try again.',
           missing_plan: 'Please pick a plan above first.',
+          terms_not_accepted: 'Please tick the box to accept the Terms of Service.',
         };
         showAlert('error', map[data.error] || data.message || 'Something went wrong. Please try again.');
         btn.disabled = false;
@@ -527,5 +532,6 @@
   });
 </script>
 
+<script src="/assets/cookie-banner.js" defer></script>
 </body>
 </html>

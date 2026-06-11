@@ -10,6 +10,8 @@ For the running session log + decisions/rationale, see
 what exists, where it lives, how it's shaped.
 
 > Generated 2026-05-23.
+> **2026-06-11 — AI build addendum.** This document predates the AI feature build. New since: tables `ai_usage` (+`record_ai_usage()` RPC), `maintenance_conversations`, `maintenance_conversation_messages`, `maintenance_triage`, `landlord_reports`, `report_score_log`, `admin_reports`, `helper_bubbles`, `helper_bubble_dismissals`, `terms_acceptance_log`, `platform_config`; listing AI columns on `property_listings`; terms columns + `show_helper_bubbles` on `profiles`. Edge functions `ai-maintenance`, `ai-triage`, `ai-listing`, `ai-onboarding`, `ai-report`, `ai-report-scheduler` (pg_cron 07:00 UTC), `accept-terms`; `_shared/anthropic.ts` + `_shared/email-footer.ts`. `address-lookup` now uses postcodes.io (free) — postcode-level coords + district, no PAF address list. Web: tenant Maintenance tab + AI chat, `/landlord/reports/`, legal pages (`/terms/` v1.0, `/website-terms/`, `/ai-transparency/`), terms acceptance gates, cookie banner, helper bubbles. See PROJECT_LOG.md 2026-06-11 for the full inventory.
+
 
 ---
 
@@ -106,7 +108,7 @@ tenants a self-service area. Both share one Supabase backend.
 | Email | Resend, `easierlet.com` domain verified |
 | Billing | Stripe Checkout + Customer Portal + webhooks |
 | CAPTCHA | Cloudflare Turnstile on public forms |
-| Address lookup | Ideal Postcodes API (UK postcode → address + UPRN + lat/lng) |
+| Address lookup | postcodes.io (free, no key — postcode → coordinates + district; manual address lines) |
 
 ---
 
@@ -923,7 +925,7 @@ Generic catch-all handler (experimental — not tied to a specific UI surface to
 
 ### 3.12 Edge Function secrets
 
-`RESEND_API_KEY`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_BUCKET`, `R2_PRIVATE_BUCKET`, `R2_PUBLIC_URL_BASE`, `IDEAL_POSTCODES_API_KEY`, `TURNSTILE_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_GROWTH`, `STRIPE_PRICE_PROFESSIONAL`, `SUPPORT_NOTIFY_EMAIL`, `APP_BASE_URL=https://easierlet.com`, `WEB_BASE_URL=https://easierlet.com`, `RENT_INVOICING_CRON_SECRET`, `TRIAL_LIFECYCLE_SECRET`, `RETENTION_CRON_SECRET`, `INVENTORY_MEDIA_CLEANUP_SECRET`, `SEED_SECRET`, `RESEND_FROM_EMAIL`. Auto-injected: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`.
+`RESEND_API_KEY`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_BUCKET`, `R2_PRIVATE_BUCKET`, `R2_PUBLIC_URL_BASE`, `ANTHROPIC_API_KEY`, `AI_REPORT_SCHEDULER_SECRET`, `TURNSTILE_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_GROWTH`, `STRIPE_PRICE_PROFESSIONAL`, `SUPPORT_NOTIFY_EMAIL`, `APP_BASE_URL=https://easierlet.com`, `WEB_BASE_URL=https://easierlet.com`, `RENT_INVOICING_CRON_SECRET`, `TRIAL_LIFECYCLE_SECRET`, `RETENTION_CRON_SECRET`, `INVENTORY_MEDIA_CLEANUP_SECRET`, `SEED_SECRET`, `RESEND_FROM_EMAIL`. Auto-injected: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`.
 
 ---
 

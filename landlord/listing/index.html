@@ -120,9 +120,18 @@
               <input class="el-input" id="headline" type="text" maxlength="120" placeholder="e.g. Bright two-bed flat with canal views">
               <div class="el-hint">A 1-line hook. This is what tenants see in search results.</div>
             </div>
-            <div class="el-field">
-              <label class="el-label" for="description">Description</label>
+            <div class="el-field" data-bubble-slot="listing_description_hint">
+              <label class="el-label" for="description">Description <span class="el-ai-badge" id="aiBadge" style="display:none">✨ AI-assisted</span></label>
               <textarea class="el-textarea" id="description" rows="8" placeholder="What makes this home stand out — the space, the location, the natural light…"></textarea>
+            </div>
+
+            <div id="aiControls" style="display:none;margin:-6px 0 16px">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <button type="button" class="el-btn" id="aiGenerateBtn">✨ Generate with AI</button>
+                <button type="button" class="el-btn el-btn-ghost" id="aiRevertBtn" style="display:none;font-size:13px">Revert to original AI version</button>
+              </div>
+              <div class="el-hint" id="aiHint"></div>
+              <div id="aiFeatures" style="display:none;margin-top:8px"></div>
             </div>
             <div class="el-field-row">
               <div class="el-field">
@@ -198,7 +207,27 @@
   </div>
 </main>
 
+<!-- AI retry guidance modal (shown before the second and final generation) -->
+<div class="modal-backdrop" id="retryModal">
+  <div class="modal" style="max-width:480px">
+    <h2 style="margin:0 0 6px">Getting the best result</h2>
+    <p class="modal-sub" style="margin:0 0 14px">This is your final AI generation for this listing — a little prep goes a long way:</p>
+    <ul style="font-size:14px;line-height:1.65;color:var(--el-ink-soft);padding-left:20px;margin:0 0 18px">
+      <li>Add more photos — especially the main living areas and any standout features</li>
+      <li>Make your description notes more specific (the AI builds on what you write)</li>
+      <li>Tick every amenity that applies</li>
+      <li>Check the rent, deposit, and available-from date are filled in</li>
+      <li>Set a hero photo that shows the property at its best</li>
+    </ul>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="el-btn el-btn-ghost" id="retryCancel">Not yet</button>
+      <button class="el-btn el-btn-primary" id="retryConfirm">I've improved my listing — generate again</button>
+    </div>
+  </div>
+</div>
+
 <script type="module" src="/assets/portal.js"></script>
+<script src="/assets/helper-bubbles.js" defer></script>
 <script type="module">
   while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
   const ELP = window.ELP;
@@ -305,7 +334,94 @@
     `;
 
     refreshPublishHint();
+    updateAiControls();
+    if (window.ELBubbles) ELBubbles.render("listing_editor", document.querySelector(".elp-main-inner"));
   }
+
+  // ---- AI listing generation --------------------------------------------
+  function updateAiControls() {
+    $("aiControls").style.display = "block";
+    const photos = media.filter((m) => m.media_type === "photo").length;
+    const count = listing.ai_generation_count ?? 0;
+    const btn = $("aiGenerateBtn");
+    const hint = $("aiHint");
+    if (count >= 2) {
+      btn.style.display = "none";
+      hint.textContent = "AI generation limit reached for this listing (2 of 2 used). Edits are all yours from here.";
+    } else if (photos < 3) {
+      btn.style.display = "";
+      btn.disabled = true;
+      hint.textContent = `Add at least 3 photos to generate with AI (${photos}/3 so far).`;
+    } else {
+      btn.style.display = "";
+      btn.disabled = false;
+      hint.textContent = count === 1
+        ? "One AI retry remaining — improve your photos and details first for a better result."
+        : "EasierLet AI writes a headline, description and key features from your photos and details.";
+    }
+    $("aiBadge").style.display = count > 0 ? "" : "none";
+    const gen1 = listing.ai_generation_1_content;
+    $("aiRevertBtn").style.display =
+      gen1 && (listing.headline !== gen1.headline || listing.description !== gen1.description) ? "" : "none";
+    renderAiFeatures();
+  }
+
+  function renderAiFeatures() {
+    const c = listing.ai_generated_content;
+    const host = $("aiFeatures");
+    if (!c?.key_features?.length) { host.style.display = "none"; return; }
+    host.style.display = "block";
+    host.innerHTML = `<div class="el-hint" style="margin-bottom:4px">Key features (from the AI draft — use them in your description if helpful):</div>` +
+      c.key_features.map((f) => `<span class="el-ai-badge" style="margin:0 6px 6px 0">${ELP.esc(f)}</span>`).join("");
+  }
+
+  async function runGenerate(confirmedRetry) {
+    const btn = $("aiGenerateBtn");
+    btn.disabled = true;
+    const prevHint = $("aiHint").textContent;
+    $("aiHint").textContent = "EasierLet AI is reviewing your photos and details… (can take ~20s)";
+    try {
+      const res = await ELP.callFn("ai-listing", { listing_id: id, confirmed_retry: confirmedRetry });
+      const err = res.data?.error;
+      if (err === "retry_guidance_required") { $("retryModal").classList.add("open"); return; }
+      if (err === "generation_limit_reached") { ELP.toast("AI generation limit reached for this listing.", "info"); return; }
+      if (err === "ai_budget_exceeded") { ELP.toast("Your AI budget is used up for this month — it resets on the 1st.", "info"); return; }
+      if (!res.ok || err || !res.data?.content) throw new Error(err || "generation_failed");
+      const c = res.data.content;
+      $("headline").value = c.headline || "";
+      $("description").value = c.description || "";
+      listing.headline = c.headline;
+      listing.description = c.description;
+      listing.ai_generated_content = c;
+      listing.ai_generation_count = res.data.generation;
+      if (res.data.generation === 1) listing.ai_generation_1_content = c;
+      ELP.toast("Listing generated! Review and edit as needed.", "success");
+    } catch (e) {
+      console.error(e);
+      ELP.toast("Couldn't generate the listing — try again shortly.", "error");
+    } finally {
+      btn.disabled = false;
+      $("aiHint").textContent = prevHint;
+      updateAiControls();
+    }
+  }
+
+  $("aiGenerateBtn").addEventListener("click", () => {
+    if ((listing.ai_generation_count ?? 0) === 1) { $("retryModal").classList.add("open"); return; }
+    runGenerate(false);
+  });
+  $("retryConfirm").addEventListener("click", () => { $("retryModal").classList.remove("open"); runGenerate(true); });
+  $("retryCancel").addEventListener("click", () => $("retryModal").classList.remove("open"));
+  $("retryModal").addEventListener("click", (e) => { if (e.target === $("retryModal")) $("retryModal").classList.remove("open"); });
+
+  $("aiRevertBtn").addEventListener("click", async () => {
+    const c = listing.ai_generation_1_content;
+    if (!c) return;
+    $("headline").value = c.headline || "";
+    $("description").value = c.description || "";
+    await save();
+    updateAiControls();
+  });
 
   function refreshPublishHint() {
     const h = $("publishHint");

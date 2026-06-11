@@ -123,6 +123,7 @@
 
       <div id="formError" style="color: var(--el-danger); font-size: 13px; margin-bottom: 14px; display:none;"></div>
 
+      <p style="font-size:12px;color:var(--el-muted,#6B8278);margin:0 0 10px;">By submitting this form you agree to our <a href="/website-terms/" target="_blank">Website Terms of Use</a>.</p>
       <button type="submit" class="el-btn el-btn-primary el-btn-full" id="submitBtn">Request viewing</button>
       <div style="text-align: center; font-size: 11px; color: var(--el-muted-soft); margin-top: 14px;">
         No fees. No obligation. Your details go straight to the landlord.
@@ -211,5 +212,6 @@ async function submit(e) {
   document.getElementById("successState").style.display = "block";
 }
 </script>
+<script src="/assets/cookie-banner.js" defer></script>
 </body>
 </html>

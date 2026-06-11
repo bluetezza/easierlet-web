@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms update · easierLet</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="../assets/easierlet.css?v=20260610a">
+
+<style>
+  body { background: var(--el-cream, #F7F4E9); font-family: var(--font-sans), -apple-system, sans-serif; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 48px 24px 80px; }
+  .card { background: #fff; border-radius: 16px; padding: 32px; box-shadow: 0 2px 16px rgba(0,0,0,0.06); }
+  h1 { font-size: 26px; color: var(--el-green, #194D3A); margin: 0 0 6px; font-weight: 500; }
+  .sub { font-size: 13px; color: var(--el-muted); margin: 0 0 22px; }
+  .summary { background: #F5F7F5; border-radius: 10px; padding: 18px 20px; margin: 0 0 20px; }
+  .summary h2 { font-size: 14px; margin: 0 0 10px; color: var(--el-ink); }
+  .summary ul { margin: 0; padding-left: 20px; }
+  .summary li { font-size: 13.5px; line-height: 1.55; color: var(--el-ink-soft); margin-bottom: 8px; }
+  .agree { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--el-ink-soft); margin: 0 0 18px; }
+  .agree input { margin-top: 3px; }
+  .btn-accept {
+    display: block; width: 100%; background: var(--el-green, #194D3A); color: #fff;
+    border: none; border-radius: 10px; padding: 14px; font-size: 15px; font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-accept:disabled { opacity: 0.45; cursor: not-allowed; }
+  .full-link { display: block; text-align: center; font-size: 13px; margin: 14px 0 0; }
+  a { color: var(--el-green, #194D3A); }
+  .error { color: #B3261E; font-size: 13px; margin: 12px 0 0; display: none; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="card">
+    <h1 id="pageTitle">Our Terms of Service</h1>
+    <p class="sub" id="pageSub">Please review and accept to continue to your portal.</p>
+
+    <div class="summary">
+      <h2>Key points of our Terms of Service (<span id="termsVersion">v1.0</span>)</h2>
+      <ul>
+        <li><strong>EasierLet is a property management software tool.</strong> It is not a letting agent, legal advisor, or financial advisor.</li>
+        <li><strong>AI features:</strong> Some features use artificial intelligence to assist with maintenance triage, listing copy, and portfolio reports. AI-generated content is guidance only — it is not legal or professional advice, and you remain responsible for all decisions.</li>
+        <li><strong>Your responsibilities:</strong> As a landlord, you remain solely responsible for compliance with all UK landlord law, including gas safety, electrical safety, deposit protection, and the Renters' Rights Act 2025.</li>
+        <li><strong>Our liability</strong> is capped at the greater of £50 or the subscription fees you paid in the previous 12 months. We are not liable for losses arising from AI-generated content or your decisions as a landlord.</li>
+        <li><strong>Data:</strong> We process your personal data as described in our <a href="/privacy/" target="_blank">Privacy Policy</a>. As a landlord, you are an independent data controller for your tenants' data.</li>
+        <li><strong>Cancellation:</strong> You may cancel at any time. Subscription fees are non-refundable for the current billing period.</li>
+      </ul>
+    </div>
+
+    <label class="agree">
+      <input type="checkbox" id="agreeBox">
+      <span>I have read and agree to EasierLet's <a href="/terms/" target="_blank">Terms of Service</a> and <a href="/privacy/" target="_blank">Privacy Policy</a></span>
+    </label>
+
+    <button class="btn-accept" id="acceptBtn" disabled>Continue</button>
+    <p class="error" id="errorMsg"></p>
+    <a class="full-link" href="/terms/" target="_blank">Read the full Terms of Service →</a>
+  </div>
+</div>
+
+<script type="module">
+  import "/assets/portal.js";
+
+  const $ = (id) => document.getElementById(id);
+
+  const session = await ELP.requireSession("/login/");
+  if (session) {
+    // Header copy depends on whether this is first acceptance or an update
+    try {
+      const res = await ELP.callFn("accept-terms", { action: "check", terms_type: "service" });
+      if (res.ok && res.data) {
+        $("termsVersion").textContent = res.data.current_version || "v1.0";
+        if (res.data.needs_update === false) {
+          // Already on the current version — bounce straight through
+          sessionStorage.setItem("el_terms_ok", "1");
+          window.location.replace(nextUrl());
+        } else if (res.data.user_version) {
+          $("pageTitle").textContent = "We've updated our Terms of Service";
+          $("pageSub").textContent = "Please review and re-accept to continue to your portal.";
+        }
+      }
+    } catch (_e) { /* keep defaults */ }
+
+    $("agreeBox").addEventListener("change", () => {
+      $("acceptBtn").disabled = !$("agreeBox").checked;
+    });
+
+    $("acceptBtn").addEventListener("click", async () => {
+      $("acceptBtn").disabled = true;
+      $("acceptBtn").textContent = "Saving…";
+      try {
+        const res = await ELP.callFn("accept-terms", { action: "accept", terms_type: "service", platform: "web" });
+        if (!res.ok || !res.data?.ok) throw new Error(res.data?.error || "accept_failed");
+        sessionStorage.setItem("el_terms_ok", "1");
+        window.location.replace(nextUrl());
+      } catch (err) {
+        $("errorMsg").textContent = "Couldn't save your acceptance — please try again.";
+        $("errorMsg").style.display = "block";
+        $("acceptBtn").disabled = false;
+        $("acceptBtn").textContent = "Continue";
+      }
+    });
+  }
+
+  function nextUrl() {
+    const next = new URLSearchParams(window.location.search).get("next") || "";
+    // Only follow same-site portal/public paths — never external redirects
+    if (next.startsWith("/") && !next.startsWith("//")) return next;
+    return "/landlord/";
+  }
+</script>
+
+</body>
+</html>

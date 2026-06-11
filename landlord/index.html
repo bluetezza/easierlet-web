@@ -2590,5 +2590,10 @@
     }
   }
 </script>
+<script src="/assets/helper-bubbles.js" defer></script>
+<script type="module">
+  while (!window.ELP || !window.ELBubbles) await new Promise((r) => setTimeout(r, 60));
+  if (await ELP.getSession()) ELBubbles.render("dashboard", document.querySelector(".elp-main-inner"));
+</script>
 </body>
 </html>

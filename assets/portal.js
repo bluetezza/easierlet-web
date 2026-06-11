@@ -38,7 +38,29 @@ async function requireSession(loginUrl) {
     window.location.replace(`${loginUrl}?next=${next}`);
     return null;
   }
+  enforceTermsAcceptance(); // async — redirects to /terms-update/ if re-acceptance is needed
   return session;
+}
+
+// Terms re-acceptance gate. When platform_config.terms_version moves past
+// the version this user accepted, every portal page redirects to
+// /terms-update/ until they re-accept. Result is cached per browser session
+// so the check costs one edge-function call per sign-in, not per page.
+async function enforceTermsAcceptance() {
+  if (window.location.pathname.indexOf("/terms-update/") === 0) return;
+  try {
+    if (sessionStorage.getItem("el_terms_ok") === "1") return;
+    const res = await callFn("accept-terms", { action: "check", terms_type: "service" });
+    if (!res.ok) return; // never lock users out on a transient check failure
+    if (res.data?.needs_update === false) {
+      sessionStorage.setItem("el_terms_ok", "1");
+      return;
+    }
+    if (res.data?.needs_update === true) {
+      const next = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.replace(`/terms-update/?next=${next}`);
+    }
+  } catch (_e) { /* transient failure — check again on next page load */ }
 }
 
 async function signOut(redirectTo = "/") {
@@ -131,6 +153,7 @@ const NAV = {
     { href: "/tenant/?tab=applications", id: "applications", label: "My applications", icon: "file" },
     { href: "/tenant/?tab=viewings",     id: "viewings",     label: "Viewings",        icon: "eye" },
     { href: "/tenant/?tab=tenancy",      id: "tenancy",      label: "My tenancy",      icon: "key" },
+    { href: "/tenant/?tab=maintenance",  id: "maintenance",  label: "Maintenance",     icon: "wrench" },
     { href: "/tenant/?tab=documents",    id: "documents",    label: "Documents",       icon: "doc" },
   ],
   landlord: [
@@ -144,6 +167,7 @@ const NAV = {
     { href: "/landlord/maintenance/",      id: "maintenance",  label: "Maintenance",     icon: "wrench" },
     { href: "/landlord/?tab=transactions", id: "transactions", label: "Transactions",    icon: "coins" },
     { href: "/landlord/?tab=documents",    id: "documents",    label: "Documents",       icon: "doc" },
+    { href: "/landlord/reports/",          id: "reports",      label: "Reports",         icon: "doc" },
     { href: "/landlord/loan/",             id: "loan",         label: "Director's loan", icon: "coins" },
     { href: "/landlord/companies/",        id: "companies",    label: "Companies",       icon: "building" },
     { href: "/landlord/ct600/",            id: "ct600",        label: "CT600 export",    icon: "doc" },

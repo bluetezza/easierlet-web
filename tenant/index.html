@@ -104,6 +104,35 @@
       </div>
     </section>
 
+    <!-- Maintenance -->
+    <section data-tab-panel="maintenance" style="display:none">
+      <div class="elp-page-head">
+        <h1 class="elp-page-title">Maintenance</h1>
+        <p class="elp-page-sub">Report an issue and track its progress.</p>
+      </div>
+      <div data-bubble-host></div>
+      <div class="elp-card" style="margin-bottom:18px">
+        <h3 style="margin:0 0 12px">Report an issue</h3>
+        <form id="maintForm">
+          <div style="margin-bottom:14px">
+            <label class="el-label" for="maintTitle">What's the problem?</label>
+            <input class="el-input" id="maintTitle" type="text" maxlength="120" required placeholder="e.g. Kitchen tap dripping">
+          </div>
+          <div style="margin-bottom:14px" data-bubble-slot="maintenance_new_description">
+            <label class="el-label" for="maintDesc">Details</label>
+            <textarea class="el-input" id="maintDesc" rows="4" required placeholder="Where is it, when did it start, and how severe is it?"></textarea>
+          </div>
+          <button type="submit" class="el-btn el-btn-primary" id="maintSubmit">Submit request</button>
+        </form>
+      </div>
+      <div class="elp-card">
+        <h3 style="margin:0 0 12px">Your requests</h3>
+        <div id="maintList" class="elp-list">
+          <div class="elp-loading"><div class="elp-spinner"></div>Loading requests…</div>
+        </div>
+      </div>
+    </section>
+
     <!-- Documents -->
     <section data-tab-panel="documents" style="display:none">
       <div class="elp-page-head">
@@ -147,6 +176,7 @@
 </main>
 
 <script type="module" src="/assets/portal.js"></script>
+<script src="/assets/helper-bubbles.js" defer></script>
 <script type="module">
   // Wait for ELP to be set on window
   while (!window.ELP) await new Promise((r) => setTimeout(r, 30));
@@ -178,6 +208,7 @@
       if (tab === "applications")  await loadApplications();
       if (tab === "viewings")      await loadViewings();
       if (tab === "tenancy")       await loadTenancy();
+      if (tab === "maintenance")   await loadMaintenance();
       if (tab === "documents")     await loadDocuments();
       if (tab === "settings")      await loadSettings();
     } catch (e) {
@@ -465,6 +496,95 @@
         <p>Tenancy agreements, inventories and other documents your landlord shares with you will live here.</p>
       </div>`;
   }
+
+  // ---- Maintenance ------------------------------------------------------
+  // Reporting goes: insert maintenance_requests (tenant RLS) → ai-maintenance
+  // start_conversation → /tenant/maintenance-chat/ for the AI Assistant chat.
+  async function tenantRow() {
+    const rows = await ELP.rest(
+      `tenants?tenant_auth_id=eq.${user.id}&select=id,user_id,property_id,tenancy_id,status&order=created_at.desc&limit=1`
+    );
+    return rows?.[0] ?? null;
+  }
+
+  async function loadMaintenance() {
+    if (window.ELBubbles) ELBubbles.render("tenant_maintenance");
+    const host = $("maintList");
+    try {
+      const t = await tenantRow();
+      if (!t) {
+        host.innerHTML = `<p style="color:var(--el-muted);font-size:14px">Maintenance reporting becomes available once your tenancy is set up.</p>`;
+        return;
+      }
+      const reqs = await ELP.rest(
+        `maintenance_requests?tenant_id=eq.${t.id}&select=id,title,status,created_at&order=created_at.desc&limit=25`
+      );
+      if (!reqs?.length) {
+        host.innerHTML = `<p style="color:var(--el-muted);font-size:14px">Nothing reported yet.</p>`;
+        return;
+      }
+      const convs = await ELP.rest(
+        `maintenance_conversations?tenant_id=eq.${t.id}&select=id,maintenance_request_id,status&order=created_at.desc`
+      ).catch(() => []);
+      const convFor = {};
+      (convs ?? []).forEach((c) => { if (!convFor[c.maintenance_request_id]) convFor[c.maintenance_request_id] = c; });
+      const statusLabel = { new: "With your landlord", acknowledged: "Acknowledged", awaiting_info: "Needs your input", scheduled: "Scheduled", in_progress: "In progress", completed: "Completed", closed: "Closed", rejected: "Not proceeding" };
+      host.innerHTML = reqs.map((r) => {
+        const c = convFor[r.id];
+        const chat = c ? `<a href="/tenant/maintenance-chat/?conversation=${c.id}" class="el-btn" style="font-size:13px;padding:6px 12px">${c.status === "active" ? "Continue chat" : "View chat"}</a>` : "";
+        return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--el-line-soft)">
+          <div><div style="font-weight:600;font-size:14.5px">${ELP.esc(r.title)}</div>
+          <div style="font-size:12.5px;color:var(--el-muted)">${statusLabel[r.status] ?? labelStatus(r.status)} · ${ELP.fmtDate(r.created_at)}</div></div>
+          ${chat}</div>`;
+      }).join("");
+    } catch (e) {
+      console.error("loadMaintenance failed", e);
+      host.innerHTML = `<p style="color:var(--el-muted);font-size:14px">Couldn't load your requests — try refreshing.</p>`;
+    }
+  }
+
+  document.getElementById("maintForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = $("maintSubmit");
+    const title = $("maintTitle").value.trim();
+    const desc = $("maintDesc").value.trim();
+    if (!title || !desc) return;
+    btn.disabled = true;
+    btn.textContent = "Submitting…";
+    try {
+      const t = await tenantRow();
+      if (!t) throw new Error("Maintenance reporting becomes available once your tenancy is set up.");
+      const inserted = await ELP.rest(`maintenance_requests`, {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          user_id: t.user_id,
+          property_id: t.property_id,
+          tenancy_id: t.tenancy_id ?? null,
+          tenant_id: t.id,
+          title,
+          description: desc,
+        }),
+      });
+      const reqId = inserted?.[0]?.id;
+      if (!reqId) throw new Error("Couldn't create the request");
+      const res = await ELP.callFn("ai-maintenance", { action: "start_conversation", maintenance_request_id: reqId });
+      if (res.ok && res.data?.conversation_id) {
+        window.location.href = `/tenant/maintenance-chat/?conversation=${res.data.conversation_id}`;
+        return;
+      }
+      ELP.toast("Request submitted — your landlord has been notified.", "success");
+      $("maintForm").reset();
+      loaded.delete("maintenance");
+      ensureLoaded("maintenance");
+    } catch (err) {
+      console.error(err);
+      ELP.toast(err.message || "Couldn't submit the request — please try again.", "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Submit request";
+    }
+  });
 
   // ---- Settings ---------------------------------------------------------
   async function loadSettings() {

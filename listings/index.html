@@ -651,6 +651,10 @@
         <div class="section-label">About this home</div>
         <div class="description collapsed" id="description"></div>
         <a href="#" class="see-more hidden" id="seeMore">Read more</a>
+        <p class="listing-ai-note" id="aiNote" hidden style="font-size:12.5px;color:#6b8f82;margin:10px 0 0;">
+          ✨ <em>This listing description was drafted with AI assistance by the landlord and reviewed before publication.</em>
+          <a href="/ai-transparency/" style="color:#6b8f82;">What does this mean?</a>
+        </p>
       </div>
 
       <!-- Amenities -->
@@ -962,6 +966,8 @@
       if (listing.description && listing.description.trim()) {
         $('descSection').hidden = false;
         $('description').textContent = listing.description;
+        // AI disclosure — shown when the copy was drafted with AI assistance
+        if ((listing.ai_generation_count ?? 0) > 0) $('aiNote').hidden = false;
         // Show "read more" if description is long
         setTimeout(() => {
           const el = $('description');
@@ -1610,5 +1616,6 @@
     // -------- Kickoff ---------------------------------------------------------
     init();
   </script>
+<script src="/assets/cookie-banner.js" defer></script>
 </body>
 </html>
