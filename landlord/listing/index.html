@@ -340,6 +340,11 @@
 
   // ---- AI listing generation --------------------------------------------
   function updateAiControls() {
+    if (!ELP.flags?.ai_listing_generator) {
+      $("aiControls").style.display = "none";
+      $("aiBadge").style.display = (listing.ai_generation_count ?? 0) > 0 ? "" : "none";
+      return;
+    }
     $("aiControls").style.display = "block";
     const photos = media.filter((m) => m.media_type === "photo").length;
     const count = listing.ai_generation_count ?? 0;

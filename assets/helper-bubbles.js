@@ -78,6 +78,8 @@ window.ELBubbles = (function () {
 
   async function render(screen, host) {
     try {
+      // Feature flag gate — bubbles ship dark until enabled
+      if (!ELP.flags?.helper_bubbles) return;
       const session = await ELP.getSession();
       if (!session) return;
       if (!(await showBubblesEnabled(session.user.id))) return;

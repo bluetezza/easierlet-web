@@ -568,10 +568,12 @@
       });
       const reqId = inserted?.[0]?.id;
       if (!reqId) throw new Error("Couldn't create the request");
-      const res = await ELP.callFn("ai-maintenance", { action: "start_conversation", maintenance_request_id: reqId });
-      if (res.ok && res.data?.conversation_id) {
-        window.location.href = `/tenant/maintenance-chat/?conversation=${res.data.conversation_id}`;
-        return;
+      if (ELP.flags?.ai_maintenance) {
+        const res = await ELP.callFn("ai-maintenance", { action: "start_conversation", maintenance_request_id: reqId });
+        if (res.ok && res.data?.conversation_id) {
+          window.location.href = `/tenant/maintenance-chat/?conversation=${res.data.conversation_id}`;
+          return;
+        }
       }
       ELP.toast("Request submitted — your landlord has been notified.", "success");
       $("maintForm").reset();

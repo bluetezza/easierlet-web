@@ -39,7 +39,58 @@ async function requireSession(loginUrl) {
     return null;
   }
   enforceTermsAcceptance(); // async — redirects to /terms-update/ if re-acceptance is needed
+  await loadFlags(session); // feature flags resolved before pages render gated UI
   return session;
+}
+
+// ---------------------------------------------------------------------------
+// Feature flags — resolved per user, cached for 5 minutes per session.
+// Semantics match _shared/flags.ts and ELFeatureFlags.swift exactly:
+//   enabled=false → off; pct=0 → enabled_for list only; 0<pct<100 → stable
+//   cohort by djb2-style hash of userId+key; pct>=100 → everyone.
+// All keys default to false — safe if the fetch fails.
+// ---------------------------------------------------------------------------
+
+const flags = {};
+
+function flagHash(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + c;
+    hash = hash | 0;
+  }
+  return Math.abs(hash);
+}
+
+async function loadFlags(session) {
+  try {
+    const cached = sessionStorage.getItem("el_flags");
+    if (cached) {
+      const { at, value } = JSON.parse(cached);
+      if (Date.now() - at < 5 * 60 * 1000) {
+        Object.assign(flags, value);
+        return flags;
+      }
+    }
+  } catch (_e) { /* fall through to fetch */ }
+  try {
+    const rows = await rest("feature_flags?select=key,enabled,rollout_pct,enabled_for");
+    const userId = session?.user?.id;
+    for (const row of rows ?? []) {
+      let on = false;
+      if (row.enabled) {
+        if (userId && Array.isArray(row.enabled_for) && row.enabled_for.includes(userId)) on = true;
+        else if ((row.rollout_pct ?? 0) >= 100) on = true;
+        else if ((row.rollout_pct ?? 0) > 0 && userId) on = flagHash(userId + row.key) % 100 < row.rollout_pct;
+      }
+      flags[row.key] = on;
+    }
+    try { sessionStorage.setItem("el_flags", JSON.stringify({ at: Date.now(), value: flags })); } catch (_e) { /* ignore */ }
+  } catch (e) {
+    console.warn("ELP.loadFlags failed — all flags defaulting to false", e);
+  }
+  return flags;
 }
 
 // Terms re-acceptance gate. When platform_config.terms_version moves past
@@ -332,6 +383,8 @@ window.ELP = {
   client,
   getSession,
   requireSession,
+  flags,
+  loadFlags,
   signOut,
   rest,
   callFn,

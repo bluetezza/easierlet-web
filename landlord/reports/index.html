@@ -107,8 +107,13 @@
   }
 
   function updateGenerateButton() {
-    const last = reports[0]?.generated_at;
     const btn = $("generateBtn");
+    if (!ELP.flags?.ai_portfolio_report) {
+      btn.disabled = true;
+      btn.textContent = "AI reports not enabled";
+      return;
+    }
+    const last = reports[0]?.generated_at;
     if (last && Date.now() - new Date(last).getTime() < 7 * 86400000) {
       const days = Math.ceil(7 - (Date.now() - new Date(last).getTime()) / 86400000);
       btn.disabled = true;
