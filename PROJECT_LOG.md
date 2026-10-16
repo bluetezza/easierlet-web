@@ -681,6 +681,12 @@ For state-machine cheat-sheets, foreign-key map, RLS pattern, and storage layout
 
 ## Session history (newest first)
 
+### 2026-10-16 — Retention job fixed; retention audit
+
+**Fix:** `retention-enforce` redeployed (v15) with verify_jwt **off**; it had been rejected at the gateway on every nightly run since it was built, so no warnings, anonymisation or deletion had ever happened. Pass 1 now also warns records already past their deadline (previously they'd have been stuck forever, because Pass 2 only acts on warned records); the warning email gives the real action date. Smoke test with the vault secret → 200 (`warned 0, tenants 0, viewings 0`; no tenant or viewing rows exist yet); wrong secret → 401 from the function. Tests: `easierlet-swift/supabase/tests/retention/` (4 passing). All five cron-called functions now have verify_jwt off.
+
+**Audit — what `/privacy/retention/` promises but the code doesn't do yet:** anonymising personal references in maintenance, tenancy-agreement and inventory records when a tenant is anonymised; deleting gas (2y), EICR (6y), EPC (10y) documents; deleting financial records and audit logs after 7 years; removing storage files (signed agreements, inventory photos, referencing PDFs) belonging to anonymised tenants. The 6-year tenant clock only starts when a tenant is set to `archived`. Not covered by any rule: support tickets, maintenance AI conversations, DSAR exports, `terms_acceptance_log`, closed landlord accounts. Found in storage: 30 PDFs under a user ID that no longer exists (deleted account, files left behind) and 3 DSAR exports from 30 April. Policy/legal items for Terry: privacy policy says easierLet is the controller of tenant data while the Terms say the landlord is; no international-transfer wording (Anthropic, Stripe, Resend are US); Right to Rent details kept 6 years where gov.uk says tenancy + 1 year; ICO fee registration for Oakrise Estates Ltd not found on the public register.
+
 ### 2026-10-16 — Pricing v2: 6-month free trial, then £4.99/month, unlimited properties
 
 **Why:** simplify. Three tiers with property caps and a 14-day trial become one plan.
