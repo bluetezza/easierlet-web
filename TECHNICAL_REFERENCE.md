@@ -165,14 +165,14 @@ Stripe-linked subscription state. One row per landlord (UNIQUE on `user_id`).
 |---|---|
 | user_id | NOT NULL UNIQUE |
 | stripe_customer_id, stripe_subscription_id | UNIQUE |
-| plan | `trial\|starter\|growth\|professional` (CHECK) |
+| plan | `trial\|standard` (CHECK; `starter\|growth\|professional` still allowed as pre-Oct-2026 legacy values) |
 | status | `trialing\|active\|past_due\|cancelled\|expired` (CHECK) |
 | trial_ends_at, current_period_end | timestamptz |
-| property_limit | int, default 1 |
+| property_limit | int, nullable. NULL = unlimited (every row since pricing v2, Oct 2026) |
 | trial_reminder_stage | `t_minus_3\|t_minus_1\|expired` or NULL (CHECK) |
-| selected_plan | NOT NULL — what they signed up to upgrade to |
+| selected_plan | Unused since pricing v2 (always NULL) |
 
-Property-limit enforcement is via `enforce_property_limit` trigger on inserts to `properties`.
+Pricing v2 (Oct 2026): one plan — 6-month free trial (no card), then £4.99/month, unlimited properties. Constants in `supabase/functions/_shared/pricing.ts`. The `enforce_property_limit` trigger on `properties` still blocks adds when status is `expired`/`cancelled`; it skips the count check when `property_limit` is NULL.
 
 ##### `subscription_events`
 Append-only Stripe event log for audit/debug.
@@ -827,18 +827,18 @@ POST `{email}`. Always returns 200 (email enumeration mitigation). On hit, gener
 ### 3.5 Billing
 
 #### `landlord-signup` (v18, Turnstile)
-Public registration. Inputs: `name`, `email`, `password`, optional `company_name`, `phone`, `turnstile_token`. Creates auth user, `landlord_profiles`, `landlord_subscriptions` (`trialing`), sends welcome email.
+Public registration. Inputs: `name`, `email`, optional `company_name`, `phone`, `turnstile_token`, `terms_accepted`. Creates auth user, `landlord_profiles`, `landlord_subscriptions` (`trialing`, 6 months, `property_limit` NULL), sends welcome email. `selected_plan` is ignored if sent.
 
 #### `create-checkout-session` (v14, JWT)
-Creates a Stripe Checkout session for plan upgrade. Returns `checkout_url`.
+Creates a Stripe Checkout session for the single £4.99/month price (`STRIPE_PRICE_MONTHLY`). If the landlord is still trialing with 2+ days left, the rest of the trial carries into Stripe (`subscription_data[trial_end]`), so the first charge lands on the trial end date. Returns `checkout_url`, or `already_subscribed` for an active/past_due subscriber.
 
-#### `stripe-webhook` (v17, signature only)
-Handles `checkout.session.completed`, `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.deleted`, `customer.subscription.updated`. Writes `landlord_subscriptions` + `subscription_events`.
+#### `stripe-webhook` (signature only — deploy with verify_jwt = false)
+Handles `checkout.session.completed`, `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.deleted`, `customer.subscription.updated`. Writes `landlord_subscriptions` + `subscription_events`. Every subscription maps to plan `standard`, `property_limit` NULL.
 
 #### `billing-portal` (v11, JWT)
 Creates a Stripe Customer Portal session and returns the URL.
 
-#### `trial-lifecycle` (v7, bearer secret)
+#### `trial-lifecycle` (bearer secret — deploy with verify_jwt = false)
 Nightly cron. Sends `t_minus_3` and `t_minus_1` trial reminders, flips expired trials to `status='expired'`, emails. Bumps `trial_reminder_stage` so reminders aren't duplicated.
 
 ### 3.6 Compliance / tax / finance
@@ -925,7 +925,7 @@ Generic catch-all handler (experimental — not tied to a specific UI surface to
 
 ### 3.12 Edge Function secrets
 
-`RESEND_API_KEY`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_BUCKET`, `R2_PRIVATE_BUCKET`, `R2_PUBLIC_URL_BASE`, `ANTHROPIC_API_KEY`, `AI_REPORT_SCHEDULER_SECRET`, `TURNSTILE_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_GROWTH`, `STRIPE_PRICE_PROFESSIONAL`, `SUPPORT_NOTIFY_EMAIL`, `APP_BASE_URL=https://easierlet.com`, `WEB_BASE_URL=https://easierlet.com`, `RENT_INVOICING_CRON_SECRET`, `TRIAL_LIFECYCLE_SECRET`, `RETENTION_CRON_SECRET`, `INVENTORY_MEDIA_CLEANUP_SECRET`, `SEED_SECRET`, `RESEND_FROM_EMAIL`. Auto-injected: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`.
+`RESEND_API_KEY`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_BUCKET`, `R2_PRIVATE_BUCKET`, `R2_PUBLIC_URL_BASE`, `ANTHROPIC_API_KEY`, `AI_REPORT_SCHEDULER_SECRET`, `TURNSTILE_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY` (pricing v2; the old `STRIPE_PRICE_STARTER/GROWTH/PROFESSIONAL` are no longer read), `SUPPORT_NOTIFY_EMAIL`, `APP_BASE_URL=https://easierlet.com`, `WEB_BASE_URL=https://easierlet.com`, `RENT_INVOICING_CRON_SECRET`, `TRIAL_LIFECYCLE_SECRET`, `RETENTION_CRON_SECRET`, `INVENTORY_MEDIA_CLEANUP_SECRET`, `SEED_SECRET`, `RESEND_FROM_EMAIL`. Auto-injected: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`.
 
 ---
 

@@ -95,7 +95,7 @@
             <div class="value" id="trialEnds">—</div>
           </div>
           <div class="meta-cell" id="renewCell" style="display:none">
-            <div class="label">Next renewal</div>
+            <div class="label">Next payment</div>
             <div class="value" id="renewDate">—</div>
           </div>
         </div>
@@ -104,12 +104,8 @@
         </div>
       </div>
 
-      <h2 id="plansHeading" style="font-family:var(--font-sans);font-weight:400;font-size:22px;margin:0 0 14px">Available plans</h2>
-      <div class="pricing-grid" id="plansGrid"></div>
-
-      <p style="font-size:13px;color:var(--el-muted);text-align:center;margin-top:20px">
-        Need more than 25 properties? <a href="mailto:hello@easierlet.com" style="color:var(--el-green)">Get in touch</a>.
-      </p>
+      <h2 id="plansHeading" style="font-family:var(--font-sans);font-weight:400;font-size:22px;margin:0 0 14px">Subscribe</h2>
+      <div class="pricing-grid" id="plansGrid" style="max-width:360px"></div>
     </div>
   </div>
 </main>
@@ -124,93 +120,54 @@
   const user = session.user;
   const $ = (id) => document.getElementById(id);
 
-  const PLAN_LIMITS = { trial: 2, starter: 3, growth: 10, professional: 25 };
-  const PLAN_LABELS = { trial: "Free trial", starter: "Starter", growth: "Growth", professional: "Professional" };
-  const PLAN_PRICES = { starter: 9.99, growth: 24.99, professional: 49.99 };
-  // Plain-English subtitle per plan, shown in the price tile.
-  const PLAN_SCOPE = {
-    starter:      "Up to 3 properties",
-    growth:       "Up to 10 properties",
-    professional: "Up to 25 properties",
-  };
-  // Display order — also used to determine "upgrade" vs "downgrade".
-  const PLAN_ORDER = ["trial", "starter", "growth", "professional"];
+  // Pricing v2 (Oct 2026): one plan, unlimited properties, 6-month free
+  // trial, then £4.99 a month. Keep in step with supabase/functions/_shared/pricing.ts.
+  const PRICE = 4.99;
+  const PLAN_LABELS = { trial: "Free trial", standard: "easierLet", starter: "easierLet", growth: "easierLet", professional: "easierLet" };
+  // Stripe needs a carried-over trial to end at least 48 hours ahead.
+  const MIN_CARRY_MS = 49 * 60 * 60 * 1000;
 
   const fmtMoney = (n) => "£" + n.toFixed(2);
+  const fmtDate = (iso) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
   function alertBox(kind, msg) {
     $("alertBox").innerHTML = `<div class="alert ${kind}">${ELP.esc(msg)}</div>`;
   }
 
-  // ─────────────────────────────────────────────────────────────────────
-  // Render plan tiles tailored to the landlord's current state.
-  //
-  // - Trialing / no plan: show all 3 plans as "Choose Starter / Growth /
-  //   Professional" with absolute prices.
-  // - Active subscription: their tile shows "Current plan", higher tiers
-  //   show the delta ("+£15/mo for 7 more properties") with "Upgrade" CTA,
-  //   lower tiers show as "Downgrade".
-  // - Expired / cancelled: same as trialing — pick any plan to resume.
-  //
-  // Section heading swaps between "Available plans" and "Upgrade options"
-  // depending on whether they're on a paid plan.
+  // One tile. What it says depends on where the landlord is:
+  // - Subscribed (active / past_due): "Your plan", no button (Manage
+  //   billing above handles card changes and cancelling).
+  // - On a trial with 2+ days left: subscribing now keeps the rest of the
+  //   trial, so the button says when the first payment will be.
+  // - Trial ending, expired or cancelled: subscribe and pay today.
   function renderPlans(sub) {
     const grid = $("plansGrid");
-    const isPaidActive = (sub.status === "active" || sub.status === "past_due");
-    $("plansHeading").textContent = isPaidActive ? "Change plan" : "Available plans";
+    const subscribed = (sub.status === "active" || sub.status === "past_due");
+    $("plansHeading").textContent = subscribed ? "Your plan" : "Subscribe";
 
-    const currentIdx = PLAN_ORDER.indexOf(sub.plan);
-    const tiles = ["starter", "growth", "professional"].map((plan) => {
-      const price = PLAN_PRICES[plan];
-      const limit = PLAN_LIMITS[plan];
-      const idx = PLAN_ORDER.indexOf(plan);
+    const carriesTrial = sub.status === "trialing" && sub.trial_ends_at
+      && (new Date(sub.trial_ends_at) - new Date()) >= MIN_CARRY_MS;
+    let note = "", cta = "", disabled = false;
+    if (subscribed) {
+      cta = "Your current plan"; disabled = true;
+    } else if (carriesTrial) {
+      cta = "Subscribe now";
+      note = `You won't be charged until your free trial ends on ${fmtDate(sub.trial_ends_at)}.`;
+    } else {
+      cta = `Subscribe for ${fmtMoney(PRICE)} a month`;
+    }
 
-      // Decide what this tile means relative to the user's current plan.
-      // For trialing landlords (currentIdx = trial = 0), every paid tile
-      // is an "upgrade" but we just say "Choose <name>" which feels more
-      // welcoming than "+£X / month".
-      let amountHtml, ctaLabel, ctaDisabled = false, badge = "", isCurrent = false;
-      if (isPaidActive && plan === sub.plan) {
-        isCurrent = true;
-        badge = `<span class="badge-current">Current plan</span>`;
-        amountHtml = `${fmtMoney(price)} <small>/ month</small>`;
-        ctaLabel = "Current plan";
-        ctaDisabled = true;
-      } else if (isPaidActive && idx > currentIdx) {
-        const delta = price - (PLAN_PRICES[sub.plan] || 0);
-        const extraProps = limit - (PLAN_LIMITS[sub.plan] || 0);
-        amountHtml = `+${fmtMoney(delta)} <small>/ month</small><br><span style="font-size:13px;color:var(--el-muted);font-family:var(--font-sans)">${extraProps > 0 ? `${extraProps} more properties` : ""}</span>`;
-        ctaLabel = `Upgrade to ${PLAN_LABELS[plan]}`;
-      } else if (isPaidActive && idx < currentIdx) {
-        const delta = (PLAN_PRICES[sub.plan] || 0) - price;
-        amountHtml = `Save ${fmtMoney(delta)} <small>/ month</small><br><span style="font-size:13px;color:var(--el-muted);font-family:var(--font-sans)">Drops to ${limit} properties</span>`;
-        ctaLabel = `Downgrade to ${PLAN_LABELS[plan]}`;
-      } else {
-        // Trial / expired / cancelled — show absolute prices, "Choose X"
-        amountHtml = `${fmtMoney(price)} <small>/ month</small>`;
-        // If the landlord pre-selected a tier at signup, highlight that
-        // tile so the conversion is one obvious click.
-        if (sub.selected_plan && plan === sub.selected_plan) {
-          ctaLabel = `Continue with ${PLAN_LABELS[plan]}`;
-          badge = `<span class="badge-current" style="background:var(--el-green);color:#fff;">Picked at signup</span>`;
-        } else {
-          ctaLabel = `Choose ${PLAN_LABELS[plan]}`;
-        }
-      }
-
-      const isPicked = !isPaidActive && sub.selected_plan === plan;
-      return `
-        <div class="price-tile${isCurrent ? " is-current" : ""}${isPicked ? " is-picked" : ""}" data-plan-tile="${plan}">
-          ${badge}
-          <h3>${PLAN_LABELS[plan]}</h3>
-          <div class="amount">${amountHtml}</div>
-          <p class="scope">${PLAN_SCOPE[plan]}</p>
-          <button class="el-btn ${isCurrent ? "el-btn-secondary" : "el-btn-primary"} upgrade-btn"
-                  data-checkout="${plan}" ${ctaDisabled ? "disabled" : ""}>${ctaLabel}</button>
-        </div>
-      `;
-    }).join("");
-    grid.innerHTML = tiles;
+    grid.innerHTML = `
+      <div class="price-tile${subscribed ? " is-current" : " is-picked"}">
+        ${subscribed ? `<span class="badge-current">Current plan</span>` : ""}
+        <h3>easierLet</h3>
+        <div class="amount">${fmtMoney(PRICE)} <small>/ month</small></div>
+        <p class="scope">Unlimited properties. Every feature included. Cancel any time.</p>
+        ${note ? `<p class="scope" style="color:var(--el-muted)">${ELP.esc(note)}</p>` : ""}
+        <button class="el-btn ${subscribed ? "el-btn-secondary" : "el-btn-primary"} upgrade-btn"
+                data-checkout="standard" ${disabled ? "disabled" : ""}>${ELP.esc(cta)}</button>
+      </div>
+    `;
   }
 
   async function load() {
@@ -218,27 +175,24 @@
       ELP.rest(`landlord_subscriptions?user_id=eq.${user.id}&select=plan,status,trial_ends_at,current_period_end,property_limit,stripe_customer_id,selected_plan&limit=1`).catch(() => []),
       ELP.rest(`properties?user_id=eq.${user.id}&archived=eq.false&select=id`).catch(() => []),
     ]);
-    const sub = subs[0] || { plan: "trial", status: "trialing", property_limit: 25 };
+    const sub = subs[0] || { plan: "trial", status: "trialing", property_limit: null };
     const propCount = props.length;
 
-    // Plan name on the hero shows the price in subtle next to the name when
-    // they're on a paid plan — feels less generic than just "Starter".
     const planLabel = PLAN_LABELS[sub.plan] || sub.plan;
-    const planPrice = PLAN_PRICES[sub.plan];
-    $("planName").textContent = planPrice
-      ? `${planLabel} · ${fmtMoney(planPrice)}/month`
-      : planLabel;
+    $("planName").textContent = sub.plan === "trial"
+      ? planLabel
+      : `${planLabel} · ${fmtMoney(PRICE)}/month`;
 
     const statusLabels = {
       trialing: "On a free trial",
       active:   "Active subscription",
       past_due: "⚠️ Payment past due",
       cancelled:"Cancelled",
-      expired:  "Expired — upgrade to continue",
+      expired:  "Trial ended — subscribe to continue",
     };
     $("planStatus").textContent = statusLabels[sub.status] || sub.status;
 
-    $("propUsage").textContent = `${propCount} of ${sub.property_limit}`;
+    $("propUsage").textContent = `${propCount} · no limit`;
 
     if (sub.trial_ends_at) {
       const days = Math.max(0, Math.round((new Date(sub.trial_ends_at) - new Date()) / 86400000));
@@ -253,10 +207,12 @@
     if (sub.status === "past_due") {
       alertBox("warn", "Your last payment was declined. Update your card via Manage billing to keep your account active.");
     } else if (sub.status === "expired" || sub.status === "cancelled") {
-      alertBox("warn", "Your subscription is no longer active. Pick a plan below to keep using easierLet.");
+      alertBox("warn", sub.status === "expired"
+        ? "Your free trial has ended. Subscribe below to keep using easierLet."
+        : "Your subscription is no longer active. Subscribe below to keep using easierLet.");
     } else if (sub.status === "trialing" && sub.trial_ends_at) {
       const days = Math.max(0, Math.round((new Date(sub.trial_ends_at) - new Date()) / 86400000));
-      if (days <= 3) alertBox("warn", `Your trial ends in ${days} day${days === 1 ? "" : "s"}. Pick a plan to keep going.`);
+      if (days <= 3) alertBox("warn", `Your trial ends in ${days} day${days === 1 ? "" : "s"}. Subscribe to keep going.`);
     }
 
     renderPlans(sub);
@@ -270,29 +226,27 @@
     }
 
     document.querySelectorAll("[data-checkout]").forEach((b) =>
-      b.addEventListener("click", () => startCheckout(b.dataset.checkout, b))
+      b.addEventListener("click", () => startCheckout(b))
     );
 
     $("loadingBox").style.display = "none";
     $("contentBox").style.display = "";
   }
 
-  async function startCheckout(plan, btn) {
+  async function startCheckout(btn) {
     const orig = btn.textContent;
     btn.disabled = true; btn.textContent = "Opening checkout…";
     try {
       // ELP.callFn(name, body) — second arg is the JSON-encodable body.
       // Returns { ok, status, data }, where `data` is the parsed JSON.
-      const res = await ELP.callFn("create-checkout-session", { plan });
+      const res = await ELP.callFn("create-checkout-session", {});
       if (res.ok && res.data?.checkout_url) {
         window.location.href = res.data.checkout_url;
         return;
       }
-      // Existing-subscription plan-change path (no checkout, direct API).
-      if (res.ok && res.data?.plan_changed) {
-        alertBox("success", res.data.message || "Plan updated.");
-        // Give the webhook a beat to land, then reload the page to show
-        // the new plan state.
+      // Already subscribed (e.g. a second tab) — no second Checkout.
+      if (res.ok && res.data?.already_subscribed) {
+        alertBox("warn", res.data.message || "You're already subscribed.");
         setTimeout(() => { window.location.reload(); }, 1500);
         return;
       }
@@ -324,7 +278,7 @@
       if (msg.includes("stripe_not_configured")) {
         alertBox("warn", "Billing portal isn't configured yet.");
       } else if (msg.includes("no_customer")) {
-        alertBox("warn", "No active billing record yet — pick a plan below to subscribe first.");
+        alertBox("warn", "No billing record yet — subscribe below first.");
       } else {
         alertBox("error", msg);
       }
