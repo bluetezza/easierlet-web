@@ -121,7 +121,7 @@ Newest entries at the top of each section.
 | Function | Version | JWT | Purpose |
 |---|---|---|---|
 | `tenant-workflow` | **v44** | Yes | Dispatcher: `get_reference`, `send_application`, `send_reference`, `reject_tenant`, `approve_pre_application`, `references_passed`, `submit_application`, `get_invite`, `notify_vorensys_submitted` (legacy), `notify_reference_submitted` (legacy) |
-| `tenancy-workflow` | current | Yes | Tenancy agreement signing |
+| `tenancy-workflow` | v2 2026-10-16 (deploy pending) | Yes | Tenancy agreement (EL-APT-2026.10): preview, generate + send, signing, finalise |
 | `inventory-workflow` | current | Yes | Email/form/PDF for inventories |
 | `listing-public-fetch` | current | No | Public listing detail fetch by slug |
 | `listings-search` | **NEW (2026-04-25)** | No | Public search index for `/properties/`. Joins `property_listings` + `properties`, filters on `status='live'`, area `ilike` across city/postcode/address_line1, bedroom/rent/availability/furnishing, paginated. Returns minimal payload + hero thumbnail per listing. |
@@ -682,6 +682,22 @@ For state-machine cheat-sheets, foreign-key map, RLS pattern, and storage layout
 ---
 
 ## Session history (newest first)
+
+### 2026-10-16 — Tenancy agreement v2 (Renters' Rights Act), Information Sheet removed
+
+**Why:** compared our APT against the Allen & Harris APT used for Frome. Ours lacked a proper Written Statement of Terms and deposit Prescribed Information, and had clauses that are void or unlawful since 1 May 2026.
+
+**Agreement template `EL-APT-2026.10`** (`tenancy-workflow/agreement.ts`, new module): particulars + 14 numbered sections + Schedule 1 Written Statement of Terms (SI 2026/324, incl. prior-notice grounds) + Schedule 2 deposit Prescribed Information (DPS / mydeposits / TDS administrator details) + Schedule 3 documents provided. Fixed: rent only after signing (max one month), professional-clean-for-pets clause removed, tenant notice may end any day with daily rent refund, possession only via s8 + court order, s13 increases 52 weeks apart. Added: Tenant Fees Act permitted payments, damp/mould, smoke + CO alarms, uninhabitability, viewings, right-to-rent checks, email service of notices, data protection, property-feature clauses, company signature block. **Government Information Sheet removed** — it only applied to tenancies that existed before 1 May 2026.
+
+**`tenancy-workflow` changes:** new `preview` action (PDF, no save/email); landlord actions now check JWT + ownership (previously any caller with an agreement ID could generate/sign/finalise); 422 with a problem list if no address for notices, invalid start date, deposit over cap, or no recognised scheme; current gas/EICR/EPC from Documents attached to the tenant email; signed copy emailed to every tenant (was lead only); guarantors excluded; `generate_and_send` only from `draft`. Local tests in `tenancy-workflow/test/` (Deno, in-memory Supabase mock). **Deploy pending — run from the Mac:** `supabase functions deploy tenancy-workflow` (MCP deploy avoided per engineering playbook).
+
+**Database:** migration `apt_v2_written_statement` applied (additive): `tenancy_agreements.template_version`, `written_statement_provided_at`, `bills_included`, `bills_details`, `property_features` (+ array CHECK). `info_sheet_path` marked deprecated (kept). Rollback: `easierlet-swift/backups/rollback_apt_v2_written_statement.sql`. Snapshot: `backups/schema_20261016_171618_pre_apt_v2.json`. Advisors: no new findings.
+
+**Web:** `/sign-tenancy/` was broken — page load sent no auth header (gateway 401) and the page used a stale anon key (`Invalid JWT` on sign). Fixed (current key + headers), copy updated (no Information Sheet; Written Statement / Prescribed Information confirmation), "open the agreement" link via short-lived signed URL. `/landlord/useful-links/` How-to-Rent entry replaced with the written-information guidance. `/landlord/tenancy/` clause placeholder + warnings after send.
+
+**iOS:** Preview Agreement button (PDFKit sheet), bills + property-feature toggles, "Fix before sending" / "Worth checking" cards, server error messages shown properly, failed drafts cancelled rather than left stuck, Landlord Profile deposit-scheme picker + "Address for Notices" wording, Info Sheet link removed. Needs an Xcode build.
+
+**Follow-ups:** solicitor review of `EL-APT-2026.10`; joint tenants can read each other's `signing_token` via RLS on `tenancy_agreement_signatures` (tighten with a view or column grants); HMO support (licensing, per-room lets, HMO alarm/fire rules) — design discussed, not built.
 
 ### 2026-06-11 — AI feature build, Terms of Service v1.0, free address lookup
 
