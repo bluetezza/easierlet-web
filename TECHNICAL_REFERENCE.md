@@ -623,7 +623,7 @@ Append-only audit trail; 200+ rows already in dev. Indexed by actor + action + r
 | resource_id, metadata, ip_address, user_agent | metadata jsonb default `'{}'` |
 
 ##### `retention_rules`
-Per-resource retention/anonymisation rules (8 rows seeded).
+Per-resource retention/anonymisation rules (17 rows: 8 original + 9 from migration `retention_v2`, 2026-10-16).
 
 | Column | Notes |
 |---|---|
@@ -768,8 +768,8 @@ Nightly cron. Lists R2 `inventory/` prefix, deletes objects > 24h old with no ma
 #### `tenant-portal` (v28, service role)
 - `send_invite` — creates Supabase auth user for a `tenants` row, links `tenant_auth_id`, sends magic-link email.
 
-#### `tenant-delete-account` (v11, JWT)
-- Tenant self-service account deletion. Anonymises `tenants` row per `retention_rules`, deletes auth user, emails landlord.
+#### `tenant-delete-account` (v14, JWT)
+- Tenant self-service account deletion. Always deletes the portal login. Applications that never became a tenancy are erased (related records, anonymise, delete row). Tenancies: contact/screening fields anonymised now, Right to Rent fields kept while needed (`rightToRentStillNeeded`), inventories re-pointed to the redacted email; `anonymised_at` left empty so `retention-enforce` finishes on schedule. Emails the landlord.
 
 ### 3.2 Listings / public
 
@@ -874,10 +874,17 @@ Read-only health check: RLS coverage, policy coverage, orphaned rows, audit acti
 #### `generate-dsar` (v15, JWT or service)
 GDPR Data Subject Access Request export. Collects all user data, renders to styled HTML, uploads to Supabase Storage, returns 24-hour signed URL.
 
-#### `retention-enforce` (v12, bearer secret)
-Nightly. Two phases:
-1. 30-day warning emails (`retention_warning_sent_at`).
-2. Anonymise rows past `retention_expires_at` (NULLs out PII fields per `retention_rules.anonymise_fields`), optionally hard-deletes.
+#### `retention-enforce` (v16, bearer secret, verify_jwt off)
+Nightly at 03:00 (pg_cron `retention-enforce-nightly`). Body `{mode}`: `all` (default), `warnings`, `anonymise`, or `delete_account` with `user_id`.
+0. Start clocks: archived/approved/draft tenancies past `tenancy_end` with no clock (end + 72 months); applications in invited/awaiting_review/referencing with no start date after 6 months (due now).
+1. 30-day warning emails (`retention_warning_sent_at`), including records already overdue.
+2. Anonymise tenants past `retention_expires_at` once warned 30+ days ago, plus related records via `_shared/tenant_erasure.ts` (documents + files, agreement PDFs/signature, signature rows, maintenance descriptions, AI chats, inventory tenant fields and tenant photos). Applicants use `tenant_rejected` and are deleted.
+3. Right to Rent: archived tenancies ended 12+ months ago → nationality/visa fields cleared, `right_to_rent_cleared_at` set.
+4. Viewing requests anonymised after 12 months.
+5. Superseded certificates deleted (gas 24, EICR 72, EPC 120 months); newest per property kept.
+6. 84-month deletion: transactions, loan_entries (by `date`), audit_log, subscription_events.
+7. Housekeeping: closed support tickets (24 months), `documents/dsar/` files (7 days, via `retention_storage_paths`), notification_queue (3 months), user_devices (12 months unseen), orphaned files (`retention_orphaned_storage`: top folder is a UUID with no auth user).
+8. Inactive landlord accounts: status expired/cancelled, ended 12+ months ago, no sign-in for 12 months → warning email (`landlord_subscriptions.deletion_warning_sent_at`), deleted 30 days later unless they sign in; never `admin_users`. Deletion removes storage under the user ID (both cases), listing media in R2, tenant logins belonging only to them, then the auth user (tables cascade).
 
 ### 3.9 Support
 
