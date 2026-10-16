@@ -8,7 +8,7 @@ Newest entries at the top of each section.
 ## Who / What
 
 - **Owner:** Terry Baldwin — director & sole owner of **Oakrise Estates Ltd** (Company No. 16852456), UK buy-to-let residential property company, Warwick area.
-- **Product:** EasierLet — native SwiftUI iOS property-management app for UK landlords. Terry is both developer and target user (first-time landlord).
+- **Product:** EasierLet — native SwiftUI iOS property-management app for UK landlords. **Not owned by Oakrise Estates Ltd.** Run by Terry as a sole trader ("Terry Baldwin, trading as easierLet") during early access; it'll become its own company if he launches it properly. Legal pages, Terms and DSAR footer name the sole trader (changed 2026-10-16). Terry is both developer and target user (first-time landlord).
 - **Brand:** Deep teal `#0F6E56` / lighter teal `#1D9E75`. Dual-font wordmark: "easier" in DM Serif Display, "Let" in DM Sans Light. Horizontal key icon. No tagline.
 
 ---
@@ -689,7 +689,7 @@ For state-machine cheat-sheets, foreign-key map, RLS pattern, and storage layout
 
 **Legal pages.** Privacy policy v3.0: who is controller for what (easierLet for landlord accounts, logins, security logs; the landlord for tenant/applicant/referee data, with easierLet as processor), sub-processor table with locations, new transfers section (UK adequacy incl. UK–US data bridge, or IDTA/Addendum), security section, updated retention summary, "one month" response time. Vorensys removed from sub-processors (landlords use it directly). Retention page rewritten with every rule. Terms v1.2: section 12 rewritten with an Article 28(3) Data Processing Schedule (12.6). `platform_config.terms_version` → v1.2, so landlords re-accept.
 
-**For Terry:** pay the ICO data protection fee (Tier 1) and add the registration number to the privacy policy; accept each provider's DPA (Supabase, Cloudflare, Resend, Stripe, Anthropic); get a solicitor to read Terms §12 and the privacy policy; Terms §16.8 and §17 give `no.reply@easierlet.com` as the complaints/contact address — swap for a monitored mailbox.
+**For Terry:** pay the ICO data protection fee (Tier 1) in his own name as a sole trader trading as easierLet — not Oakrise — and add the registration number to the privacy policy; accept each provider's DPA (Supabase, Cloudflare, Resend, Stripe, Anthropic); get a solicitor to read Terms §12 and the privacy policy; Terms §16.8 and §17 give `no.reply@easierlet.com` as the complaints/contact address — swap for a monitored mailbox.
 
 ### 2026-10-16 — Retention job fixed; retention audit
 
