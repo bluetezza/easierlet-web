@@ -90,7 +90,7 @@
       </div>
 
       <div class="warning">
-        <strong>Before signing:</strong> Please ensure you have read the Tenancy Agreement and the Renters' Rights Act Information Sheet attached to your email. By signing below you confirm that you have read and agree to all terms.
+        <strong>Before signing:</strong> Please read the whole tenancy agreement first — it was attached to your email<span id="readLinkWrap" style="display:none">, and you can also <a id="readLink" href="#" target="_blank" rel="noopener" style="color:#8A6000;font-weight:600;">open it here</a></span>. It includes the Written Statement of Terms (Schedule 1)<span class="has-deposit">, the deposit prescribed information (Schedule 2)</span> and the list of documents you've been given. Take as long as you need, and get advice if anything is unclear.
       </div>
 
       <div class="card">
@@ -106,7 +106,7 @@
 
       <div class="checkbox-row">
         <input type="checkbox" id="agreeCheck">
-        <label for="agreeCheck">I confirm that I have read and understood the Tenancy Agreement and the Renters' Rights Act Information Sheet 2026. I agree to the terms set out in the agreement.</label>
+        <label for="agreeCheck">I have read and agree to the tenancy agreement. I confirm I received the Written Statement of Terms before signing<span class="has-deposit">, that the deposit prescribed information is accurate to the best of my knowledge and belief,</span> and that I received the documents listed as provided.</label>
       </div>
 
       <button class="btn-submit" id="submitBtn" disabled onclick="submitSignature()">Sign Agreement</button>
@@ -116,7 +116,7 @@
 
   <script>
     const SUPABASE_URL = 'https://ffzknvcptqjlkxmkdxuk.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmemtudmNwdHFqbGt4bWtkeHVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3OTU1MDYsImV4cCI6MjA1OTM3MTUwNn0.kdj4eUmPBNouyV4mwAbAHXByM_5jqJNBy3HdGFPWiis';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmemtudmNwdHFqbGt4bWtkeHVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNTQ0ODQsImV4cCI6MjA5MDgzMDQ4NH0.YRdkBgoVm7cpUJlsK8T4nP6iNE3vgfOmODImiAkPhr4';
 
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
@@ -188,7 +188,9 @@
     async function init() {
       if (!token) { showState('errorState'); return; }
       try {
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/tenancy-workflow?action=get_agreement&token=${token}`);
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/tenancy-workflow?action=get_agreement&token=${encodeURIComponent(token)}`, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
         const data = await res.json();
         if (!res.ok || !data.agreement) { showState('errorState'); return; }
 
@@ -200,7 +202,14 @@
         document.getElementById('detailTenant').textContent = data.currentSigner?.tenant_name || '—';
         document.getElementById('detailStart').textContent = formatDate(data.agreement.start_date);
         document.getElementById('detailRent').textContent = `£${Number(data.agreement.monthly_rent || 0).toFixed(2)}`;
-        document.getElementById('detailDeposit').textContent = `£${Number(data.agreement.deposit || 0).toFixed(2)}`;
+        document.getElementById('detailDeposit').textContent = Number(data.agreement.deposit || 0) > 0 ? `£${Number(data.agreement.deposit).toFixed(2)}` : 'None';
+        if (!(Number(data.agreement.deposit || 0) > 0)) {
+          document.querySelectorAll('.has-deposit').forEach(el => el.style.display = 'none');
+        }
+        if (data.pdf_url) {
+          document.getElementById('readLink').href = data.pdf_url;
+          document.getElementById('readLinkWrap').style.display = 'inline';
+        }
 
         // Show signing status for all tenants (if joint tenancy)
         if (data.allSignatures && data.allSignatures.length > 1) {

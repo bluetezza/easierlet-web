@@ -168,7 +168,7 @@
       <!-- Custom clauses -->
       <div class="elp-card">
         <div class="elp-card-head"><div class="elp-card-title">Additional clauses (optional)</div></div>
-        <textarea class="el-textarea" id="agClauses" rows="6" placeholder="Custom terms — e.g. pet-keeping, parking, garden maintenance."></textarea>
+        <textarea class="el-textarea" id="agClauses" rows="6" placeholder="Extra terms specific to this property. Don't add fees, fixed terms, rent reviews, pet bans or professional cleaning — these have no effect or are unlawful."></textarea>
       </div>
 
       <!-- Landlord signature -->
@@ -414,6 +414,9 @@
         })),
       });
       if (!res.ok) throw new Error(res.data?.error || `failed (${res.status})`);
+      if (Array.isArray(res.data?.warnings) && res.data.warnings.length) {
+        alert("Agreement sent. Things to check:\n\n• " + res.data.warnings.join("\n• "));
+      }
       ELP.toast("Agreement sent to tenants", "success");
       window.location.reload();
     } catch (err) {
