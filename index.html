@@ -28,7 +28,6 @@
 
 
   <link rel="stylesheet" href="/assets/easierlet.css?v=20260428a">
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
   <style>
     body { font-family: var(--font-sans); background: var(--el-bg); }
@@ -225,11 +224,11 @@
 
 <section class="hero">
   <div class="container">
-    <div class="pill">6 months free · Then £4.99 a month · No card required</div>
+    <div class="pill">Invite-only early access · 6 months free, then £4.99 a month</div>
     <h1>Manage your properties with confidence</h1>
     <p class="lede">Everything a UK landlord needs — tenancy agreements, referencing, inventories, maintenance, and compliance tracking — in one place.</p>
     <div class="cta-row">
-      <a href="#signup" class="btn-primary">Start your free trial</a>
+      <a href="#signup" class="btn-primary">Join early access</a>
       <a href="#features" class="btn-secondary">See what's included</a>
     </div>
   </div>
@@ -289,7 +288,7 @@
           <li>Cancel any time</li>
           <li>Email support</li>
         </ul>
-        <a href="#signup" class="pick-btn">Start your 6-month free trial</a>
+        <a href="#signup" class="pick-btn">Invite-only for now</a>
       </div>
     </div>
     <p style="text-align:center;font-size:13px;color:var(--el-muted);margin-top:24px;max-width:520px;margin-left:auto;margin-right:auto;">
@@ -301,46 +300,9 @@
 <section id="signup" class="signup-section">
   <div class="container">
     <div class="signup-card" id="signupCard">
-      <h2>Create your free account</h2>
-      <p class="sub">6 months free, no card required. Then £4.99 a month for unlimited properties.</p>
-
-      <div class="alert" id="alertBox"></div>
-
-      <form id="signupForm" novalidate>
-        <div class="field">
-          <label for="suName">Your name</label>
-          <input type="text" id="suName" required autocomplete="name">
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label for="suEmail">Email</label>
-            <input type="email" id="suEmail" required autocomplete="email">
-          </div>
-          <div class="field">
-            <label for="suPhone">Phone (optional)</label>
-            <input type="tel" id="suPhone" autocomplete="tel">
-          </div>
-        </div>
-        <div class="field">
-          <label for="suCompany">Company name (optional)</label>
-          <input type="text" id="suCompany" autocomplete="organization">
-        </div>
-        <p style="font-size:13px;color:var(--el-muted);margin:0 0 6px;line-height:1.5">
-          We'll send you an email to confirm your address — you'll set your password from that link. No card needed for the 6-month trial.
-        </p>
-
-        <div class="turnstile-wrap">
-          <div class="cf-turnstile" data-sitekey="0x4AAAAAAC_qyS_vO4XbyHFw"></div>
-        </div>
-
-        <label class="agree">
-          <input type="checkbox" id="suAgree" required>
-          <span>I have read and agree to easierLet's <a href="/terms/" target="_blank">Terms of Service</a> and <a href="/privacy/" target="_blank">Privacy Policy</a>. I understand that easierLet stores my landlord details to manage my tenancies.</span>
-        </label>
-
-        <button type="submit" class="btn-primary submit-btn" id="suSubmit">Start my free trial</button>
-        <p style="text-align:center;font-size:13px;color:var(--el-muted);margin:14px 0 0">Already have an account? <a href="/login/" style="color:var(--el-green)">Sign in</a></p>
-      </form>
+      <h2>easierLet is invite-only for now</h2>
+      <p class="sub">We're testing easierLet with a small group of landlords before opening it up to everyone. If you've been invited, use the link in your invitation email to set your password, then sign in.</p>
+      <a href="/login/" class="btn-primary submit-btn" style="display:block;text-align:center;text-decoration:none;">Sign in</a>
     </div>
   </div>
 </section>
@@ -356,80 +318,6 @@
   <p style="margin-top:14px;color:var(--el-muted)">© easierLet — Property management made easier.</p>
 </footer>
 
-<script type="module">
-  const SUPABASE_URL = 'https://ffzknvcptqjlkxmkdxuk.supabase.co';
-  const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmemtudmNwdHFqbGt4bWtkeHVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNTQ0ODQsImV4cCI6MjA5MDgzMDQ4NH0.YRdkBgoVm7cpUJlsK8T4nP6iNE3vgfOmODImiAkPhr4';
-  const SIGNUP_URL = `${SUPABASE_URL}/functions/v1/landlord-signup`;
-
-  const $ = (id) => document.getElementById(id);
-  function showAlert(kind, message) {
-    const a = $('alertBox');
-    a.className = `alert ${kind}`;
-    a.textContent = message;
-    a.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-
-  $('signupForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = $('suName').value.trim();
-    const email = $('suEmail').value.trim();
-    const phone = $('suPhone').value.trim();
-    const company = $('suCompany').value.trim();
-    const agreed = $('suAgree').checked;
-    const turnstileToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
-
-    if (!name) return showAlert('error', 'Please enter your name.');
-    if (!email || !/.+@.+\..+/.test(email)) return showAlert('error', 'Please enter a valid email address.');
-    if (!agreed) return showAlert('error', 'Please agree to the privacy policy and terms.');
-    if (!turnstileToken) return showAlert('error', 'Please complete the captcha above.');
-
-    const btn = $('suSubmit');
-    btn.disabled = true;
-    btn.textContent = 'Creating your account…';
-
-    try {
-      const res = await fetch(SIGNUP_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': ANON_KEY,
-        },
-        body: JSON.stringify({
-          name, email,
-          company_name: company || null,
-          phone: phone || null,
-          turnstile_token: turnstileToken,
-          terms_accepted: agreed === true,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.ok === false) {
-        const map = {
-          email_exists: 'An account with this email already exists. Try signing in instead.',
-          bad_email: 'Please enter a valid email address.',
-          bot_check_failed: 'Captcha check failed — please try again.',
-          terms_not_accepted: 'Please tick the box to accept the Terms of Service.',
-        };
-        showAlert('error', map[data.error] || data.message || 'Something went wrong. Please try again.');
-        btn.disabled = false;
-        btn.textContent = 'Start my free trial';
-        if (window.turnstile) window.turnstile.reset();
-        return;
-      }
-      // Account created — but they need to verify their email and set
-      // a password before signing in. Show a clear success state and
-      // don't try to sign them in client-side.
-      const form = document.getElementById('signupForm');
-      if (form) form.style.display = 'none';
-      showAlert('success', `Almost there — we've sent a verification link to ${email}. Click it to set your password and sign in. (Check your spam folder if you don't see it within a minute.)`);
-    } catch (err) {
-      console.error(err);
-      showAlert('error', err.message || 'Network error. Please try again.');
-      btn.disabled = false;
-      btn.textContent = 'Start my free trial';
-    }
-  });
-</script>
 
 <script src="/assets/cookie-banner.js" defer></script>
 </body>
