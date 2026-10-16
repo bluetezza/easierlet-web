@@ -396,13 +396,11 @@ CHECK constraints:
 
 RLS: `Users can read own subscription` — `auth.uid() = user_id` (SELECT only; writes happen via service role from `landlord-signup` and `stripe-webhook`).
 
-Pricing tiers + property limits:
+Pricing (v2, from 2026-10-16 — replaces the Starter/Growth/Professional tiers):
 | Plan | Properties | Monthly |
 |---|---|---|
-| Trial | 2 | Free 14d |
-| Starter | 3 | £9.99 |
-| Growth | 10 | £24.99 |
-| Professional | 25 | £49.99 |
+| Trial | Unlimited | Free for 6 months, no card |
+| Standard | Unlimited | £4.99 |
 
 Migration backfilled an existing trialing row for every legacy `landlord_profiles.user_id` so nobody is locked out of new property creation.
 
@@ -682,6 +680,22 @@ For state-machine cheat-sheets, foreign-key map, RLS pattern, and storage layout
 ---
 
 ## Session history (newest first)
+
+### 2026-10-16 — Pricing v2: 6-month free trial, then £4.99/month, unlimited properties
+
+**Why:** simplify. Three tiers with property caps and a 14-day trial become one plan.
+
+**Database:** migration `pricing_v2_single_plan` (`easierlet-swift/backups/migration_pricing_v2_single_plan.sql`): plan `standard` added (legacy tier values still allowed), `property_limit` nullable with no default (NULL = unlimited, all rows set NULL), paid tiers → `standard`, `selected_plan` cleared, any live or recently-expired trial extended to 6 months from sign-up. Rollback: `backups/rollback_pricing_v2_single_plan.sql` (maps `standard` → `professional`, caps back to 25). Snapshot: `backups/schema_20261016_182627_pre_pricing_v2.json`. Migration + rollback dry-run on a local Postgres (PGlite) replica of the table. `enforce_property_limit` trigger already skips the cap when `property_limit` is NULL — unchanged. Table had 0 rows at the time; no paid subscribers existed, so nobody needed moving to the new Stripe price.
+
+**Edge functions** (new `_shared/pricing.ts` holds the constants): `landlord-signup` (6-month trial, no plan pick, `property_limit` NULL, new welcome copy), `create-checkout-session` (one price from `STRIPE_PRICE_MONTHLY`; subscribing during the trial carries the remaining trial into Stripe so nobody pays early; no plan-change path), `stripe-webhook` (every subscription = `standard`, unlimited; new confirmation email with first-charge date), `trial-lifecycle` (copy), `admin-api` (trial reset/seed = 6 months unlimited, Stripe sync + email, seed writes `profiles.user_role` not `role`). Local tests: `easierlet-swift/supabase/tests/billing/` (11 passing).
+
+**Found while doing this:** `stripe-webhook` and `trial-lifecycle` were deployed with verify_jwt = true. Stripe and the pg_cron job don't send a Supabase JWT, so the gateway returned 401 to every webhook and every nightly trial run (confirmed: a non-JWT bearer gets `UNAUTHORIZED_INVALID_JWT_FORMAT`). Both must be redeployed with verify_jwt = false. `retention-enforce` has the same setting and the same kind of cron secret, so it is probably failing too.
+
+**Web:** homepage hero, single price card, sign-up form shown straight away (no tier pick), meta description; `/billing/` single plan tile (shows when the first payment will be for trial subscribers); billing success/cancel copy; Terms of Service v1.1 (section 4: trial, single plan, monthly billing only, no property limit) + key points on `/terms-update/`.
+
+**iOS:** `SubscriptionManager` — optional `propertyLimit` (nil = unlimited), plan label, no property cap gate; trial banner copy; Properties alert only for an ended subscription; sign-up link fixed (`/signup/` was a 404 → `/#signup`).
+
+**Deploy order:** (1) create the £4.99/month GBP price in Stripe and set `STRIPE_PRICE_MONTHLY`; (2) apply migration; (3) deploy `landlord-signup` first (old site sends `selected_plan`, the new function ignores it — the old function would reject the new site), then `create-checkout-session`, `stripe-webhook` (verify_jwt false), `trial-lifecycle` (verify_jwt false), `admin-api`; (4) merge easierlet-web; (5) bump `platform_config.terms_version` to v1.1; (6) Xcode build. No feature flag: a pricing change can't sensibly run two ways at once, and there were no landlords on the old pricing.
 
 ### 2026-10-16 — Tenancy agreement v2 (Renters' Rights Act), Information Sheet removed
 
