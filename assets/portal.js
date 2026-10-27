@@ -223,7 +223,6 @@ const NAV = {
     { href: "/landlord/companies/",        id: "companies",    label: "Companies",       icon: "building" },
     { href: "/landlord/ct600/",            id: "ct600",        label: "CT600 export",    icon: "doc" },
     { href: "/landlord/useful-links/",     id: "useful-links", label: "Useful links",    icon: "link" },
-    { href: "/billing/",                   id: "billing",      label: "Billing",         icon: "coins" },
     { href: "/support/",                   id: "support",      label: "Support",         icon: "help" },
   ],
 };

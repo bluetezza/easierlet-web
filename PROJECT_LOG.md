@@ -23,7 +23,7 @@ Newest entries at the top of each section.
 | Media storage | Cloudflare R2 — `easierlet-media-public` (listings, served from `media.easierlet.com`) + `easierlet-media-private` (inventory photos, signed URLs) |
 | Document storage | Supabase Storage `documents` bucket (tenancy PDFs, certificates, info sheets) |
 | Email | Resend (`no.reply@easierlet.com`, domain verified) |
-| Billing | Stripe Checkout + Customer Portal + webhooks |
+| Billing | None — easierLet is free (since 2026-10-27). Stripe removed; the four billing functions are retired stubs. |
 | AI | Anthropic Claude API (claude-sonnet-4-6 + claude-haiku-4-5) via `_shared/anthropic.ts`; per-landlord $2/month budget in `ai_usage` |
 | CAPTCHA | Cloudflare Turnstile on public forms |
 | Address lookup | postcodes.io (free, no key — UK postcode → coordinates + district; user types address lines). Replaced Ideal Postcodes 2026-06-11 |
@@ -138,11 +138,11 @@ Newest entries at the top of each section.
 | `visit-notify` | **NEW (2026-04-26)** | Yes | Resend wrapper for property visits. Actions: `send_notice` (validates ≥24h notice, emails active tenants with tokenised confirm link, sets visit→`notice_sent`), `send_update` (re-sends with "Updated" subject), `send_cancellation` (emails + sets visit→`cancelled`). |
 | `visit-response` | **NEW (2026-04-26)** | No (token-auth) | Tenant accepts or requests reschedule via per-row `access_token`. GET returns visit+property+landlord snapshot for the web form; POST `accept` flips `tenant_response=accepted` + status→`confirmed` + emails landlord; POST `request_reschedule` stores note + emails landlord. |
 | `landlord-signup` | **NEW (2026-04-27)** | No (Turnstile) | Public landlord registration. Verifies Turnstile, creates auth user (`email_confirm=true`), upserts `landlord_profiles` + trialing `landlord_subscriptions` (14 days, 2-property limit), upserts `profiles.role='landlord'` for routing, sends Resend welcome email. Returns `{ok, user_id}`. |
-| `create-checkout-session` | **NEW (2026-04-27)** | Yes | Reads `STRIPE_SECRET_KEY` + `STRIPE_PRICE_{STARTER,GROWTH,PROFESSIONAL}`. Finds-or-creates the Stripe customer for the user, creates a Checkout session in subscription mode, returns `checkout_url`. Returns 503 `stripe_not_configured` until secrets are set. |
-| `stripe-webhook` | **NEW (2026-04-27)** | No (signed) | Verifies Stripe HMAC signature with `STRIPE_WEBHOOK_SECRET`. Handles `checkout.session.completed`, `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.deleted`, `customer.subscription.updated` — syncs `landlord_subscriptions` (plan / status / property_limit / current_period_end). Emails landlord on payment failure. |
-| `billing-portal` | **NEW (2026-04-27)** | Yes | Returns Stripe Customer Portal URL for the user's customer. 404 `no_customer` if they haven't started a subscription yet. |
+| `create-checkout-session` | **RETIRED (2026-10-27)** | Yes | Stub: returns 410 `billing_removed`. easierLet is free. Safe to delete. |
+| `stripe-webhook` | **RETIRED (2026-10-27)** | No | Stub: returns 410 `billing_removed`. Safe to delete. |
+| `billing-portal` | **RETIRED (2026-10-27)** | Yes | Stub: returns 410 `billing_removed`. Safe to delete. |
 | `admin-auth` | **NEW (2026-04-28)** | No (handles auth itself) | Admin login flow — password sign-in, admin_users gate, MFA challenge / verify / enrol. Issues an aal2 session for admin-api. |
-| `admin-api` | **NEW (2026-04-28)** | Yes (aal2 enforced) | All admin operations: dashboard_stats, list_landlords, view_landlord, view_tenant, extend_trial, view_audit_log, list_retention_pending, override_retention, generate_dsar (proxy), whoami. Every read of landlord/tenant data audited. |
+| `admin-api` | **NEW (2026-04-28)** | Yes (aal2 enforced) | All admin operations: dashboard_stats, list_landlords, view_landlord, view_tenant, view_audit_log, list_retention_pending, override_retention, generate_dsar (proxy), whoami. Every read of landlord/tenant data audited. Trial and Stripe actions return 410 since 2026-10-27. |
 | `seed-admin` | **NEW (2026-04-28)** | No (SEED_SECRET) | One-time bootstrap: creates the first admin auth user + admin_users row. Idempotent. |
 | `security-check` | **NEW (2026-04-28)** | Yes (admin) | Returns a structured health report: RLS, policy coverage, orphaned data, retention queue, audit recent writes, service-role-in-URL sanity. |
 | `retention-enforce` | **NEW (2026-04-28)** | No (RETENTION_CRON_SECRET) | Nightly job (03:00 UTC via pg_cron) — Pass 1 sends 30-day warnings, Pass 2 anonymises records past their retention deadline. Handles tenants + viewing_requests. |
@@ -152,7 +152,7 @@ Newest entries at the top of each section.
 | `inventory-media-cleanup` | current | No (cron secret) | Nightly cron — scans R2 `inventory/` prefix, deletes objects 24h+ old with no matching `inventory_photos` row. Capped at 500 deletes per run. |
 | `password-reset-request` | current | No (public) | POST `{email}`. Always returns 200 (enumeration mitigation). Generates Supabase recovery link, sends branded Resend email. Hit by iOS `AuthView` "Forgot password" and `/reset-password/` flow. |
 | `rent-invoicing` | current | Yes (JWT) or No (cron secret) | Auto-rent invoicing. `generate_due` (JWT, landlord-manual) creates `transactions` for tenants on `auto_invoice=true` whose `rent_due_day` has passed; `auto_run` (bearer-secret cron, daily 06:00 UTC) runs the same across the whole DB. Bumps `tenants.last_invoice_period`. |
-| `trial-lifecycle` | current | No (cron secret) | Nightly cron. Sends `t_minus_3` and `t_minus_1` trial reminders, flips expired trials to `status='expired'`. Bumps `landlord_subscriptions.trial_reminder_stage` so reminders aren't duplicated. |
+| `trial-lifecycle` | **RETIRED (2026-10-27)** | No | Stub: returns 410 `billing_removed`; its cron job is unscheduled. Safe to delete. |
 | `support-ticket` | current | Yes (JWT) | Actions: `create`, `reply`, `close`. Writes `support_tickets` + `support_ticket_messages`. Emails `SUPPORT_NOTIFY_EMAIL` on every user message. Plan-at-open snapshot. |
 | `ct600-export` | current | Yes (JWT) | Generates CT600 handover PDF + transactions CSV for a `companies` row + period range. Built with pdf-lib. Returns 24-hour signed Supabase Storage URLs. iOS calls via `CT600ExportClient`; web from `/landlord/ct600/`. |
 | `compliance-export` | current | Yes (JWT) | Streams a ZIP of every compliance certificate (Gas Safety, EICR, EPC, deposit protection, etc.) for one property + a manifest PDF. Content-Type `application/zip`. |
@@ -168,9 +168,9 @@ Newest entries at the top of each section.
 
 Core: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_BUCKET`, `R2_PRIVATE_BUCKET`, `R2_PUBLIC_URL_BASE`, `IDEAL_POSTCODES_API_KEY`, `TURNSTILE_SECRET_KEY`, `APP_BASE_URL=https://easierlet.com`, `WEB_BASE_URL=https://easierlet.com`, `SUPPORT_NOTIFY_EMAIL`.
 
-Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_GROWTH`, `STRIPE_PRICE_PROFESSIONAL`.
+Stripe: none needed since 2026-10-27 (easierLet is free). `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY` and any old `STRIPE_PRICE_*` can be deleted.
 
-Cron / bootstrap shared secrets: `INVENTORY_MEDIA_CLEANUP_SECRET`, `TRIAL_LIFECYCLE_SECRET`, `RENT_INVOICING_CRON_SECRET`, `RETENTION_CRON_SECRET`, `SEED_SECRET`.
+Cron / bootstrap shared secrets: `INVENTORY_MEDIA_CLEANUP_SECRET`, `RENT_INVOICING_CRON_SECRET`, `RETENTION_CRON_SECRET`, `SEED_SECRET`.
 
 Auto-injected by Supabase: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`.
 
@@ -179,7 +179,7 @@ Auto-injected by Supabase: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVIC
 | Job | Frequency | Function | Auth |
 |---|---|---|---|
 | Inventory R2 orphan cleanup | Nightly | `inventory-media-cleanup` | `INVENTORY_MEDIA_CLEANUP_SECRET` |
-| Trial reminders + expiry | Daily | `trial-lifecycle` | `TRIAL_LIFECYCLE_SECRET` |
+| ~~Trial reminders + expiry~~ | Removed 2026-10-27 | — | `trial-lifecycle-nightly` unscheduled (easierLet is free) |
 | Rent auto-invoicing | Daily 06:00 UTC | `rent-invoicing?action=auto_run` | `RENT_INVOICING_CRON_SECRET` |
 | Retention enforce (warning + anonymise) | Nightly 03:00 UTC | `retention-enforce` | `RETENTION_CRON_SECRET` |
 
@@ -206,9 +206,9 @@ Auto-injected by Supabase: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVIC
 | `/viewing-response/?token=…` | `viewing-response` | Viewer accepts or declines a proposed viewing time. |
 | `/visit-response/?token=…` | `visit-response` | **NEW (2026-04-26)** Tenant confirms a landlord property visit or requests a reschedule with optional note. Branded teal layout matching `/viewing-response/`. |
 | `/signup/` | `landlord-signup` | **NEW (2026-04-27)** Public landlord registration with hero, feature grid, 4-tier pricing table, Turnstile-protected signup form. On success, signs the user in and redirects to `/landlord/`. |
-| `/billing/` | `create-checkout-session` + `billing-portal` | **NEW (2026-04-27)** Authenticated billing dashboard — current plan, property usage, trial countdown, upgrade buttons (Stripe Checkout), Manage billing button (Stripe Customer Portal). Shows `Billing setup pending` graceful state until Stripe keys are configured. |
-| `/billing/success/` | — | **NEW (2026-04-27)** Stripe Checkout `success_url` — confirms subscription is active. |
-| `/billing/cancel/` | — | **NEW (2026-04-27)** Stripe Checkout `cancel_url` — explains nothing was charged, links back to `/billing/`. |
+| `/billing/` | — | **2026-10-27** Notice: "easierLet is free", then redirects to `/landlord/` (catches old links). |
+| ~~`/billing/success/`~~ | — | Deleted 2026-10-27. |
+| ~~`/billing/cancel/`~~ | — | Deleted 2026-10-27. |
 | `/privacy/` | — | **REWRITTEN (2026-04-28)** Full UK GDPR privacy policy v2 with table of contents, retention summary, processor list. |
 | `/privacy/retention/` | — | **NEW (2026-04-28)** Plain-English retention summary table with periods + legal basis per data category. |
 | `/terms/` | — | **NEW (2026-04-28)** Landlord Terms of Service: account, billing, acceptable use, data-controller/processor split, liability, governing law (England & Wales). |
@@ -396,11 +396,7 @@ CHECK constraints:
 
 RLS: `Users can read own subscription` — `auth.uid() = user_id` (SELECT only; writes happen via service role from `landlord-signup` and `stripe-webhook`).
 
-Pricing (v2, from 2026-10-16 — replaces the Starter/Growth/Professional tiers):
-| Plan | Properties | Monthly |
-|---|---|---|
-| Trial | Unlimited | Free for 6 months, no card |
-| Standard | Unlimited | £4.99 |
+**Unused since 2026-10-27: easierLet is free.** Nothing reads or writes this table any more. It's kept (empty) for history; `retention-enforce` deletes a landlord's row with their account.
 
 Migration backfilled an existing trialing row for every legacy `landlord_profiles.user_id` so nobody is locked out of new property creation.
 
@@ -650,7 +646,7 @@ For state-machine cheat-sheets, foreign-key map, RLS pattern, and storage layout
 
 ## Current priorities (as of 2026-05-23)
 
-1. **Activate Stripe in production** — `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_{STARTER,GROWTH,PROFESSIONAL}` need setting; webhook endpoint added in Stripe Dashboard for the five subscribed events; Customer Portal configured. EFs flip from `stripe_not_configured` to live as soon as the env vars are present (Completed item 7 has the activation steps).
+1. ~~**Activate Stripe in production**~~ — not needed: easierLet is free (2026-10-27).
 2. **End-to-end smoke-test the production stack** with a real landlord + tenant account, covering everything in the capabilities matrix in TECHNICAL_REFERENCE.md section 6 — properties CRUD, listing publish, viewing confirm, tenancy generate + sign canvas, inventory send + finalise, maintenance triage, visit notice + 24h gate, compliance ZIP export, CT600 export, support ticket round-trip, password reset, account deletion.
 3. **Finish admin centre activation** — pending `admin CNAME bluetezza.github.io.` DNS record + first-admin seed via `seed-admin` EF (see Session 2026-04-28).
 4. **Wire APNs delivery for `notification_queue`** — model + outbox already in place; needs the worker + Apple Auth Key.
@@ -680,6 +676,24 @@ For state-machine cheat-sheets, foreign-key map, RLS pattern, and storage layout
 ---
 
 ## Session history (newest first)
+
+### 2026-10-27 — easierLet is free
+
+**Decision (Terry):** no trial, no subscription, no price and no property limit. Plain wording: "free". If he wants to make money later he'll add optional premium services.
+
+**Database:** migration `easierlet_free` (`easierlet-swift/backups/migration_easierlet_free.sql`, rollback alongside). `enforce_property_limit()` is a no-op. New `landlord_profiles.deletion_warning_sent_at` and `retention_landlord_activity(p_inactive_before)` (service role only): last activity = latest of sign-up, last sign-in, auth session refresh and own audit-log entries; admins excluded. `trial-lifecycle-nightly` cron unscheduled. `landlord_subscriptions` and `subscription_events` are left in place, empty and unused.
+
+**Retention:** pass 8 of `retention-enforce` (v18) now deletes a landlord account unused for 12 months after a 30-day warning email; any use after the warning cancels it (audit `account_deletion_cancelled`). Previously it depended on a trial or subscription ending, which can't happen now. Rule text in `retention_rules` updated. 19 retention tests pass.
+
+**Edge functions:** `landlord-signup` v25 (no trial row; email says easierLet is free; invite-only gate kept), `admin-api` v38 (trial/Stripe actions return 410; no subscription data in lists, landlord view or dashboard stats), `support-ticket` v9 (`plan_at_open` null, no plan in subjects), `generate-dsar` v20 (no subscription section), `ai-report-scheduler` v6 (every landlord eligible; flag and AI budget still apply). `create-checkout-session`, `stripe-webhook`, `billing-portal`, `trial-lifecycle` are stubs returning 410 `billing_removed`. `_shared/pricing.ts` and the billing tests deleted.
+
+**iOS:** `SubscriptionManager.swift` deleted (subscription screen in More, dashboard trial banner, Properties limit alert). Terms key points updated. Needs an Xcode build.
+
+**Web:** homepage "Free to use" card, hero pill and meta description; `/billing/` is a redirect notice, success/cancel pages deleted; Billing removed from the portal nav and "Billing question" from support categories. Terms of Service v1.3 (section 4 "Price": free, plus optional paid services in future — price shown first, only pay if you choose; liability cap £50; no refund, non-payment or subscription wording; 12.6(k) inactivity deletion). Privacy policy v3.1 (Stripe and billing removed; landlord account retention). Retention page updated. `platform_config.terms_version` = v1.3.
+
+**Admin centre:** Subscriptions/Trials tiles, plan filter and plan columns removed; landlord page has an Account card with Generate DSAR (it used to sit inside the subscription card, which never showed). Internal data protection policy: owner and controller now Terry as sole trader (it still said Oakrise), Stripe removed, stale retention table replaced with a pointer to the live schedule.
+
+**For Terry:** delete the webhook endpoint in the Stripe sandbox; optionally delete the four retired functions and the `STRIPE_*` and `TRIAL_LIFECYCLE_SECRET` secrets in Supabase. AI costs (Anthropic) are paid by him with no income to offset them; each landlord's monthly AI budget and the AI feature flags still cap it.
 
 ### 2026-10-16 — Invite-only sign-up; operator is the sole trader
 
