@@ -46,12 +46,16 @@ async function requireSession(loginUrl) {
 // ---------------------------------------------------------------------------
 // Feature flags — resolved per user, cached for 5 minutes per session.
 // Semantics match _shared/flags.ts and ELFeatureFlags.swift exactly:
-//   enabled=false → off; pct=0 → enabled_for list only; 0<pct<100 → stable
-//   cohort by djb2-style hash of userId+key; pct>=100 → everyone.
+//   enabled=false → off; premium_only=true → off unless this account has
+//   Premium (has_premium(): a Premium landlord, or a tenant of one);
+//   pct=0 → enabled_for list only; 0<pct<100 → stable cohort by djb2-style
+//   hash of userId+key; pct>=100 → everyone.
+// easierLet is free; features that cost money per use (AI) are Premium-only.
 // All keys default to false — safe if the fetch fails.
 // ---------------------------------------------------------------------------
 
 const flags = {};
+const premium = { has: false }; // ELP.premium.has — set by loadFlags
 
 function flagHash(str) {
   let hash = 0;
@@ -65,28 +69,33 @@ function flagHash(str) {
 
 async function loadFlags(session) {
   try {
-    const cached = sessionStorage.getItem("el_flags");
+    const cached = sessionStorage.getItem("el_flags_v2");
     if (cached) {
-      const { at, value } = JSON.parse(cached);
+      const { at, value, hasPremium } = JSON.parse(cached);
       if (Date.now() - at < 5 * 60 * 1000) {
         Object.assign(flags, value);
+        premium.has = !!hasPremium;
         return flags;
       }
     }
   } catch (_e) { /* fall through to fetch */ }
   try {
-    const rows = await rest("feature_flags?select=key,enabled,rollout_pct,enabled_for");
+    const rows = await rest("feature_flags?select=key,enabled,rollout_pct,enabled_for,premium_only");
     const userId = session?.user?.id;
+    // Fail safe: no answer means no Premium.
+    premium.has = (await rest("rpc/has_premium", { method: "POST", body: "{}" }).catch(() => false)) === true;
     for (const row of rows ?? []) {
       let on = false;
-      if (row.enabled) {
+      if (row.premium_only && !premium.has) {
+        on = false; // costs money per use → Premium only (beta list included)
+      } else if (row.enabled) {
         if (userId && Array.isArray(row.enabled_for) && row.enabled_for.includes(userId)) on = true;
         else if ((row.rollout_pct ?? 0) >= 100) on = true;
         else if ((row.rollout_pct ?? 0) > 0 && userId) on = flagHash(userId + row.key) % 100 < row.rollout_pct;
       }
       flags[row.key] = on;
     }
-    try { sessionStorage.setItem("el_flags", JSON.stringify({ at: Date.now(), value: flags })); } catch (_e) { /* ignore */ }
+    try { sessionStorage.setItem("el_flags_v2", JSON.stringify({ at: Date.now(), value: flags, hasPremium: premium.has })); } catch (_e) { /* ignore */ }
   } catch (e) {
     console.warn("ELP.loadFlags failed — all flags defaulting to false", e);
   }
@@ -383,6 +392,7 @@ window.ELP = {
   getSession,
   requireSession,
   flags,
+  premium,
   loadFlags,
   signOut,
   rest,

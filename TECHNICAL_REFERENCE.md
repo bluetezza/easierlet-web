@@ -161,6 +161,18 @@ Company-and-contact info for landlords; powers the APT (Assured Periodic Tenancy
 ##### `landlord_subscriptions` and `subscription_events` (unused)
 Left over from paid plans. **Unused since 2026-10-27: easierLet is free**, so nothing reads or writes them. Both are empty and kept for history; `retention-enforce` still deletes a landlord's rows with their account, and `subscription_events` rows after 7 years.
 
+##### `premium_accounts` (new 2026-10-28)
+Landlords with Premium. Premium unlocks the features that cost money per use (the AI features). One row per landlord.
+
+| Column | Notes |
+|---|---|
+| user_id | PK, FK auth.users ON DELETE CASCADE |
+| granted_at | timestamptz, default now() |
+| granted_by | admin auth user id (ON DELETE SET NULL) |
+| note | text, optional |
+
+RLS: a landlord can SELECT their own row; only the service role writes (admin-api `set_premium`). `feature_flags.premium_only` marks Premium-only flags; `has_premium()` (authenticated) is true for a Premium landlord or a tenant of one. `_shared/flags.ts` `isEnabled()` and the iOS/web flag code return false for a premium_only flag without Premium, whatever the rollout or beta list.
+
 ##### `admin_users`
 Internal admin/support staff. Decoupled from `auth.users` by `auth_id` FK.
 
