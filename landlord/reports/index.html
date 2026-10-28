@@ -110,7 +110,8 @@
     const btn = $("generateBtn");
     if (!ELP.flags?.ai_portfolio_report) {
       btn.disabled = true;
-      btn.textContent = "AI reports not enabled";
+      // AI reports cost money per use, so they're part of Premium.
+      btn.textContent = ELP.premium?.has ? "AI reports not enabled" : "Part of Premium";
       return;
     }
     const last = reports[0]?.generated_at;

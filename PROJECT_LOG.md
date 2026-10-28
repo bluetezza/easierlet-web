@@ -24,7 +24,7 @@ Newest entries at the top of each section.
 | Document storage | Supabase Storage `documents` bucket (tenancy PDFs, certificates, info sheets) |
 | Email | Resend (`no.reply@easierlet.com`, domain verified) |
 | Billing | None — easierLet is free (since 2026-10-27). Stripe removed; the four billing functions are retired stubs. |
-| AI | Anthropic Claude API (claude-sonnet-4-6 + claude-haiku-4-5) via `_shared/anthropic.ts`; per-landlord $2/month budget in `ai_usage` |
+| AI | Anthropic Claude API (claude-sonnet-4-6 + claude-haiku-4-5) via `_shared/anthropic.ts`; per-landlord $2/month budget in `ai_usage`; **Premium-only** (`premium_accounts`, set from the admin centre) |
 | CAPTCHA | Cloudflare Turnstile on public forms |
 | Address lookup | postcodes.io (free, no key — UK postcode → coordinates + district; user types address lines). Replaced Ideal Postcodes 2026-06-11 |
 | Public site | `easierlet.com` — `bluetezza/easierlet-web` — local `~/easierlet-web/` |
@@ -676,6 +676,22 @@ For state-machine cheat-sheets, foreign-key map, RLS pattern, and storage layout
 ---
 
 ## Session history (newest first)
+
+### 2026-10-28 — Premium: features that cost money are Premium-only
+
+**Decision (Terry):** anything that costs him money per use is Premium and not on free accounts. Only the AI features cost per use (Anthropic). Email (Resend), storage (Supabase, R2) and the database stay free for everyone: they have free allowances and the app can't work without them. No payment yet: Terry switches Premium on per landlord from the admin centre.
+
+**Database:** migration `premium_ai` (`easierlet-swift/backups/migration_premium_ai.sql`, rollback alongside). New `premium_accounts` (user_id PK → auth.users, cascade; granted_at, granted_by, note); RLS lets a landlord read their own row; only the service role writes (a landlord can't give themselves Premium — checked). `feature_flags.premium_only` set on ai_maintenance, ai_listing_generator, ai_portfolio_report, ai_onboarding_brief, tenant_portal_chat. `has_premium()` (authenticated only): true for a Premium landlord or a tenant of one.
+
+**Edge functions:** `_shared/flags.ts` `isEnabled()` returns false for a premium_only flag unless the landlord has Premium (the beta list doesn't get round it); new `isPremium()`. Redeployed ai-listing v6, ai-maintenance v6, ai-onboarding v6, ai-report v6, ai-triage v6, ai-report-scheduler v7 (only scores Premium landlords). Fixed: ai-maintenance `tenant_override` called Claude without checking the flag. admin-api v39: `set_premium` (audited `admin.premium_granted` / `admin.premium_removed`), Premium in list/view landlord and a dashboard count. generate-dsar v21: Premium shown in the landlord's profile section. 9 new flag tests (`supabase/tests/flags`), 19 retention tests still pass.
+
+**Clients:** iOS `ELFeatureFlags` and web `ELP.loadFlags` mirror the rule using `has_premium()` (`ELP.premium.has`). iOS AI usage card says AI is part of Premium on free accounts (no purchase prompt, for App Store rules). Web reports button says "Part of Premium".
+
+**Admin centre:** landlord page Give/Remove Premium button; Premium pill in the landlords list; "N with Premium" on the dashboard; "Premium only" label on flags.
+
+**Legal/site:** Terms v1.4 (definition of Premium; 4.2 Premium — AI only, switched on at our discretion, no charge during early access; 4.3 paid services; 5.5 AI only on Premium). Privacy policy v3.2 (no AI processing for non-Premium accounts). AI transparency page and homepage note. `platform_config.terms_version` = v1.4.
+
+**Note:** Premium doesn't switch AI on by itself. The AI flags are still off for everyone; turn a flag on (rollout 100%) and it then works only for Premium landlords.
 
 ### 2026-10-27 — easierLet is free
 
